@@ -12,10 +12,25 @@ signature** that anyone can independently verify on random.org. Even the host
 cannot rig the outcome.
 
 ## Roles (two logins)
-- **Host** — create raffles, manage entries/prizes, share a join code, run the
-  draw, show verification.
-- **Player** — sign in, join via code, watch the draw live, see if they won,
-  verify the result.
+- **Host** — configure a raffle (prize, capacity, seat mode, ticket price),
+  open/close ticket sales, run the draw, show verification. **The host can NOT
+  manually add people to the wheel** — entries come *only* from purchased
+  tickets/seats. This is core to the fairness story.
+- **Player** — sign in, browse open raffles, **buy ticket(s)/seat(s)**, watch
+  the draw live, see if they won, verify the result.
+
+## Ticketing & seats (host-configurable per raffle)
+Entries = purchased tickets only. The host picks one **seat mode** per raffle:
+1. **Manual select** — fixed seat board (e.g. 1–100); players pick their own
+   open seat number(s), like choosing seats at a venue.
+2. **Random assign** — player buys N tickets; the system assigns random seat
+   numbers from the remaining open seats.
+3. **No seats** — just a quantity of tickets; each ticket is an entry, no
+   numbering.
+
+Host also sets **capacity** (total seats/tickets) and **ticket price**. The
+**wheel/draw is over the sold tickets** (or sold seats); Random.org's signed
+result picks the winning ticket → its owner wins.
 
 ## Proposed stack (web + mobile, one codebase)
 - **Expo (React Native + Expo Router)** → iOS, Android, and web from one codebase.
@@ -36,24 +51,44 @@ cannot rig the outcome.
 
 ## Data model (first cut)
 - `profiles` (id, role: host|player, display_name)
-- `raffles` (id, host_id, title, join_code, status: draft|open|drawing|complete, created_at)
-- `entries` (id, raffle_id, player_id, label, created_at)
-- `draws` (id, raffle_id, winner_entry_id, randomorg_signed_json, verify_url, drawn_at)
-- RLS: players see/join open raffles + their own entries; only the host's
-  Edge Function writes `draws`.
+- `raffles` (id, host_id, title, prize, seat_mode: manual|random|none,
+  capacity, ticket_price_cents, status: draft|open|sold_out|drawing|complete,
+  created_at)
+- `tickets` (id, raffle_id, owner_id, seat_number nullable, status:
+  available|held|sold, purchased_at, payment_ref) — a sold ticket IS an entry;
+  `seat_number` is null in "no seats" mode
+- `draws` (id, raffle_id, winning_ticket_id, randomorg_signed_json, verify_url,
+  drawn_at)
+- RLS: players can buy/hold open tickets and read their own + the public raffle
+  state; **no one can insert a ticket without a purchase**; only the host's
+  Edge Function writes `draws`. Capacity + uniqueness of `seat_number` enforced
+  server-side so two players can't grab the same seat.
 
 ## Milestones (each shippable)
-1. Scaffold + auth (host/player) + create raffle + join by code — **web first**.
-2. The wheel + signed draw + verify panel ← the core magic.
-3. Realtime live draw for players.
-4. Polish + native builds (EAS) → app stores.
+1. Scaffold + auth (host/player) + host creates a raffle (capacity, seat mode,
+   price, prize) — **web first**.
+2. Ticketing: players buy seats/tickets (manual board / random / quantity);
+   capacity + seat uniqueness enforced server-side.
+3. The wheel over sold tickets + signed draw (Random.org) + verify panel ← core magic.
+4. Realtime live draw for players.
+5. Payments (Stripe) for paid tickets; receipts.
+6. Polish + native builds (EAS) → app stores.
 
 ## Accounts / keys needed (free tiers)
 - GitHub repo (for code + cloud CI)
 - Supabase project (URL + anon key for client; service role + Random.org key in Edge Function secrets)
-- Random.org API key (Signed API)
+- Random.org API key (Signed API) — ✅ Jordan has it. Goes into Supabase Edge
+  Function secrets ONLY (never client/chat).
+- Stripe account (for paid tickets, Milestone 5)
 - Expo/EAS account (later, for store builds)
 - Dev environment: GitHub Codespaces (cloud Node) since there's no local Node toolchain.
+
+## Open questions
+- **Payments:** are tickets paid with real money (→ Stripe, receipts, payouts,
+  and added legal/compliance care) or free/claim for now? Strongly implied paid.
+- **Capacity model:** fixed capacity per raffle (e.g. always 100 seats) or
+  host-set each time? Sell-until-drawn with no cap, or must sell out first?
+- **Firearms prizes?** (see below) — affects app-store path + age/geo/FFL rules.
 
 ## Open question (blocks platform choice)
 Are prizes **firearms / firearms-adjacent** (given the SendItGuns connection)?
