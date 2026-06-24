@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Send It Raffles — Wheel Prototype</title>
+<style>
+  :root {
+    --blue: #0066FF;
+    --ink: #0b1220;
+    --muted: #6b7280;
+    --bg: #f4f6fb;
+    --card: #ffffff;
+    --border: #e6e9f0;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    display: flex;
+    justify-content: center;
+    padding: 24px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .app { width: 100%; max-width: 980px; }
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+  .logo { width: 38px; height: 38px; border-radius: 11px; background: var(--blue);
+    display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 18px; }
+  h1 { font-size: 22px; margin: 0; letter-spacing: -0.02em; }
+  .sub { color: var(--muted); font-size: 13px; margin: 2px 0 20px 50px; }
+  .note { margin-left: 50px; }
+  .grid { display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 760px){ .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 18px;
+    padding: 16px; box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 8px 24px rgba(16,24,40,.04); }
+  .card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 10px; }
+  textarea { width: 100%; min-height: 220px; resize: vertical; border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px; font: inherit; font-size: 14px; line-height: 1.6; outline: none; }
+  textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(0,102,255,.12); }
+  .row { display: flex; gap: 8px; margin-top: 10px; }
+  button { font: inherit; font-weight: 600; border: 0; border-radius: 12px; padding: 11px 16px; cursor: pointer; }
+  .btn-primary { background: var(--blue); color: #fff; flex: 1; font-size: 15px; }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-ghost { background: #eef1f7; color: var(--ink); }
+  .wheel-wrap { display: grid; place-items: center; padding: 8px; position: relative; }
+  .stage { position: relative; width: min(560px, 86vw); aspect-ratio: 1; }
+  canvas { width: 100%; height: 100%; display: block; }
+  .pointer { position: absolute; top: -2px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0; border-left: 16px solid transparent; border-right: 16px solid transparent;
+    border-top: 26px solid var(--ink); filter: drop-shadow(0 2px 3px rgba(0,0,0,.25)); z-index: 3; }
+  .hub { position: absolute; inset: 0; margin: auto; width: 84px; height: 84px; border-radius: 50%;
+    background: #fff; border: 6px solid var(--blue); display: grid; place-items: center;
+    font-weight: 800; color: var(--blue); font-size: 12px; text-align: center; line-height: 1.05; z-index: 2;
+    box-shadow: 0 6px 18px rgba(0,0,0,.12); }
+  .winner { margin-top: 16px; text-align: center; min-height: 30px; }
+  .winner b { font-size: 20px; }
+  .badge { display: inline-block; background: rgba(0,102,255,.1); color: var(--blue);
+    font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+  .disclaimer { margin-top: 18px; font-size: 12px; color: var(--muted); border-top: 1px dashed var(--border); padding-top: 12px; }
+  .disclaimer b { color: var(--ink); }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="logo">SR</div>
+      <div>
+        <h1>Send It Raffles</h1>
+      </div>
+    </header>
+    <div class="sub">Wheel prototype — proves out the visual. <span class="badge">Prototype RNG</span></div>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Entries</h2>
+        <textarea id="names" spellcheck="false">Jordan
+Alex
+Sam
+Taylor
+Jordan B
+Casey
+Morgan
+Riley</textarea>
+        <div class="row">
+          <button class="btn-primary" id="spin">Spin the wheel</button>
+          <button class="btn-ghost" id="shuffle" title="Shuffle order">Shuffle</button>
+        </div>
+        <div class="disclaimer">
+          <b>Note:</b> this prototype picks the winner with the browser's built-in
+          randomness, just to show the wheel. The real app decides the winner with
+          <b>Random.org's Signed API</b> on the server, and shows a verifiable
+          certificate — so nobody (not even the host) can rig it.
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>The Wheel</h2>
+        <div class="wheel-wrap">
+          <div class="stage">
+            <div class="pointer"></div>
+            <canvas id="wheel" width="1120" height="1120"></canvas>
+            <div class="hub">SEND<br>IT</div>
+          </div>
+        </div>
+        <div class="winner" id="winner"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const palette = ["#0066FF","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#ec4899","#84cc16","#f97316","#3b82f6"];
+  const canvas = document.getElementById("wheel");
+  const ctx = canvas.getContext("2d");
+  const namesEl = document.getElementById("names");
+  const spinBtn = document.getElementById("spin");
+  const shuffleBtn = document.getElementById("shuffle");
+  const winnerEl = document.getElementById("winner");
+  const TAU = Math.PI * 2;
+  let rotation = 0;       // current rotation (radians, clockwise)
+  let spinning = false;
+
+  function entries(){
+    return namesEl.value.split("\n").map(s => s.trim()).filter(Boolean);
+  }
+
+  // Crypto-quality random index in [0, n) — stand-in for the server's
+  // Random.org signed draw in the real app.
+  function randomIndex(n){
+    const buf = new Uint32Array(1);
+    crypto.getRandomValues(buf);
+    return buf[0] % n;
+  }
+
+  function draw(){
+    const items = entries();
+    const n = Math.max(items.length, 1);
+    const slice = TAU / n;
+    const cx = canvas.width / 2, cy = canvas.height / 2, r = cx - 8;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rotation);
+    for (let i = 0; i < n; i++){
+      const a0 = i * slice, a1 = a0 + slice;
+      ctx.beginPath();
+      ctx.moveTo(0,0);
+      ctx.arc(0,0,r,a0,a1);
+      ctx.closePath();
+      ctx.fillStyle = palette[i % palette.length];
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,.85)";
+      ctx.lineWidth = 4; ctx.stroke();
+      // label
+      ctx.save();
+      ctx.rotate(a0 + slice/2);
+      ctx.textAlign = "right";
+      ctx.fillStyle = "#fff";
+      ctx.font = "600 " + Math.max(20, Math.min(46, 520 / n + 14)) + "px -apple-system, Segoe UI, Roboto, sans-serif";
+      ctx.fillText(items[i] ?? "—", r - 26, 12);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  function spin(){
+    const items = entries();
+    if (spinning || items.length < 2) return;
+    spinning = true; spinBtn.disabled = true; winnerEl.textContent = "";
+    const n = items.length, slice = TAU / n;
+    const winner = randomIndex(n);
+    // Land the winner's slice center under the top pointer (1.5π).
+    const center = winner * slice + slice/2;
+    let finalMod = (1.5 * Math.PI - center) % TAU;
+    finalMod = (finalMod + TAU) % TAU;
+    const extraTurns = 6;
+    const start = rotation;
+    const target = start + (TAU - (start % TAU)) + finalMod + extraTurns * TAU;
+    const dur = 5200, t0 = performance.now();
+    const ease = t => 1 - Math.pow(1 - t, 3); // cubic ease-out
+    function frame(now){
+      const t = Math.min(1, (now - t0) / dur);
+      rotation = start + (target - start) * ease(t);
+      draw();
+      if (t < 1){ requestAnimationFrame(frame); }
+      else {
+        rotation = target % TAU;
+        spinning = false; spinBtn.disabled = false;
+        winnerEl.innerHTML = '<span class="badge">Winner</span><br><b>🎉 ' + items[winner] + '</b>';
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function shuffle(){
+    const items = entries();
+    for (let i = items.length - 1; i > 0; i--){
+      const j = randomIndex(i + 1);
+      [items[i], items[j]] = [items[j], items[i]];
+    }
+    namesEl.value = items.join("\n");
+    draw();
+  }
+
+  spinBtn.addEventListener("click", spin);
+  shuffleBtn.addEventListener("click", shuffle);
+  namesEl.addEventListener("input", draw);
+  draw();
+})();
+</script>
+</body>
+</html>
