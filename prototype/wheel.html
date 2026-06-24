@@ -176,10 +176,10 @@ Riley</textarea>
   const TAU=Math.PI*2;
   let rotation=0, spinning=false, soundOn=false, drawNo=0, audio=null, lastTickIdx=-1;
 
-  // ── theme ──
+  // ── theme ── (initial setTheme call is at the very bottom, after every
+  // const/function is defined, so the draw() it triggers can see them)
   const root=document.documentElement;
   const savedTheme=localStorage.getItem("sr.theme")||"light";
-  setTheme(savedTheme);
   $("theme").onclick=()=>setTheme(root.getAttribute("data-theme")==="dark"?"light":"dark");
   function setTheme(t){ root.setAttribute("data-theme",t); localStorage.setItem("sr.theme",t);
     $("theme").textContent=t==="dark"?"☀️":"🌙"; draw(); }
@@ -281,7 +281,9 @@ Riley</textarea>
   $("mClose").onclick=()=>$("overlay").classList.remove("show");
   $("mAgain").onclick=()=>{ $("overlay").classList.remove("show"); setTimeout(spin,250); };
   $("overlay").onclick=e=>{ if(e.target===$("overlay")) $("overlay").classList.remove("show"); };
-  draw();
+  // Initialize theme (this also runs the first draw()). Done last so all
+  // const helpers (entries, randInt, …) are defined before draw() uses them.
+  setTheme(savedTheme);
 })();
 </script>
 </body>
