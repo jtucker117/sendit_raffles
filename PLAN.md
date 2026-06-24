@@ -72,7 +72,25 @@ result picks the winning ticket → its owner wins.
 3. The wheel over sold tickets + signed draw (Random.org) + verify panel ← core magic.
 4. Realtime live draw for players.
 5. Payments (Stripe) for paid tickets; receipts.
-6. Polish + native builds (EAS) → app stores.
+5. Payments → **host-handles model** (see below). 6. Polish + native builds (EAS) → app stores.
+
+## Payments & compliance (decided direction)
+- **Model: host payment handles + manual confirm.** The app displays the host's
+  own Venmo / Zelle / Cash App / PayPal; the player pays the host **directly,
+  off-platform**; the host marks the ticket **confirmed** (optionally with a
+  proof screenshot) → ticket issued. **We are a raffle *manager*, not a payment
+  processor.** Only confirmed tickets enter the draw (still Random.org-signed).
+- **Terminology configurable per raffle:** "Purchase" / "Donation" / "Entry"
+  (host's choice of wording).
+- **Stripe:** optional, later — only with proper nonprofit/licensed/sweepstakes
+  structure (Stripe restricts raffles).
+- **Compliance reality (NOT legal advice):** prize + chance + consideration =
+  lottery, which is restricted/illegal for for-profits in many states.
+  Relabeling a required payment as a "donation" does NOT remove the
+  consideration — it's still legally a raffle. The real fix is a **genuine free
+  alternate entry (AMOE)**, deferred for now but the data model leaves room
+  (a per-raffle `free_entry_enabled` flag). Jordan to verify state rules +
+  firearms implications before taking real money.
 
 ## Accounts / keys needed (free tiers)
 - GitHub repo (for code + cloud CI)
@@ -83,12 +101,17 @@ result picks the winning ticket → its owner wins.
 - Expo/EAS account (later, for store builds)
 - Dev environment: GitHub Codespaces (cloud Node) since there's no local Node toolchain.
 
-## Open questions
-- **Payments:** are tickets paid with real money (→ Stripe, receipts, payouts,
-  and added legal/compliance care) or free/claim for now? Strongly implied paid.
-- **Capacity model:** fixed capacity per raffle (e.g. always 100 seats) or
-  host-set each time? Sell-until-drawn with no cap, or must sell out first?
-- **Firearms prizes?** (see below) — affects app-store path + age/geo/FFL rules.
+## Decisions locked
+- **Capacity:** host sets it per raffle.
+- **Payments:** host-handles + manual confirm (Venmo/Zelle/Cash App/PayPal),
+  "Purchase/Donation/Entry" wording configurable. Stripe later/optional.
+- **Free alternate entry (AMOE):** deferred; data model leaves room.
+
+## Still open
+- **Firearms prizes?** affects app-store path + age/geo/FFL rules (mixed/unsure
+  → build for both, web-first).
+- **Legal structure** for paid/donation raffles in Jordan's state(s) — to verify
+  before going live with real money.
 
 ## Open question (blocks platform choice)
 Are prizes **firearms / firearms-adjacent** (given the SendItGuns connection)?
