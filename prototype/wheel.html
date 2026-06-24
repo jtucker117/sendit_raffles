@@ -21,11 +21,9 @@
   .wrap{ max-width:1060px; margin:0 auto; padding:0 20px 44px; }
   header{ position:sticky; top:0; z-index:40; display:flex; align-items:center; gap:12px; padding:16px 20px; margin:0 -20px 22px;
     background:var(--glass); -webkit-backdrop-filter:saturate(180%) blur(20px); backdrop-filter:saturate(180%) blur(20px); border-bottom:.5px solid var(--hair); }
-  .logo{ width:40px; height:40px; border-radius:12px; background:linear-gradient(150deg,var(--accent),#5ac8fa); display:grid; place-items:center;
-    color:#fff; font-weight:800; font-size:16px; box-shadow:0 4px 12px rgba(0,122,255,.35); }
+  .logo{ width:40px; height:40px; border-radius:12px; background:linear-gradient(150deg,var(--accent),#5ac8fa); display:grid; place-items:center; color:#fff; font-weight:800; font-size:16px; box-shadow:0 4px 12px rgba(0,122,255,.35); }
   h1{ font-size:19px; margin:0; font-weight:700; letter-spacing:-.02em; } .tag{ color:var(--muted); font-size:12.5px; }
-  .spacer{ flex:1; }
-  .seg{ display:flex; gap:2px; padding:2px; background:var(--bg2); border:.5px solid var(--hair); border-radius:11px; }
+  .spacer{ flex:1; } .seg{ display:flex; gap:2px; padding:2px; background:var(--bg2); border:.5px solid var(--hair); border-radius:11px; }
   .iconbtn{ width:34px; height:30px; border:0; border-radius:9px; background:transparent; color:var(--ink); cursor:pointer; font-size:15px; display:grid; place-items:center; transition:transform .08s,background .15s; }
   .iconbtn:active{ transform:scale(.9); } .iconbtn.active{ background:var(--accent-soft); color:var(--accent); }
   .hero{ margin:4px 0 22px; } .hero .big{ font-size:30px; font-weight:800; letter-spacing:-.03em; margin:0; } .hero .sub{ color:var(--muted); font-size:14px; margin-top:4px; }
@@ -44,33 +42,39 @@
   .btn-green{ background:var(--green-soft); color:var(--green); border-radius:14px; padding:12px 14px; }
   .btn-soft:disabled,.btn-green:disabled{ opacity:.4; cursor:default; transform:none; }
   .stack{ display:flex; flex-direction:column; gap:8px; margin-top:4px; }
+  .pickrow{ display:flex; gap:8px; margin-top:8px; } .pickrow input{ width:96px; text-align:center; }
   .hint{ font-size:12px; color:var(--muted); margin-top:10px; line-height:1.5; } .hint b{ color:var(--ink); font-weight:600; }
 
   .counts{ display:flex; gap:14px; flex-wrap:wrap; font-size:13px; margin-bottom:12px; }
   .counts .c{ display:flex; align-items:center; gap:6px; color:var(--muted); }
   .dot{ width:10px; height:10px; border-radius:3px; } .dot.free{ background:var(--green); } .dot.paid{ background:var(--accent); } .dot.open{ background:var(--hair); }
-  .pickbar{ display:none; align-items:center; justify-content:space-between; gap:10px; background:var(--accent-soft); color:var(--accent);
-    border-radius:12px; padding:9px 13px; margin-bottom:12px; font-size:13.5px; font-weight:600; }
-  .pickbar.show{ display:flex; }
-  .pickbar button{ background:var(--card); color:var(--ink); border-radius:9px; padding:7px 11px; font-size:13px; }
+  .pickbar{ display:none; align-items:center; justify-content:space-between; gap:10px; background:var(--accent-soft); color:var(--accent); border-radius:12px; padding:9px 13px; margin-bottom:12px; font-size:13.5px; font-weight:600; }
+  .pickbar.show{ display:flex; } .pickbar button{ background:var(--card); color:var(--ink); border-radius:9px; padding:7px 11px; font-size:13px; }
   .board{ display:grid; gap:7px; max-height:430px; overflow:auto; padding:2px; }
-  .seat{ aspect-ratio:1; border-radius:11px; border:.5px solid var(--hair); background:var(--bg2); color:var(--muted); font-size:12px; font-weight:700;
-    display:grid; place-items:center; cursor:default; position:relative; transition:transform .08s,box-shadow .12s; padding:0; line-height:1; }
+  .seat{ aspect-ratio:1; border-radius:11px; border:.5px solid var(--hair); background:var(--bg2); color:var(--muted); font-size:13px; font-weight:700; display:grid; place-items:center; cursor:default; position:relative; transition:transform .08s,box-shadow .12s; padding:0; line-height:1; }
   .seat.free{ background:var(--green-soft); border-color:transparent; color:var(--green); cursor:pointer; }
   .seat.paid{ background:var(--accent-soft); border-color:transparent; color:var(--accent); cursor:pointer; }
-  .seat.pickable{ cursor:pointer; box-shadow:0 0 0 2px var(--accent-soft) inset; }
-  .seat.pickable:hover{ box-shadow:0 0 0 2px var(--accent) inset; }
+  .seat.pickable{ cursor:pointer; box-shadow:0 0 0 2px var(--accent-soft) inset; } .seat.pickable:hover{ box-shadow:0 0 0 2px var(--accent) inset; }
   .seat:active{ transform:scale(.9); }
   .seat .who{ position:absolute; bottom:3px; left:0; right:0; font-size:8px; font-weight:600; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 2px; }
   .board.compact .who{ display:none; }
+  /* large-board claimed list */
+  .biginfo{ font-size:13px; color:var(--muted); background:var(--bg2); border:.5px solid var(--hair); border-radius:12px; padding:10px 13px; margin-bottom:12px; }
+  .clist{ max-height:300px; overflow:auto; border:.5px solid var(--hair); border-radius:14px; }
+  .clist .ci{ display:flex; align-items:center; gap:10px; padding:10px 13px; font-size:14px; position:relative; }
+  .clist .ci + .ci::before{ content:""; position:absolute; top:0; left:13px; right:0; height:.5px; background:var(--hair); }
+  .clist .num{ font-family:ui-monospace,Menlo,monospace; font-weight:700; min-width:52px; }
+  .clist .nm{ flex:1; } .clist .tp{ font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; }
+  .tp.free{ background:var(--green-soft); color:var(--green); } .tp.paid{ background:var(--accent-soft); color:var(--accent); }
+  .clist .x{ background:transparent; color:var(--muted); font-size:16px; padding:2px 6px; border-radius:8px; }
+  .clist-empty{ padding:18px; text-align:center; color:var(--muted); font-size:13px; }
 
   .wheel-wrap{ display:grid; place-items:center; padding:6px 0 2px; }
   .stage{ position:relative; width:min(520px,80vw); aspect-ratio:1; }
   .stage::before{ content:""; position:absolute; inset:-10px; border-radius:50%; background:radial-gradient(circle at 50% 35%, var(--accent-soft), transparent 62%); }
   canvas#wheel{ position:relative; width:100%; height:100%; display:block; filter:drop-shadow(0 18px 36px rgba(0,0,0,.20)); }
   .pointer{ position:absolute; top:-6px; left:50%; transform:translateX(-50%); z-index:3; color:var(--accent); filter:drop-shadow(0 4px 5px rgba(0,0,0,.3)); }
-  .hub{ position:absolute; inset:0; margin:auto; width:88px; height:88px; border-radius:50%; background:var(--card); border:7px solid var(--accent);
-    display:grid; place-items:center; font-weight:900; color:var(--accent); font-size:12px; text-align:center; line-height:1.05; z-index:2; box-shadow:0 10px 26px rgba(0,0,0,.2); }
+  .hub{ position:absolute; inset:0; margin:auto; width:88px; height:88px; border-radius:50%; background:var(--card); border:7px solid var(--accent); display:grid; place-items:center; font-weight:900; color:var(--accent); font-size:12px; text-align:center; line-height:1.05; z-index:2; box-shadow:0 10px 26px rgba(0,0,0,.2); }
   .empty-wheel{ color:var(--muted); font-size:13.5px; text-align:center; padding:26px 0; }
 
   .cert{ margin-top:20px; } .cert-empty{ color:var(--muted); font-size:13.5px; } .cert-box{ display:none; }
@@ -79,8 +83,8 @@
   .group{ background:var(--bg2); border:.5px solid var(--hair); border-radius:16px; overflow:hidden; }
   .group .li{ display:flex; align-items:center; justify-content:space-between; gap:14px; padding:12px 14px; font-size:14px; position:relative; }
   .group .li + .li::before{ content:""; position:absolute; top:0; left:14px; right:0; height:.5px; background:var(--hair); }
-  .li .k{ color:var(--muted); } .li .v{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-weight:600; text-align:right; word-break:break-all; }
-  .sig{ font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; color:var(--muted); background:var(--bg2); border:.5px solid var(--hair); border-radius:12px; padding:10px 12px; margin-top:10px; max-height:72px; overflow:auto; word-break:break-all; }
+  .li .k{ color:var(--muted); } .li .v{ font-family:ui-monospace,Menlo,monospace; font-weight:600; text-align:right; word-break:break-all; }
+  .sig{ font-family:ui-monospace,Menlo,monospace; font-size:11px; color:var(--muted); background:var(--bg2); border:.5px solid var(--hair); border-radius:12px; padding:10px 12px; margin-top:10px; max-height:72px; overflow:auto; word-break:break-all; }
   .verify{ display:inline-flex; gap:5px; margin-top:12px; color:var(--accent); font-weight:600; font-size:14px; text-decoration:none; }
 
   .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.4); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); display:none; place-items:center; z-index:50; padding:22px; } .overlay.show{ display:grid; }
@@ -91,10 +95,13 @@
   .modal .acts{ display:flex; border-top:.5px solid var(--hair); } .modal .acts button{ flex:1; background:transparent; color:var(--accent); font-size:16px; padding:15px; border-radius:0; }
   .modal .acts button:first-child{ border-right:.5px solid var(--hair); font-weight:500; color:var(--ink); }
   #confetti{ position:fixed; inset:0; pointer-events:none; z-index:60; display:none; } #confetti.show{ display:block; }
+  #toast{ position:fixed; left:50%; bottom:28px; transform:translateX(-50%) translateY(20px); background:var(--ink); color:var(--bg); font-size:13.5px; font-weight:600; padding:11px 16px; border-radius:13px; box-shadow:var(--shadow); opacity:0; pointer-events:none; transition:opacity .2s,transform .2s; z-index:70; }
+  #toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
   <canvas id="confetti"></canvas>
+  <div id="toast"></div>
   <div class="wrap">
     <header>
       <div class="logo">SR</div>
@@ -103,7 +110,7 @@
       <div class="seg"><button class="iconbtn" id="sound" title="Spin sound">🔇</button><button class="iconbtn" id="theme" title="Appearance">🌙</button></div>
     </header>
 
-    <div class="hero"><h2 class="big">Host a raffle</h2><div class="sub">Free seats are randomly assigned; paid buyers pick a seat or go random. Only claimed seats enter the wheel.</div></div>
+    <div class="hero"><h2 class="big">Host a raffle</h2><div class="sub">Free seats are randomly assigned (1 per player); paid buyers pick a seat or go random. Only claimed seats enter the wheel.</div></div>
 
     <div class="grid">
       <div class="col">
@@ -127,12 +134,15 @@
           <div class="stack">
             <button class="btn-green" id="claimFree">🎟️ Free seat — random</button>
             <button class="btn-soft" id="claimPaidRand">💳 Paid — random seat</button>
-            <button class="btn-soft" id="claimPaidPick">🎯 Paid — pick my seat</button>
           </div>
-          <p class="hint"><b>Real app:</b> players log in with a username + password; free seats
-            are capped (<b id="hintFree">8</b>) and auto-assigned; paid seats use the host's
-            Venmo/Zelle/Cash App/PayPal with host confirmation.</p>
-          <button class="btn-soft" id="sample" style="width:100%; margin-top:6px">Demo fill</button>
+          <div class="pickrow">
+            <input id="pickNum" type="number" min="1" placeholder="Seat #" />
+            <button class="btn-soft" id="claimPaidPick" style="flex:1">🎯 Paid — pick seat</button>
+          </div>
+          <p class="hint"><b>1 free seat per player.</b> Free seats are capped (<b id="hintFree">8</b>)
+            and auto-assigned. Paid seats: type a seat # (or tap one on small boards), or go random —
+            player pays the host's Venmo/Zelle/Cash App/PayPal, host confirms. Real app: username + password login.</p>
+          <button class="btn-soft" id="sample" style="width:100%; margin-top:8px">Demo fill</button>
         </div>
       </div>
 
@@ -144,7 +154,10 @@
           <span class="c"><span class="dot paid"></span> Paid <b id="nPaid" style="color:var(--ink)">0</b></span>
         </div>
         <div class="pickbar" id="pickbar"><span id="pickMsg">Pick an open seat…</span><button id="pickCancel">Cancel</button></div>
+
+        <div id="biginfo" class="biginfo" style="display:none"></div>
         <div class="board" id="board"></div>
+        <div id="clistWrap" style="display:none"><div class="clist" id="clist"></div></div>
 
         <div style="margin-top:18px" class="wheel-wrap">
           <div class="stage" id="stage">
@@ -154,7 +167,7 @@
           </div>
         </div>
         <div class="empty-wheel" id="emptyWheel">Claim at least 2 seats to spin.</div>
-        <div class="row" style="margin-top:14px; display:flex"><button class="btn-primary" id="spin">Spin the wheel</button></div>
+        <div style="margin-top:14px; display:flex"><button class="btn-primary" id="spin">Spin the wheel</button></div>
 
         <div class="cert">
           <p class="label">Fairness Certificate</p>
@@ -186,9 +199,9 @@
 (function(){
   const palette=["#007aff","#34c759","#ff9f0a","#ff3b30","#af52de","#5ac8fa","#ff2d55","#30d158","#ff9500","#0a84ff"];
   const $=id=>document.getElementById(id);
-  const canvas=$("wheel"), ctx=canvas.getContext("2d"); const TAU=Math.PI*2;
+  const canvas=$("wheel"), ctx=canvas.getContext("2d"); const TAU=Math.PI*2; const GRID_MAX=120;
   let rotation=0, spinning=false, soundOn=false, audio=null, lastTickIdx=-1;
-  let seats=[], seatEls=[], playerNo=0, pickMode=false;
+  let seats=[], seatEls=[], playerNo=0, pickMode=false; const freeOwners=new Set();
 
   const root=document.documentElement; const savedTheme=localStorage.getItem("sr.theme")||"light";
   $("theme").onclick=()=>setTheme(root.getAttribute("data-theme")==="dark"?"light":"dark");
@@ -199,78 +212,86 @@
     g.gain.setValueAtTime(.05,audio.currentTime); g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+.05);
     o.connect(g); g.connect(audio.destination); o.start(); o.stop(audio.currentTime+.05);}catch(e){} }
 
+  let toastT=null; function toast(m){ const el=$("toast"); el.textContent=m; el.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove("show"),2000); }
   function randInt(n){ const b=new Uint32Array(1); crypto.getRandomValues(b); return b[0]%n; }
   function mockSig(){ const b=new Uint8Array(48); crypto.getRandomValues(b); return btoa(String.fromCharCode(...b)); }
-  const cfg=()=>({ cap:Math.max(2,Math.min(1000,+$("capacity").value||2)), free:Math.max(0,Math.min(1000,+$("freeLimit").value||0)),
-    term:$("term").value });
+  const cfg=()=>({ cap:Math.max(2,Math.min(1000,+$("capacity").value||2)), free:Math.max(0,Math.min(1000,+$("freeLimit").value||0)) });
   const claimed=()=>seats.map((s,i)=>s?{name:s.name,type:s.type,seat:i+1}:null).filter(Boolean);
   const freeUsed=()=>seats.filter(s=>s&&s.type==="free").length;
   const openIdx=()=>{ const a=[]; for(let i=0;i<seats.length;i++) if(!seats[i]) a.push(i); return a; };
-  const showNames=()=>seats.length<=80;
-  function seatMin(cap){ return cap<=60?46:cap<=160?34:cap<=400?26:cap<=700?20:16; }
-  function currentName(){ const v=$("pname").value.trim(); return v||("Player "+(++playerNo)); }
+  const gridMode=()=>seats.length<=GRID_MAX;
+  const showNames=()=>seats.length<=60;
+  function seatMin(cap){ return cap<=60?44:34; }
+  function resolveName(){ const v=$("pname").value.trim(); return v||("Player "+(++playerNo)); }
 
-  function buildBoard(){ const c=cfg(); seats=new Array(c.cap).fill(null); seatEls=[]; playerNo=0; pickMode=false;
-    $("nFreeMax").textContent=c.free; $("hintFree").textContent=c.free;
-    const b=$("board"); b.innerHTML=""; b.style.gridTemplateColumns="repeat(auto-fill,minmax("+seatMin(c.cap)+"px,1fr))";
-    b.classList.toggle("compact",!showNames());
-    for(let i=0;i<c.cap;i++){ const el=document.createElement("button"); el.className="seat"; el.onclick=()=>onSeat(i); b.appendChild(el); seatEls.push(el); paintSeat(i); }
-    setPickbar(); updateCounts(); draw(); }
+  function buildBoard(){ const c=cfg(); seats=new Array(c.cap).fill(null); seatEls=[]; playerNo=0; pickMode=false; freeOwners.clear();
+    $("nFreeMax").textContent=c.free; $("hintFree").textContent=c.free; $("pickNum").max=c.cap;
+    const b=$("board");
+    if(gridMode()){ $("board").style.display="grid"; $("clistWrap").style.display="none"; $("biginfo").style.display="none";
+      b.innerHTML=""; b.style.gridTemplateColumns="repeat(auto-fill,minmax("+seatMin(c.cap)+"px,1fr))"; b.classList.toggle("compact",!showNames());
+      for(let i=0;i<c.cap;i++){ const el=document.createElement("button"); el.className="seat"; el.onclick=()=>onSeat(i); b.appendChild(el); seatEls.push(el); paintSeat(i); } }
+    else { $("board").style.display="none"; $("clistWrap").style.display="block"; $("biginfo").style.display="block";
+      $("biginfo").textContent="Large raffle ("+c.cap+" seats) — claimed seats are listed below. Use the Seat # box to pick a specific seat."; }
+    setPickbar(); render();
+  }
 
   function paintSeat(i){ const s=seats[i], el=seatEls[i]; if(!el) return;
-    el.className="seat"+(s?(" "+s.type):(pickMode?" pickable":""));
-    el.textContent=String(i+1);
+    el.className="seat"+(s?(" "+s.type):(pickMode?" pickable":"")); el.textContent=String(i+1);
     if(s&&showNames()){ const w=document.createElement("span"); w.className="who"; w.textContent=s.name; el.appendChild(w); }
     el.title=s?(s.name+" · "+s.type+" · seat "+(i+1)):("Seat "+(i+1)+" · open"); }
 
-  function repaintAll(){ for(let i=0;i<seats.length;i++) paintSeat(i); }
+  function renderList(){ const cl=claimed().sort((a,b)=>a.seat-b.seat); const box=$("clist");
+    if(!cl.length){ box.innerHTML='<div class="clist-empty">No seats claimed yet.</div>'; return; }
+    box.innerHTML=""; cl.forEach(c=>{ const row=document.createElement("div"); row.className="ci";
+      const num=document.createElement("span"); num.className="num"; num.textContent="#"+c.seat;
+      const nm=document.createElement("span"); nm.className="nm"; nm.textContent=c.name;
+      const tp=document.createElement("span"); tp.className="tp "+c.type; tp.textContent=c.type;
+      const x=document.createElement("button"); x.className="x"; x.textContent="×"; x.title="Release"; x.onclick=()=>release(c.seat-1);
+      row.append(num,nm,tp,x); box.appendChild(row); }); }
 
-  function onSeat(i){
-    if(pickMode){ if(!seats[i]){ assign(i,"paid"); setPick(false); } return; }
-    if(seats[i]){ seats[i]=null; paintSeat(i); updateCounts(); draw(); } // click claimed seat to release (host/demo)
-  }
-  function assign(i,type){ seats[i]={ name:currentName(), type }; paintSeat(i); updateCounts(); draw(); }
+  function render(){ if(gridMode()){ for(let i=0;i<seats.length;i++) paintSeat(i); } else { renderList(); } updateCounts(); draw(); }
 
-  function claimFree(){ const c=cfg(); const open=openIdx(); if(freeUsed()>=c.free||!open.length) return; assign(open[randInt(open.length)],"free"); }
-  function claimPaidRand(){ const open=openIdx(); if(!open.length) return; assign(open[randInt(open.length)],"paid"); }
-  function setPick(on){ pickMode=on; setPickbar(); repaintAll(); }
-  function setPickbar(){ const pb=$("pickbar"); pb.classList.toggle("show",pickMode); if(pickMode) $("pickMsg").textContent="Pick an open seat for "+($("pname").value.trim()||"this player")+"…"; }
+  function onSeat(i){ if(pickMode){ if(!seats[i]) assign(i,"paid"); setPick(false); return; } if(seats[i]) release(i); }
+  function release(i){ const s=seats[i]; if(!s) return; if(s.type==="free") freeOwners.delete(s.name.toLowerCase()); seats[i]=null; render(); }
+  function assign(i,type,nameArg){ const name=nameArg||resolveName(); seats[i]={name,type}; if(type==="free") freeOwners.add(name.toLowerCase()); render(); }
+
+  function claimFree(){ const c=cfg(), open=openIdx(); if(freeUsed()>=c.free){ toast("Free seats are all taken"); return; } if(!open.length){ toast("Board is full"); return; }
+    const name=resolveName(); if(freeOwners.has(name.toLowerCase())){ toast("Only 1 free seat per player"); return; } assign(open[randInt(open.length)],"free",name); toast("Free seat assigned to "+name); }
+  function claimPaidRand(){ const open=openIdx(); if(!open.length){ toast("Board is full"); return; } assign(open[randInt(open.length)],"paid"); }
+  function claimPaidPick(){ const v=parseInt($("pickNum").value,10);
+    if(v>=1&&v<=seats.length){ if(seats[v-1]){ toast("Seat #"+v+" is taken"); return; } assign(v-1,"paid"); $("pickNum").value=""; return; }
+    if(gridMode()){ setPick(true); toast("Tap an open seat"); } else { toast("Enter a seat number to pick"); } }
+  function setPick(on){ pickMode=on; setPickbar(); if(gridMode()) for(let i=0;i<seats.length;i++) paintSeat(i); }
+  function setPickbar(){ const pb=$("pickbar"); pb.classList.toggle("show",pickMode&&gridMode()); if(pickMode) $("pickMsg").textContent="Pick an open seat for "+($("pname").value.trim()||"this player")+"…"; }
 
   function updateCounts(){ const open=openIdx().length, fu=freeUsed(), c=cfg(), cl=claimed().length;
     $("nOpen").textContent=open; $("nFree").textContent=fu; $("nPaid").textContent=cl-fu;
-    $("claimFree").disabled=(fu>=c.free)||open===0;
-    $("claimPaidRand").disabled=open===0; $("claimPaidPick").disabled=open===0;
+    $("claimFree").disabled=(fu>=c.free)||open===0; $("claimPaidRand").disabled=open===0; $("claimPaidPick").disabled=open===0;
     const enough=cl>=2; $("emptyWheel").style.display=enough?"none":"block"; $("stage").style.display=enough?"block":"none"; $("spin").disabled=!enough; }
 
-  function sampleFill(){ buildBoard(); const c=cfg(); const target=Math.min(c.cap,Math.max(6,Math.round(c.cap*0.45)));
-    for(let k=0;k<target;k++){ const open=openIdx(); if(!open.length) break; const type=freeUsed()<c.free?"free":"paid";
-      const i=open[randInt(open.length)]; seats[i]={ name:"Player "+(++playerNo), type }; paintSeat(i); }
-    updateCounts(); draw(); }
+  function sampleFill(){ buildBoard(); const c=cfg(); const target=Math.min(c.cap,Math.max(8,Math.round(c.cap*0.4)));
+    for(let k=0;k<target;k++){ const open=openIdx(); if(!open.length) break; const name="Player "+(++playerNo);
+      const type=freeUsed()<c.free?"free":"paid"; const i=open[randInt(open.length)]; seats[i]={name,type}; if(type==="free") freeOwners.add(name.toLowerCase()); }
+    render(); }
 
   function draw(){ const items=claimed(), n=items.length; const cx=canvas.width/2, cy=canvas.height/2, r=cx-8;
     ctx.clearRect(0,0,canvas.width,canvas.height); if(n<2) return; const slice=TAU/n; const label=n<=60;
     ctx.save(); ctx.translate(cx,cy); ctx.rotate(rotation);
     for(let i=0;i<n;i++){ const a0=i*slice; ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,r,a0,a0+slice); ctx.closePath();
       ctx.fillStyle=palette[i%palette.length]; ctx.fill(); ctx.strokeStyle="rgba(255,255,255,.9)"; ctx.lineWidth=n>120?1:4; ctx.stroke();
-      if(label){ ctx.save(); ctx.rotate(a0+slice/2); ctx.textAlign="right"; ctx.fillStyle="#fff";
-        ctx.font="600 "+Math.max(18,Math.min(38,520/n+12))+"px -apple-system,'SF Pro Text',Segoe UI,Roboto,sans-serif";
-        ctx.fillText("#"+items[i].seat+" "+items[i].name, r-26, 11); ctx.restore(); } }
+      if(label){ ctx.save(); ctx.rotate(a0+slice/2); ctx.textAlign="right"; ctx.fillStyle="#fff"; ctx.font="600 "+Math.max(18,Math.min(38,520/n+12))+"px -apple-system,Segoe UI,Roboto,sans-serif"; ctx.fillText("#"+items[i].seat+" "+items[i].name, r-26, 11); ctx.restore(); } }
     ctx.restore(); }
 
   function idxUnderPointer(slice){ return Math.floor((((1.5*Math.PI-rotation)%TAU+TAU)%TAU)/slice); }
   function spin(){ const items=claimed(); if(spinning||items.length<2) return; spinning=true; $("spin").disabled=true;
     const n=items.length, slice=TAU/n, w=randInt(n); const center=w*slice+slice/2; let finalMod=((1.5*Math.PI-center)%TAU+TAU)%TAU;
-    const start=rotation, target=start+(TAU-(start%TAU))+finalMod+6*TAU; const dur=5400, t0=performance.now(), ease=t=>1-Math.pow(1-t,3);
-    lastTickIdx=idxUnderPointer(slice);
-    (function frame(now){ const t=Math.min(1,(now-t0)/dur); rotation=start+(target-start)*ease(t); draw();
-      const ci=idxUnderPointer(slice); if(ci!==lastTickIdx){ lastTickIdx=ci; tick(); }
+    const start=rotation, target=start+(TAU-(start%TAU))+finalMod+6*TAU; const dur=5400, t0=performance.now(), ease=t=>1-Math.pow(1-t,3); lastTickIdx=idxUnderPointer(slice);
+    (function frame(now){ const t=Math.min(1,(now-t0)/dur); rotation=start+(target-start)*ease(t); draw(); const ci=idxUnderPointer(slice); if(ci!==lastTickIdx){ lastTickIdx=ci; tick(); }
       if(t<1) requestAnimationFrame(frame); else { rotation=target%TAU; spinning=false; updateCounts(); finish(items[w],n); } })(t0); }
 
-  function finish(win,n){ const now=new Date();
-    $("certEmpty").style.display="none"; $("certBox").style.display="block";
-    $("cDraw").textContent="SR-"+now.getTime().toString(36).toUpperCase(); $("cRange").textContent=n+" seats";
-    $("cResult").textContent="#"+win.seat; $("cWinner").textContent=win.name;
-    $("cType").textContent=win.type==="free"?"Free seat (random)":"Paid";
+  function finish(win,n){ const now=new Date(); $("certEmpty").style.display="none"; $("certBox").style.display="block";
+    $("cDraw").textContent="SR-"+now.getTime().toString(36).toUpperCase(); $("cRange").textContent=n+" seats"; $("cResult").textContent="#"+win.seat;
+    $("cWinner").textContent=win.name; $("cType").textContent=win.type==="free"?"Free seat (random)":"Paid";
     $("cTime").textContent=now.toISOString().replace("T"," ").replace(/\.\d+Z$/,"Z"); $("cSig").textContent=mockSig();
     $("mWho").textContent=win.name; $("mSub").textContent="Seat #"+win.seat+" · "+(win.type==="free"?"free entry":"paid entry")+" · verified fair";
     $("overlay").classList.add("show"); confetti(); }
@@ -279,13 +300,12 @@
   function confetti(){ sizeCf(); cf.classList.add("show"); const parts=[];
     for(let i=0;i<170;i++) parts.push({ x:innerWidth/2+(Math.random()-.5)*220, y:innerHeight*0.26, vx:(Math.random()-.5)*12, vy:Math.random()*-13-4, g:.34, r:Math.random()*7+4, c:palette[i%palette.length], rot:Math.random()*TAU, vr:(Math.random()-.5)*.3 });
     cancelAnimationFrame(cfRAF); const t0=performance.now();
-    (function run(now){ const el=now-t0; cfx.clearRect(0,0,cf.width,cf.height);
-      parts.forEach(p=>{ p.vy+=p.g; p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr; cfx.save(); cfx.translate(p.x,p.y); cfx.rotate(p.rot); cfx.fillStyle=p.c; cfx.globalAlpha=Math.max(0,1-el/2700); cfx.fillRect(-p.r/2,-p.r/2,p.r,p.r*.6); cfx.restore(); });
+    (function run(now){ const el=now-t0; cfx.clearRect(0,0,cf.width,cf.height); parts.forEach(p=>{ p.vy+=p.g; p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr; cfx.save(); cfx.translate(p.x,p.y); cfx.rotate(p.rot); cfx.fillStyle=p.c; cfx.globalAlpha=Math.max(0,1-el/2700); cfx.fillRect(-p.r/2,-p.r/2,p.r,p.r*.6); cfx.restore(); });
       if(el<2700) cfRAF=requestAnimationFrame(run); else { cf.classList.remove("show"); cfx.clearRect(0,0,cf.width,cf.height); } })(t0); }
 
-  $("apply").onclick=buildBoard;
-  ["capacity","freeLimit"].forEach(id=>$(id).onchange=buildBoard);
-  $("claimFree").onclick=claimFree; $("claimPaidRand").onclick=claimPaidRand; $("claimPaidPick").onclick=()=>setPick(true);
+  $("apply").onclick=buildBoard; ["capacity","freeLimit"].forEach(id=>$(id).onchange=buildBoard);
+  $("claimFree").onclick=claimFree; $("claimPaidRand").onclick=claimPaidRand; $("claimPaidPick").onclick=claimPaidPick;
+  $("pickNum").addEventListener("keydown",e=>{ if(e.key==="Enter") claimPaidPick(); });
   $("pickCancel").onclick=()=>setPick(false); $("sample").onclick=sampleFill; $("spin").onclick=spin;
   $("mClose").onclick=()=>$("overlay").classList.remove("show"); $("mAgain").onclick=()=>{ $("overlay").classList.remove("show"); setTimeout(spin,260); };
   $("overlay").onclick=e=>{ if(e.target===$("overlay")) $("overlay").classList.remove("show"); };
