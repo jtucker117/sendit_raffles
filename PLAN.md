@@ -23,8 +23,8 @@ cannot rig the outcome.
 Entries = claimed seats only (host can't add anyone). A raffle is a numbered
 seat board; host sets **total seats (up to 1000)** and a **free-seat cap**.
 
-- **Free seats** — capped per raffle; **randomly assigned** to an open seat
-  number (player can't choose). The genuine free-entry path.
+- **Free seats** — capped per raffle AND **limited to 1 per player**; **randomly
+  assigned** to an open seat number (player can't choose). The genuine free-entry path.
 - **Paid seats** — the player chooses: **pick a specific open seat**, or
   **random assign**. Payment is the host-handles model (Venmo/Zelle/Cash
   App/PayPal, host confirms).
