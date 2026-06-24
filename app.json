@@ -7,16 +7,27 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "icon": "./assets/logo.png",
+    "splash": {
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0a0c"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.senditraffles"
     },
     "android": {
-      "package": "app.senditraffles"
+      "package": "app.senditraffles",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/logo.png",
+        "backgroundColor": "#0a0a0c"
+      }
     },
     "web": {
       "bundler": "metro",
-      "output": "static"
+      "output": "static",
+      "favicon": "./assets/logo.png"
     },
     "plugins": ["expo-router"]
   }

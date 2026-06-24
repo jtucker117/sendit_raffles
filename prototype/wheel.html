@@ -5,15 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Send It Raffles</title>
 <style>
+  /* Send It Raffles brand — Texas red / black / navy / chrome */
   :root, [data-theme="light"]{
-    --bg:#f2f2f7; --bg2:#ffffff; --card:#ffffff; --ink:#1c1c1e; --muted:#8a8a8e; --hair:rgba(60,60,67,.12);
-    --accent:#007aff; --accent-soft:rgba(0,122,255,.10); --green:#34c759; --green-soft:rgba(52,199,89,.14);
-    --shadow:0 .5px 1px rgba(0,0,0,.04), 0 10px 34px rgba(0,0,0,.07); --glass:rgba(242,242,247,.72);
+    --bg:#f3f3f5; --bg2:#ffffff; --card:#ffffff; --ink:#15151a; --muted:#6b7280; --hair:rgba(0,0,0,.1);
+    --accent:#d11f2d; --accent-soft:rgba(209,31,45,.10); --navy:#16243f;
+    --green:#1f9d57; --green-soft:rgba(31,157,87,.12);
+    --shadow:0 .5px 1px rgba(0,0,0,.05), 0 10px 34px rgba(0,0,0,.08); --glass:rgba(243,243,245,.75);
   }
   [data-theme="dark"]{
-    --bg:#000; --bg2:#1c1c1e; --card:#1c1c1e; --ink:#f5f5f7; --muted:#98989f; --hair:rgba(120,120,128,.30);
-    --accent:#0a84ff; --accent-soft:rgba(10,132,255,.18); --green:#30d158; --green-soft:rgba(48,209,88,.20);
-    --shadow:0 .5px 1px rgba(0,0,0,.5), 0 14px 40px rgba(0,0,0,.6); --glass:rgba(20,20,22,.66);
+    --bg:#0a0a0c; --bg2:#14151a; --card:#14151a; --ink:#f3f4f6; --muted:#9aa0a6; --hair:rgba(255,255,255,.12);
+    --accent:#e6232f; --accent-soft:rgba(230,35,47,.18); --navy:#1b2b4d;
+    --green:#2fbf6b; --green-soft:rgba(47,191,107,.20);
+    --shadow:0 .5px 1px rgba(0,0,0,.6), 0 16px 44px rgba(0,0,0,.7); --glass:rgba(10,10,12,.72);
   }
   *{ box-sizing:border-box; } html,body{ margin:0; min-height:100%; }
   body{ font-family:-apple-system,"SF Pro Display","SF Pro Text",system-ui,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
@@ -21,7 +24,7 @@
   .wrap{ max-width:1060px; margin:0 auto; padding:0 20px 44px; }
   header{ position:sticky; top:0; z-index:40; display:flex; align-items:center; gap:12px; padding:16px 20px; margin:0 -20px 22px;
     background:var(--glass); -webkit-backdrop-filter:saturate(180%) blur(20px); backdrop-filter:saturate(180%) blur(20px); border-bottom:.5px solid var(--hair); }
-  .logo{ width:40px; height:40px; border-radius:12px; background:linear-gradient(150deg,var(--accent),#5ac8fa); display:grid; place-items:center; color:#fff; font-weight:800; font-size:16px; box-shadow:0 4px 12px rgba(0,122,255,.35); }
+  .logo{ width:48px; height:48px; border-radius:12px; object-fit:contain; display:block; }
   h1{ font-size:19px; margin:0; font-weight:700; letter-spacing:-.02em; } .tag{ color:var(--muted); font-size:12.5px; }
   .spacer{ flex:1; } .seg{ display:flex; gap:2px; padding:2px; background:var(--bg2); border:.5px solid var(--hair); border-radius:11px; }
   .iconbtn{ width:34px; height:30px; border:0; border-radius:9px; background:transparent; color:var(--ink); cursor:pointer; font-size:15px; display:grid; place-items:center; transition:transform .08s,background .15s; }
@@ -104,7 +107,7 @@
   <div id="toast"></div>
   <div class="wrap">
     <header>
-      <div class="logo">SR</div>
+      <img class="logo" src="logo.png" alt="Send It Raffles" />
       <div><h1>Send It Raffles</h1><div class="tag">Provably-fair draws</div></div>
       <div class="spacer"></div>
       <div class="seg"><button class="iconbtn" id="sound" title="Spin sound">🔇</button><button class="iconbtn" id="theme" title="Appearance">🌙</button></div>
@@ -197,13 +200,13 @@
 
 <script>
 (function(){
-  const palette=["#007aff","#34c759","#ff9f0a","#ff3b30","#af52de","#5ac8fa","#ff2d55","#30d158","#ff9500","#0a84ff"];
+  const palette=["#d11f2d","#16243f","#3a3f47","#8c1b24","#26406e","#5b6470","#a01018","#23262e","#b22230","#1e2d4d"];
   const $=id=>document.getElementById(id);
   const canvas=$("wheel"), ctx=canvas.getContext("2d"); const TAU=Math.PI*2; const GRID_MAX=120;
   let rotation=0, spinning=false, soundOn=false, audio=null, lastTickIdx=-1;
   let seats=[], seatEls=[], playerNo=0, pickMode=false; const freeOwners=new Set();
 
-  const root=document.documentElement; const savedTheme=localStorage.getItem("sr.theme")||"light";
+  const root=document.documentElement; const savedTheme=localStorage.getItem("sr.theme")||"dark";
   $("theme").onclick=()=>setTheme(root.getAttribute("data-theme")==="dark"?"light":"dark");
   function setTheme(t){ root.setAttribute("data-theme",t); localStorage.setItem("sr.theme",t); $("theme").textContent=t==="dark"?"☀️":"🌙"; draw(); }
   $("sound").onclick=()=>{ soundOn=!soundOn; $("sound").textContent=soundOn?"🔊":"🔇"; $("sound").classList.toggle("active",soundOn); };
