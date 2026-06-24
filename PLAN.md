@@ -19,18 +19,20 @@ cannot rig the outcome.
 - **Player** — sign in, browse open raffles, **buy ticket(s)/seat(s)**, watch
   the draw live, see if they won, verify the result.
 
-## Ticketing & seats (host-configurable per raffle)
-Entries = purchased tickets only. The host picks one **seat mode** per raffle:
-1. **Manual select** — fixed seat board (e.g. 1–100); players pick their own
-   open seat number(s), like choosing seats at a venue.
-2. **Random assign** — player buys N tickets; the system assigns random seat
-   numbers from the remaining open seats.
-3. **No seats** — just a quantity of tickets; each ticket is an entry, no
-   numbering.
+## Ticketing & seats
+Entries = claimed seats only (host can't add anyone). A raffle is a numbered
+seat board; host sets **total seats (up to 1000)** and a **free-seat cap**.
 
-Host also sets **capacity** (total seats/tickets) and **ticket price**. The
-**wheel/draw is over the sold tickets** (or sold seats); Random.org's signed
-result picks the winning ticket → its owner wins.
+- **Free seats** — capped per raffle; **randomly assigned** to an open seat
+  number (player can't choose). The genuine free-entry path.
+- **Paid seats** — the player chooses: **pick a specific open seat**, or
+  **random assign**. Payment is the host-handles model (Venmo/Zelle/Cash
+  App/PayPal, host confirms).
+- A claimed seat **shows the owner's name** on the board.
+- **All players log in with a username + password** (Supabase Auth).
+
+The **wheel/draw is over the claimed seats**; Random.org's signed result picks
+the winning seat → its owner wins.
 
 ## Proposed stack (web + mobile, one codebase)
 - **Expo (React Native + Expo Router)** → iOS, Android, and web from one codebase.
@@ -51,12 +53,12 @@ result picks the winning ticket → its owner wins.
 
 ## Data model (first cut)
 - `profiles` (id, role: host|player, display_name)
-- `raffles` (id, host_id, title, prize, seat_mode: manual|random|none,
-  capacity, ticket_price_cents, status: draft|open|sold_out|drawing|complete,
-  created_at)
-- `tickets` (id, raffle_id, owner_id, seat_number nullable, status:
-  available|held|sold, purchased_at, payment_ref) — a sold ticket IS an entry;
-  `seat_number` is null in "no seats" mode
+- `raffles` (id, host_id, title, prize, capacity (≤1000), free_seat_limit,
+  entry_word: donation|purchase|entry, amount_cents, status:
+  draft|open|sold_out|drawing|complete, created_at)
+- `tickets` (id, raffle_id, owner_id, seat_number, type: free|paid,
+  assigned: random|picked, status: held|confirmed, claimed_at, payment_ref) —
+  a confirmed ticket IS an entry; free seats are always assigned=random
 - `draws` (id, raffle_id, winning_ticket_id, randomorg_signed_json, verify_url,
   drawn_at)
 - RLS: players can buy/hold open tickets and read their own + the public raffle
