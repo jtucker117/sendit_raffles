@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Send It Raffles",
+    "slug": "sendit-raffles",
+    "scheme": "senditraffles",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.senditraffles"
+    },
+    "android": {
+      "package": "app.senditraffles"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": ["expo-router"]
+  }
+}
