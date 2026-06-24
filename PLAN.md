@@ -105,7 +105,9 @@ result picks the winning ticket → its owner wins.
 - **Capacity:** host sets it per raffle.
 - **Payments:** host-handles + manual confirm (Venmo/Zelle/Cash App/PayPal),
   "Purchase/Donation/Entry" wording configurable. Stripe later/optional.
-- **Free alternate entry (AMOE):** deferred; data model leaves room.
+- **Free seats:** enabled — host sets a **per-raffle cap** on how many seats can
+  be claimed free (the rest are paid/donation). This is the genuine free-entry
+  path. Data model: `raffles.free_seat_limit`, `tickets.type = free|paid`.
 
 ## Still open
 - **Firearms prizes?** affects app-store path + age/geo/FFL rules (mixed/unsure
