@@ -215,7 +215,7 @@ export default function RaffleDetail() {
 
   return (
     <View style={styles.screen}>
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: canPick && selected.length > 0 ? 170 : 48 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: BOTTOM_NAV_HEIGHT + (canPick && selected.length > 0 ? 110 : 40) }}>
       {raffle.cover_url ? <Image source={{ uri: raffle.cover_url }} style={styles.cover} /> : <View style={[styles.cover, styles.coverPh]} />}
       <View style={styles.pad}>
         <Text style={styles.title}>{raffle.title}</Text>

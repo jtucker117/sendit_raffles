@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/lib/supabase";
 import { radius, AppColors } from "@/lib/theme";
+import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 
 interface Row {
   id: string;
@@ -57,7 +58,7 @@ export default function AdminUsers() {
   const players = rows.filter((r) => r.role === "player").length;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: 48 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: BOTTOM_NAV_HEIGHT + 40 }}>
       <Text style={styles.h1}>🛡️ All Accounts</Text>
       <Text style={styles.sub}>{rows.length} total · {hosts} hosts · {players} players</Text>
 

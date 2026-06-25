@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/lib/supabase";
 import { radius, AppColors } from "@/lib/theme";
+import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 
 interface Raffle { id: string; host_id: string; title: string; status: string; amount_cents: number; }
 interface Ticket { id: string; seat_number: number; owner_id: string; type: "free" | "paid"; status: string; paid_method: string | null; }
@@ -94,7 +95,7 @@ export default function ManageEntries() {
   const list = tab === "pending" ? pending : confirmed;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: 48 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: BOTTOM_NAV_HEIGHT + 40 }}>
       <Text style={styles.eyebrow}>MANAGE ENTRIES</Text>
       <Text style={styles.title}>{raffle.title}</Text>
       <Text style={styles.sub}>Seat price {money(raffle.amount_cents)} · confirm payments, remove or refund players.</Text>

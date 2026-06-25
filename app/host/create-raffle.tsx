@@ -9,6 +9,7 @@ import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/lib/supabase";
 import { pickAndUploadImage } from "@/lib/upload";
 import { radius, AppColors } from "@/lib/theme";
+import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 
 const TERMS = ["Donation", "Purchase", "Entry"] as const;
 
@@ -94,7 +95,7 @@ export default function CreateRaffleScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: 48 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: BOTTOM_NAV_HEIGHT + 40 }}>
       <Text style={styles.h1}>🎡 Create Raffle</Text>
 
       {/* Cover */}
