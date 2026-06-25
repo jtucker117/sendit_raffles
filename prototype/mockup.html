@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Send It Raffles — Hi-Fi Mockup</title>
+<style>
+  /* ---- Brand tokens (flip --accent to #f4791f for the orange wireframe look) ---- */
+  :root{
+    --accent:#e6232f;      /* Send It red */
+    --accent-dark:#b3151f;
+    --navy:#1b2b4d;
+    --ink:#0d0f14;
+    --bg-app:#0a0a0c;      /* dark screens */
+    --bg-light:#f4f5f7;    /* light marketplace */
+    --card-light:#ffffff;
+    --line-light:#e6e8ec;
+    --text-dark:#0d0f14;
+    --muted-dark:#6b7280;
+    --text-light:#f3f4f6;
+    --muted-light:#9aa0a6;
+    --surface-d:#14151a;
+    --surfaceAlt-d:#1b1d24;
+    --border-d:#262932;
+    --green:#2fbf6b;
+    --radius:16px;
+    --shadow:0 6px 24px rgba(0,0,0,.10);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+  body{background:#101216;color:#fff;}
+
+  /* ---- Chrome / screen switcher ---- */
+  .chrome{position:sticky;top:0;z-index:50;background:#16181d;border-bottom:1px solid #23262d;padding:10px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+  .chrome .brand{display:flex;align-items:center;gap:9px;font-weight:800;letter-spacing:-.3px;}
+  .chrome .brand img{width:26px;height:26px;border-radius:6px;}
+  .chrome .tag{color:#7c828c;font-size:12px;font-weight:600;}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto;}
+  .tabs button{background:#22252c;border:1px solid #2c3038;color:#c8ccd2;font-size:12.5px;font-weight:700;padding:7px 12px;border-radius:999px;cursor:pointer;transition:.15s;}
+  .tabs button:hover{border-color:#3a3f49;}
+  .tabs button.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+  .stage{max-width:1280px;margin:0 auto;padding:28px 16px 80px;}
+  .screen{display:none;}
+  .screen.show{display:block;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+  .screen-h{display:flex;align-items:baseline;gap:10px;margin:0 0 16px;}
+  .screen-h h2{font-size:18px;font-weight:800;}
+  .screen-h span{color:#7c828c;font-size:13px;}
+
+  /* phone frame */
+  .phones{display:flex;gap:28px;flex-wrap:wrap;}
+  .phone{width:340px;background:#000;border-radius:38px;padding:10px;box-shadow:0 18px 50px rgba(0,0,0,.5);}
+  .phone .scr{border-radius:30px;overflow:hidden;height:720px;position:relative;}
+  .phone .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:130px;height:24px;background:#000;border-radius:0 0 16px 16px;z-index:30;}
+
+  /* ===== light marketplace ===== */
+  .light{background:var(--bg-light);color:var(--text-dark);height:100%;overflow:auto;}
+  .webframe{background:var(--bg-light);color:var(--text-dark);border-radius:var(--radius);overflow:hidden;border:1px solid var(--line-light);box-shadow:var(--shadow);}
+  .topbar{display:flex;align-items:center;gap:14px;padding:14px 18px;background:#fff;border-bottom:1px solid var(--line-light);}
+  .logo{display:flex;align-items:center;gap:8px;font-weight:900;letter-spacing:-.5px;font-size:18px;}
+  .logo img{width:30px;height:30px;border-radius:7px;}
+  .search{flex:1;background:var(--bg-light);border:1px solid var(--line-light);border-radius:999px;padding:10px 16px;color:var(--muted-dark);font-size:14px;}
+  .navlinks{display:flex;gap:18px;color:#3a3f49;font-size:14px;font-weight:600;}
+  .btn{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:800;font-size:14px;cursor:pointer;}
+  .btn.sm{padding:8px 13px;font-size:13px;}
+  .btn.block{width:100%;}
+  .btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent);}
+  .btn.dark{background:#0d0f14;color:#fff;}
+  .avatar{width:34px;height:34px;border-radius:50%;background:var(--navy);}
+
+  /* hero / featured */
+  .hero{margin:18px;border-radius:var(--radius);overflow:hidden;position:relative;background:linear-gradient(135deg,#243043,#1b2b4d);height:230px;color:#fff;display:flex;align-items:flex-end;}
+  .hero .img-note{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.35);font-weight:700;letter-spacing:1px;}
+  .hero .info{position:relative;padding:18px;width:100%;background:linear-gradient(to top,rgba(0,0,0,.6),transparent);}
+  .pill{display:inline-block;background:var(--accent);color:#fff;font-size:12px;font-weight:800;padding:5px 10px;border-radius:999px;}
+  .pill.live{background:#fff;color:var(--accent);}
+  .pill.soft{background:rgba(255,255,255,.16);color:#fff;}
+
+  .chips{display:flex;gap:8px;flex-wrap:wrap;padding:0 18px 4px;}
+  .chip{background:#fff;border:1px solid var(--line-light);border-radius:999px;padding:7px 14px;font-size:13px;font-weight:700;color:#3a3f49;cursor:pointer;}
+  .chip.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+  .section-t{display:flex;align-items:center;justify-content:space-between;padding:18px 18px 10px;}
+  .section-t h3{font-size:15px;font-weight:800;}
+  .section-t a{color:var(--accent);font-size:13px;font-weight:700;text-decoration:none;}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;padding:0 18px 18px;}
+  .card{background:var(--card-light);border:1px solid var(--line-light);border-radius:14px;overflow:hidden;cursor:pointer;transition:.15s;}
+  .card:hover{transform:translateY(-3px);box-shadow:var(--shadow);}
+  .card .cimg{height:130px;background:linear-gradient(135deg,#e9ecf1,#dfe3ea);display:flex;align-items:center;justify-content:center;color:#aab0ba;font-size:12px;font-weight:700;letter-spacing:1px;position:relative;}
+  .card .badge{position:absolute;top:8px;left:8px;background:var(--accent);color:#fff;font-size:11px;font-weight:800;padding:4px 8px;border-radius:999px;}
+  .card .cbody{padding:12px;}
+  .card .ctitle{font-size:14px;font-weight:800;}
+  .card .csub{font-size:12px;color:var(--muted-dark);margin-top:2px;}
+  .bar{height:6px;border-radius:999px;background:#eceef2;margin-top:10px;overflow:hidden;}
+  .bar i{display:block;height:100%;background:var(--accent);}
+  .crow{display:flex;justify-content:space-between;align-items:center;margin-top:9px;font-size:12px;font-weight:700;}
+  .crow .price{color:var(--text-dark);}
+  .crow .left{color:var(--muted-dark);font-weight:600;}
+
+  /* mobile detail */
+  .gallery{height:230px;background:linear-gradient(135deg,#e9ecf1,#dfe3ea);display:flex;align-items:center;justify-content:center;color:#aab0ba;font-weight:700;letter-spacing:1px;position:relative;}
+  .gallery .back{position:absolute;top:14px;left:14px;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;font-weight:800;}
+  .pad{padding:16px;}
+  .verified{display:inline-flex;align-items:center;gap:6px;color:var(--green);font-size:12px;font-weight:800;}
+  .h-title{font-size:20px;font-weight:900;margin-top:8px;}
+  .countdown{display:flex;gap:8px;margin:14px 0;}
+  .cd{flex:1;background:#fff;border:1px solid var(--line-light);border-radius:12px;padding:10px 0;text-align:center;}
+  .cd b{font-size:22px;font-weight:900;display:block;}
+  .cd span{font-size:10px;color:var(--muted-dark);letter-spacing:1px;}
+  .progress-row{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--muted-dark);margin-bottom:6px;}
+  .seatgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin-top:6px;}
+  .seat{aspect-ratio:1;border-radius:9px;background:#eceef2;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#9aa0a6;cursor:pointer;}
+  .seat.sel{background:var(--accent);color:#fff;}
+  .seat.taken{background:#d9dde3;color:#b3b8c0;}
+  .stickybar{position:absolute;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line-light);padding:12px 16px;display:flex;gap:10px;align-items:center;}
+  .stepper{display:flex;align-items:center;border:1px solid var(--line-light);border-radius:10px;overflow:hidden;}
+  .stepper button{background:#fff;border:none;width:38px;height:42px;font-size:18px;font-weight:800;cursor:pointer;color:#3a3f49;}
+  .stepper span{width:36px;text-align:center;font-weight:800;}
+
+  /* ===== dark draw ===== */
+  .dark{background:var(--bg-app);color:var(--text-light);height:100%;overflow:auto;position:relative;}
+  .dark.center{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;}
+  .eyebrow{color:var(--accent);font-size:13px;font-weight:900;letter-spacing:2px;}
+  .big-count{font-size:84px;font-weight:900;letter-spacing:-2px;line-height:1;margin:10px 0;}
+  .draw-sub{color:var(--muted-light);font-size:14px;max-width:260px;}
+  .wheel-wrap{width:280px;height:280px;position:relative;margin:18px auto;}
+  .pointer{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-top:24px solid #fff;z-index:5;}
+  .wheel{width:280px;height:280px;border-radius:50%;position:relative;
+    background:conic-gradient(var(--accent) 0 25%, var(--navy) 25% 50%, var(--accent-dark) 50% 75%, #243043 75% 100%);
+    box-shadow:0 0 0 6px #fff, 0 18px 50px rgba(0,0,0,.6);animation:spin 6s cubic-bezier(.17,.67,.2,1) forwards;}
+  @keyframes spin{from{transform:rotate(0);}to{transform:rotate(1980deg);}}
+  .hub{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:84px;height:84px;border-radius:50%;background:#000;border:3px solid #fff;display:flex;align-items:center;justify-content:center;}
+  .hub img{width:64px;height:64px;border-radius:50%;}
+  .winner-name{font-size:34px;font-weight:900;margin-top:8px;}
+  .cert{background:var(--surfaceAlt-d);border:1px solid var(--border-d);border-radius:12px;padding:14px;margin-top:18px;text-align:left;width:100%;max-width:320px;}
+  .cert h4{font-size:13px;font-weight:800;margin-bottom:8px;}
+  .cert .r{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;color:var(--muted-light);}
+  .cert .r b{color:#fff;font-weight:700;}
+  .cert .verify{color:var(--accent);font-size:13px;font-weight:800;margin-top:10px;display:inline-block;}
+
+  /* spectator */
+  .stage-grid{display:grid;grid-template-columns:1.3fr .7fr;gap:0;height:100%;}
+  .stage-left{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;border-right:1px solid var(--border-d);}
+  .stage-right{padding:24px;overflow:auto;}
+  .live-dot{display:inline-flex;align-items:center;gap:7px;color:var(--accent);font-weight:900;font-size:13px;letter-spacing:1px;}
+  .live-dot i{width:9px;height:9px;border-radius:50%;background:var(--accent);display:inline-block;animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+  .entrant{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--border-d);font-size:14px;}
+  .entrant span{color:var(--muted-light);}
+
+  /* generic dark cards for manage/create/profile */
+  .dcard{background:var(--surface-d);border:1px solid var(--border-d);border-radius:14px;padding:16px;margin:0 16px 14px;}
+  .label{color:var(--muted-light);font-size:12px;font-weight:700;margin-bottom:7px;display:block;}
+  .input{background:var(--surfaceAlt-d);border:1px solid var(--border-d);border-radius:10px;padding:12px;color:#fff;font-size:14px;width:100%;}
+  .seg{display:flex;gap:7px;}
+  .seg div{flex:1;text-align:center;padding:10px;border-radius:10px;border:1px solid var(--border-d);font-size:13px;font-weight:700;color:#c8ccd2;background:var(--surfaceAlt-d);}
+  .seg div.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .mrow{display:flex;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--border-d);}
+  .mrow .nm{font-weight:800;font-size:14px;}
+  .mrow .mt{color:var(--muted-light);font-size:12px;}
+  .tagpill{padding:7px 12px;border-radius:999px;font-size:12px;font-weight:800;}
+  .tagpill.green{background:rgba(47,191,107,.16);color:var(--green);}
+  .tagpill.redo{border:1px solid var(--accent);color:var(--accent);}
+
+  .note{color:#7c828c;font-size:12px;margin:10px 16px 0;line-height:1.5;}
+  .hint-light{color:var(--muted-dark);font-size:12px;}
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <div class="brand"><img src="../assets/logo.png" alt="">Send It Raffles <span class="tag">· hi-fi mockup</span></div>
+  <div class="tabs" id="tabs">
+    <button data-s="browse" class="active">Browse (web)</button>
+    <button data-s="detail">Raffle detail</button>
+    <button data-s="lobby">Draw lobby</button>
+    <button data-s="wheel">Wheel spin</button>
+    <button data-s="winner">Winner</button>
+    <button data-s="spectator">Spectator stage</button>
+    <button data-s="manage">Manage entries</button>
+    <button data-s="create">Create raffle</button>
+    <button data-s="profile">Profile</button>
+  </div>
+</div>
+
+<div class="stage">
+
+  <!-- ============ A · BROWSE (web, light) ============ -->
+  <section class="screen show" id="browse">
+    <div class="screen-h"><h2>Browse / Discover</h2><span>web · card-grid marketplace</span></div>
+    <div class="webframe">
+      <div class="topbar">
+        <div class="logo"><img src="../assets/logo.png" alt="">SEND IT</div>
+        <div class="search">Search raffles, prizes, hosts…</div>
+        <div class="navlinks"><span>Discover</span><span>Live</span><span>My tickets</span></div>
+        <button class="btn sm" onclick="go('create')">+ Host</button>
+        <div class="avatar"></div>
+      </div>
+
+      <div class="hero">
+        <div class="img-note">FEATURED PRIZE IMAGE</div>
+        <div class="info">
+          <span class="pill live">● LIVE · ends 04:21</span>
+          <div style="font-size:24px;font-weight:900;margin-top:10px;">Glock 19 Gen5 — Spring Send It</div>
+          <div style="display:flex;gap:10px;align-items:center;margin-top:10px;">
+            <button class="btn sm" onclick="go('detail')">Enter · $5</button>
+            <span class="pill soft">412 entrants</span>
+            <span class="pill soft">87% sold</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="chips">
+        <div class="chip active">All</div><div class="chip">Firearms</div><div class="chip">Cash</div>
+        <div class="chip">Optics</div><div class="chip">Gear</div><div class="chip">Charity</div><div class="chip">Ending soon</div>
+      </div>
+
+      <div class="section-t"><h3>Ending soon</h3><a href="#">See all →</a></div>
+      <div class="grid">
+        <div class="card" onclick="go('detail')"><div class="cimg">PRIZE<div class="badge">3h left</div></div><div class="cbody"><div class="ctitle">Daniel Defense DDM4</div><div class="csub">Hosted by West TX Outdoors</div><div class="bar"><i style="width:88%"></i></div><div class="crow"><span class="price">$10 / ticket</span><span class="left">12 left</span></div></div></div>
+        <div class="card" onclick="go('detail')"><div class="cimg">PRIZE</div><div class="cbody"><div class="ctitle">$2,000 Cash Drop</div><div class="csub">Hosted by Lone Star Raffles</div><div class="bar"><i style="width:64%"></i></div><div class="crow"><span class="price">$5 / ticket</span><span class="left">71 left</span></div></div></div>
+        <div class="card" onclick="go('detail')"><div class="cimg">PRIZE</div><div class="cbody"><div class="ctitle">Vortex Optics Bundle</div><div class="csub">Hosted by Hill Country Co.</div><div class="bar"><i style="width:40%"></i></div><div class="crow"><span class="price">$3 / ticket</span><span class="left">120 left</span></div></div></div>
+        <div class="card" onclick="go('detail')"><div class="cimg">PRIZE<div class="badge">almost gone</div></div><div class="cbody"><div class="ctitle">Sig Sauer P365</div><div class="csub">Hosted by Send It Co.</div><div class="bar"><i style="width:96%"></i></div><div class="crow"><span class="price">$8 / ticket</span><span class="left">4 left</span></div></div></div>
+        <div class="card" onclick="go('detail')"><div class="cimg">PRIZE</div><div class="cbody"><div class="ctitle">YETI + Gear Kit</div><div class="csub">Hosted by Trail Crew</div><div class="bar"><i style="width:22%"></i></div><div class="crow"><span class="price">$2 / ticket</span><span class="left">210 left</span></div></div></div>
+        <div class="card" onclick="go('detail')"><div class="cimg">PRIZE</div><div class="cbody"><div class="ctitle">AR-15 Build Kit</div><div class="csub">Hosted by Send It Co.</div><div class="bar"><i style="width:55%"></i></div><div class="crow"><span class="price">$6 / ticket</span><span class="left">88 left</span></div></div></div>
+      </div>
+    </div>
+    <p class="note">Light, marketplace-style browse (à la your wireframe A1). Cards show price/ticket + a sold progress bar. Tap any card or “Enter” to see the raffle detail.</p>
+  </section>
+
+  <!-- ============ B · RAFFLE DETAIL (mobile, light) ============ -->
+  <section class="screen" id="detail">
+    <div class="screen-h"><h2>Raffle detail & ticket buying</h2><span>mobile · pick-your-seats + sticky buy bar</span></div>
+    <div class="phones">
+      <div class="phone"><div class="scr"><div class="notch"></div>
+        <div class="light">
+          <div class="gallery">PRIZE GALLERY<div class="back">‹</div></div>
+          <div class="pad" style="padding-bottom:90px;">
+            <span class="verified">✓ Verified host · Send It Co.</span>
+            <div class="h-title">Glock 19 Gen5</div>
+            <div class="hint-light" style="margin-top:4px;">Provably-fair draw · Random.org signed</div>
+            <div class="countdown">
+              <div class="cd"><b>02</b><span>DAYS</span></div><div class="cd"><b>14</b><span>HRS</span></div>
+              <div class="cd"><b>09</b><span>MIN</span></div><div class="cd"><b>33</b><span>SEC</span></div>
+            </div>
+            <div class="progress-row"><span>$50 / seat</span><span>2 of 50 seats left</span></div>
+            <div class="bar"><i style="width:96%"></i></div>
+            <div style="font-weight:800;margin:16px 0 8px;">Pick your seats</div>
+            <div class="seatgrid">
+              <div class="seat taken">1</div><div class="seat sel">2</div><div class="seat taken">3</div><div class="seat">4</div><div class="seat sel">5</div><div class="seat taken">6</div>
+              <div class="seat">7</div><div class="seat taken">8</div><div class="seat">9</div><div class="seat">10</div><div class="seat taken">11</div><div class="seat">12</div>
+            </div>
+            <div class="hint-light" style="margin-top:10px;">2 seats selected · or tap “lucky dip” for random.</div>
+            <button class="btn ghost block" style="margin-top:12px;">🎲 Lucky dip — random seat</button>
+          </div>
+          <div class="stickybar">
+            <div class="stepper"><button>–</button><span>2</span><button>+</button></div>
+            <button class="btn block" onclick="go('lobby')">Reserve #02, #05 — $100</button>
+          </div>
+        </div>
+      </div></div>
+
+      <div class="phone"><div class="scr"><div class="notch"></div>
+        <div class="dark">
+          <div style="height:230px;background:linear-gradient(135deg,#1b2b4d,#0d0f14);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.35);font-weight:700;letter-spacing:1px;position:relative;">
+            FULL-BLEED PRIZE
+            <span class="pill" style="position:absolute;top:14px;right:14px;">31% sold</span>
+            <div class="back" style="position:absolute;top:14px;left:14px;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;color:#fff;">‹</div>
+          </div>
+          <div style="padding:18px;">
+            <div style="font-size:22px;font-weight:900;">$2,000 Cash Drop</div>
+            <span class="verified" style="margin-top:6px;display:inline-flex;">✓ Verified host</span>
+            <div class="countdown">
+              <div class="cd" style="background:var(--surfaceAlt-d);border-color:var(--border-d);color:#fff;"><b>02</b><span>DAYS</span></div>
+              <div class="cd" style="background:var(--surfaceAlt-d);border-color:var(--border-d);color:#fff;"><b>14</b><span>HRS</span></div>
+              <div class="cd" style="background:var(--surfaceAlt-d);border-color:var(--border-d);color:#fff;"><b>09</b><span>MIN</span></div>
+            </div>
+            <div class="label" style="margin-top:10px;">Ticket bundle</div>
+            <input type="range" min="1" max="25" value="10" style="width:100%;accent-color:var(--accent);">
+            <div style="display:flex;justify-content:space-between;color:var(--muted-light);font-size:12px;"><span>1</span><span>10 tickets</span><span>25</span></div>
+            <button class="btn block" style="margin-top:16px;" onclick="go('lobby')">Enter with 10 — $20</button>
+          </div>
+        </div>
+      </div></div>
+    </div>
+    <p class="note">Two looks from your wireframe B — light scroll page with a sticky buy bar + seat picker (left), and the premium dark layout with a bundle slider (right). The seat picker is the Send It “purchased seats only” rule.</p>
+  </section>
+
+  <!-- ============ C1 · DRAW LOBBY ============ -->
+  <section class="screen" id="lobby">
+    <div class="screen-h"><h2>Pre-draw lobby</h2><span>the signature moment · notification + 60s countdown</span></div>
+    <div class="phones">
+      <div class="phone"><div class="scr"><div class="notch"></div>
+        <div class="dark center">
+          <span class="eyebrow">📣 DRAW STARTING SOON</span>
+          <div class="big-count" id="lobbyCount">00:42</div>
+          <p class="draw-sub">Get ready — the wheel spins when the timer hits zero. 50 entrants locked in.</p>
+          <div style="margin-top:24px;width:100%;max-width:280px;">
+            <div class="entrant" style="border-top:1px solid var(--border-d);">Tickets entered <span>50</span></div>
+            <div class="entrant">Prize <span>Glock 19 Gen5</span></div>
+            <div class="entrant">Method <span>Random.org signed</span></div>
+          </div>
+          <button class="btn" style="margin-top:24px;" onclick="go('wheel')">▶ Spin now (host)</button>
+        </div>
+      </div></div>
+    </div>
+    <p class="note">When the host runs the draw it notifies entrants and starts the 60-second countdown before the spin. (Live-updating demo timer.)</p>
+  </section>
+
+  <!-- ============ C2 · WHEEL SPIN ============ -->
+  <section class="screen" id="wheel">
+    <div class="screen-h"><h2>The spin</h2><span>provably-fair wheel · one slice per seat</span></div>
+    <div class="phones">
+      <div class="phone"><div class="scr"><div class="notch"></div>
+        <div class="dark center">
+          <span class="eyebrow">SPINNING…</span>
+          <div class="wheel-wrap">
+            <div class="pointer"></div>
+            <div class="wheel" id="spinWheel"></div>
+            <div class="hub"><img src="../assets/logo.png" alt=""></div>
+          </div>
+          <p class="draw-sub">50 seats on the wheel — the signed Random.org result decides where it lands.</p>
+          <button class="btn" style="margin-top:18px;" onclick="go('winner')">See winner →</button>
+        </div>
+      </div></div>
+    </div>
+    <p class="note">This mirrors the real app’s wheel (logo hub, top pointer, one slice per seat). Re-open this tab to replay the spin.</p>
+  </section>
+
+  <!-- ============ C2b · WINNER REVEAL ============ -->
+  <section class="screen" id="winner">
+    <div class="screen-h"><h2>Winner reveal</h2><span>+ verifiable certificate</span></div>
+    <div class="phones">
+      <div class="phone"><div class="scr"><div class="notch"></div>
+        <div class="dark center">
+          <span class="eyebrow">🎉 WE HAVE A WINNER</span>
+          <div class="wheel-wrap" style="width:200px;height:200px;">
+            <div class="pointer"></div>
+            <div class="wheel" style="width:200px;height:200px;animation:none;transform:rotate(220deg);"></div>
+            <div class="hub" style="width:64px;height:64px;"><img src="../assets/logo.png" style="width:48px;height:48px;" alt=""></div>
+          </div>
+          <div class="winner-name">Jordan T.</div>
+          <div class="draw-sub">Seat #27 of 50</div>
+          <div class="cert">
+            <h4>Random.org Signed Draw</h4>
+            <div class="r">Entrants <b>50</b></div>
+            <div class="r">Winning number <b>27</b></div>
+            <div class="r">Drawn <b>Jun 25, 8:02 PM</b></div>
+            <a class="verify" href="#">Verify on Random.org →</a>
+          </div>
+          <button class="btn block" style="margin-top:18px;max-width:320px;" onclick="go('browse')">Done</button>
+        </div>
+      </div></div>
+    </div>
+    <p class="note">The proof is the payoff — the winner card shows the signed certificate + a verify link, so no one (not even the host) can rig it.</p>
+  </section>
+
+  <!-- ============ C3 · SPECTATOR STAGE (web) ============ -->
+  <section class="screen" id="spectator">
+    <div class="screen-h"><h2>Spectator stage</h2><span>web / big screen · watch party</span></div>
+    <div class="webframe" style="background:var(--bg-app);border-color:var(--border-d);height:560px;">
+      <div class="stage-grid">
+        <div class="stage-left">
+          <span class="live-dot"><i></i>LIVE DRAW</span>
+          <div class="wheel-wrap" style="margin-top:24px;">
+            <div class="pointer"></div>
+            <div class="wheel"></div>
+            <div class="hub"><img src="../assets/logo.png" alt=""></div>
+          </div>
+          <div style="color:var(--muted-light);margin-top:22px;font-weight:700;letter-spacing:1px;">SHUFFLING 1,204 TICKETS…</div>
+        </div>
+        <div class="stage-right">
+          <div style="font-weight:900;font-size:15px;margin-bottom:6px;color:#fff;">Entrants <span style="color:var(--muted-light);font-weight:600;">· 1,204</span></div>
+          <div class="entrant">Jordan T. <span>#27</span></div>
+          <div class="entrant">Marcus R. <span>#103</span></div>
+          <div class="entrant">Bella K. <span>#418</span></div>
+          <div class="entrant">Devon W. <span>#762</span></div>
+          <div class="entrant">Sam P. <span>#955</span></div>
+          <div class="entrant">Riley H. <span>#1188</span></div>
+          <div class="entrant" style="color:var(--muted-light);">+ 1,198 more…</div>
+        </div>
+      </div>
+    </div>
+    <p class="note">Big-screen mode for live events — wheel on the left, scrolling entrants on the right, à la your wireframe C3.</p>
+  </section>
+
+  <!-- ============ MANAGE ENTRIES (host) ============ -->
+  <section class="screen" id="manage">
+    <div class="screen-h"><h2>Manage entries</h2><span>host · confirm payments, remove / refund</span></div>
+    <div class="phones">
+      <div class="phone"><div class="scr"><div class="notch"></div>
+        <div class="dark">
+          <div style="padding:16px;">
+            <span class="eyebrow">MANAGE ENTRIES</span>
+            <div style="font-size:22px;font-weight:900;margin-top:4px;">Glock 19 Gen5</div>
+            <div class="hint-light" style="color:var(--muted-light);margin-top:6px;">Seat price $50 · confirm payments, remove or refund.</div>
+            <div class="seg" style="margin-top:16px;"><div class="on">Pending · 2</div><div>Confirmed · 48</div></div>
+          </div>
+          <div class="dcard">
+            <div class="mrow" style="border-top:none;"><div style="flex:1;"><div class="nm">Marcus R.</div><div class="mt">Seat #14 · paid</div></div><div class="tagpill green">Confirm</div><div class="tagpill redo">Reject</div></div>
+            <div class="mrow"><div style="flex:1;"><div class="nm">Bella K.</div><div class="mt">Seat #22 · paid</div></div><div class="tagpill green">Confirm</div><div class="tagpill redo">Reject</div></div>
+          </div>
+          <p class="note">Tapping Confirm asks how they paid:</p>
+          <div class="dcard">
+            <div class="label">How were they paid?</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+              <div class="tagpill green">Venmo</div><div class="tagpill green">Cash App</div><div class="tagpill green">Card</div><div class="tagpill green">PayPal</div><div class="tagpill green">Zelle</div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+    <p class="note">Already built in the app — shown here in the new visual style. Pending/Confirmed tabs, confirm with payment method, reject/remove.</p>
+  </section>
+
+  <!-- ============ CREATE RAFFLE ============ -->
+  <section class="screen" id="create">
+    <div class="screen-h"><h2>Create raffle</h2><span>host · revenue goal → auto price</span></div>
+    <div class="phones">
+      <div class="phone"><div class="scr"><div class="notch"></div>
+        <div class="dark">
+          <div style="padding:16px;">
+            <div style="font-size:22px;font-weight:900;">Create raffle</div>
+            <div style="height:120px;border:1.5px dashed var(--border-d);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--muted-light);margin:16px 0;">📷 Add cover photo</div>
+          </div>
+          <div class="dcard" style="margin-top:0;">
+            <label class="label">Title</label><input class="input" value="Glock 19 Gen5">
+            <label class="label" style="margin-top:12px;">Prize</label><input class="input" value="Glock 19 Gen5 + 3 mags">
+            <div style="display:flex;gap:10px;margin-top:12px;">
+              <div style="flex:1;"><label class="label">Total seats</label><input class="input" value="50"></div>
+              <div style="flex:1;"><label class="label">Free seats</label><input class="input" value="0"></div>
+            </div>
+            <label class="label" style="margin-top:12px;">Revenue goal ($)</label><input class="input" value="2500">
+            <label class="label" style="margin-top:12px;">Price per seat</label><input class="input" value="50">
+            <div class="hint-light" style="color:var(--muted-light);margin-top:6px;">Goal $2,500 ÷ 50 paid seats = $50/seat → raises $2,500</div>
+            <button class="btn block" style="margin-top:16px;">Create raffle</button>
+          </div>
+        </div>
+      </div></div>
+    </div>
+    <p class="note">Revenue-goal math (÷ paid seats, rounded up) shown in the new style.</p>
+  </section>
+
+  <!-- ============ PROFILE ============ -->
+  <section class="screen" id="profile">
+    <div class="screen-h"><h2>Profile</h2><span>host · code, raffles, settings</span></div>
+    <div class="phones">
+      <div class="phone"><div class="scr"><div class="notch"></div>
+        <div class="dark">
+          <div style="height:140px;background:linear-gradient(135deg,#1b2b4d,#0d0f14);"></div>
+          <div style="text-align:center;margin-top:-44px;">
+            <div style="width:88px;height:88px;border-radius:50%;background:var(--navy);border:4px solid var(--bg-app);margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:900;">J</div>
+            <div style="font-size:20px;font-weight:900;margin-top:8px;">Send It Co.</div>
+            <div class="hint-light" style="color:var(--muted-light);">Host · Approved</div>
+          </div>
+          <div class="dcard" style="margin-top:16px;border-color:var(--accent);align-items:center;text-align:center;">
+            <div class="label" style="text-align:center;">YOUR HOST CODE</div>
+            <div style="color:var(--accent);font-size:26px;font-weight:900;letter-spacing:4px;">4F9A2C</div>
+            <div class="hint-light" style="color:var(--muted-light);margin-top:4px;">Share so players can follow you</div>
+          </div>
+          <div style="padding:0 16px;"><div style="font-weight:800;font-size:13px;letter-spacing:.5px;color:var(--muted-light);text-transform:uppercase;margin-bottom:10px;">Your raffles</div></div>
+          <div class="dcard" style="padding:0;overflow:hidden;">
+            <div style="height:90px;background:linear-gradient(135deg,#243043,#1b2b4d);"></div>
+            <div style="padding:12px;"><div class="nm">Glock 19 Gen5</div><div class="mt">48 / 50 seats · ends in 02:14</div></div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+    <p class="note">Profile with host code chip + raffle feed, restyled.</p>
+  </section>
+
+</div>
+
+<script>
+  const tabs = document.getElementById('tabs');
+  function go(id){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('show'));
+    document.getElementById(id).classList.add('show');
+    [...tabs.children].forEach(b=>b.classList.toggle('active', b.dataset.s===id));
+    window.scrollTo({top:0,behavior:'smooth'});
+    // restart wheel animation if entering the wheel screen
+    if(id==='wheel'){const w=document.getElementById('spinWheel'); if(w){w.style.animation='none'; void w.offsetWidth; w.style.animation='';}}
+  }
+  tabs.addEventListener('click', e=>{ if(e.target.dataset.s) go(e.target.dataset.s); });
+
+  // demo lobby countdown
+  let t=42;
+  setInterval(()=>{ const el=document.getElementById('lobbyCount'); if(!el)return; t=t>0?t-1:60; el.textContent='00:'+String(t).padStart(2,'0'); },1000);
+</script>
+</body>
+</html>
