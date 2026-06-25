@@ -102,19 +102,31 @@ export default function Home() {
 
         {loadingRaffles ? (
           <ActivityIndicator color={colors.red} style={{ marginTop: 40 }} />
-        ) : raffles.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>No raffles yet.</Text>
-            <Text style={styles.emptyHint}>{isHost ? "Create your first raffle." : "Follow a host with their code to see raffles."}</Text>
-            {!isHost && (
-              <TouchableOpacity style={styles.followBtn} onPress={() => router.push("/join")}>
-                <Text style={styles.followText}>Follow a host</Text>
-              </TouchableOpacity>
-            )}
-          </View>
         ) : (
           <>
-            {/* Featured hero */}
+            {/* Category chips (always visible — marketplace feel) */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+              {CATEGORIES.map((c) => (
+                <TouchableOpacity key={c} style={[styles.chip, cat === c && styles.chipActive]} onPress={() => setCat(c)}>
+                  <Text style={[styles.chipText, cat === c && styles.chipTextActive]}>{c}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {raffles.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <Image source={LOGO} style={styles.emptyLogo} resizeMode="contain" />
+                <Text style={styles.emptyText}>No raffles yet</Text>
+                <Text style={styles.emptyHint}>
+                  {isHost ? "Create your first raffle — add a cover photo and it’ll be featured up top." : "Follow a host with their code to see their raffles."}
+                </Text>
+                <TouchableOpacity style={styles.followBtn} onPress={() => router.push(isHost ? "/host/create-raffle" : "/join")}>
+                  <Text style={styles.followText}>{isHost ? "+ Create raffle" : "Follow a host"}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                {/* Featured hero */}
             {featured && (
               <TouchableOpacity activeOpacity={0.9} style={styles.hero} onPress={() => router.push(`/raffle/${featured.id}`)}>
                 {featured.cover_url
@@ -132,15 +144,6 @@ export default function Home() {
                 </View>
               </TouchableOpacity>
             )}
-
-            {/* Category chips (visual filter scaffold) */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-              {CATEGORIES.map((c) => (
-                <TouchableOpacity key={c} style={[styles.chip, cat === c && styles.chipActive]} onPress={() => setCat(c)}>
-                  <Text style={[styles.chipText, cat === c && styles.chipTextActive]}>{c}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
 
             {/* Grid */}
             <Text style={styles.sectionTitle}>{isHost ? "Open raffles" : "Raffles from hosts you follow"}</Text>
@@ -162,6 +165,8 @@ export default function Home() {
                 </TouchableOpacity>
               ))}
             </View>
+              </>
+            )}
           </>
         )}
       </ScrollView>
@@ -217,7 +222,9 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   cardLeft: { color: colors.muted, fontSize: 12, fontWeight: "600" },
 
   empty: { alignItems: "center", marginTop: 40, gap: 8 },
-  emptyText: { color: colors.text, fontSize: 16, fontWeight: "700" },
+  emptyCard: { alignItems: "center", gap: 10, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingVertical: 40, paddingHorizontal: 24, marginTop: 8 },
+  emptyLogo: { width: 64, height: 64, opacity: 0.55, marginBottom: 4 },
+  emptyText: { color: colors.text, fontSize: 18, fontWeight: "800" },
   emptyHint: { color: colors.muted, fontSize: 13, textAlign: "center", maxWidth: 280 },
   followBtn: { marginTop: 12, backgroundColor: colors.red, paddingVertical: 12, paddingHorizontal: 22, borderRadius: radius.md },
   followText: { color: colors.onAccent, fontWeight: "700" },
