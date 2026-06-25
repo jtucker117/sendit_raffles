@@ -26,7 +26,23 @@ Deno.serve(async (req) => {
     const RANDOM_ORG_KEY = Deno.env.get("RANDOM_ORG_KEY");
     if (!RANDOM_ORG_KEY) return json({ error: "RANDOM_ORG_KEY not set" }, 500);
 
-    const { raffle_id } = await req.json();
+    const body = await req.json();
+
+    // ----- Verify a past draw's signature (no auth needed; proves fairness) -----
+    if (body?.verify) {
+      const { random, signature } = body;
+      if (!random || !signature) return json({ error: "random + signature required" }, 400);
+      const vr = await fetch("https://api.random.org/json-rpc/4/invoke", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "verifySignature", params: { random, signature } }),
+      });
+      const vj = await vr.json();
+      if (vj.error) return json({ error: `Random.org: ${vj.error.message}` }, 502);
+      return json({ authentic: !!vj.result?.authenticity });
+    }
+
+    const raffle_id = body?.raffle_id;
     if (!raffle_id) return json({ error: "raffle_id required" }, 400);
 
     // Who is calling?

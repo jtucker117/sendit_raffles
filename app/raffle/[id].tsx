@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
-  Image, TextInput, Alert, Linking, Modal, useWindowDimensions,
+  Image, TextInput, Alert, Modal, useWindowDimensions,
 } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
@@ -23,14 +23,6 @@ interface Ticket { id: string; seat_number: number; owner_id: string; type: "fre
 type DrawStage = "idle" | "confirm" | "countdown" | "drawing" | "spinning" | "done" | "error";
 const COUNTDOWN_SECONDS = 60;
 
-// Deep-link to THIS draw's signed result on Random.org's public verification form.
-function verifyUrl(draw: any): string {
-  const r = draw?.randomorg_signed;
-  if (r?.random && r?.signature) {
-    return `https://api.random.org/signatures/form?format=json&random=${encodeURIComponent(JSON.stringify(r.random))}&signature=${encodeURIComponent(r.signature)}`;
-  }
-  return draw?.verify_url || "https://www.random.org/";
-}
 
 export default function RaffleDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -52,6 +44,8 @@ export default function RaffleDetail() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [draw, setDraw] = useState<any | null>(null);
   const [winnerName, setWinnerName] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [verifyMsg, setVerifyMsg] = useState<string | null>(null);
 
   // Draw event state
   const [stage, setStage] = useState<DrawStage>("idle");
@@ -211,6 +205,27 @@ export default function RaffleDetail() {
     router.replace("/");
   }
 
+  // Verify a completed draw's signature directly against Random.org's API.
+  async function verifyDraw() {
+    const r = draw?.randomorg_signed;
+    if (!r?.random || !r?.signature) return;
+    setVerifying(true); setVerifyMsg(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("draw", { body: { verify: true, random: r.random, signature: r.signature } });
+      if (error) {
+        let detail = error.message;
+        try { const b = await (error as any).context?.json?.(); if (b?.error) detail = b.error; } catch {}
+        throw new Error(detail);
+      }
+      if ((data as any)?.error) throw new Error((data as any).error);
+      setVerifyMsg((data as any).authentic ? "✓ Verified authentic by Random.org" : "⚠️ Could not verify this signature");
+    } catch (e: any) {
+      setVerifyMsg(`Verify failed: ${e?.message ?? "try again"}`);
+    } finally {
+      setVerifying(false);
+    }
+  }
+
   const wheelSize = Math.min(width - 64, 340);
   const drawStyle = raffle.draw_style ?? "wheel";
   const revealLabel = drawStyle === "scratch" ? "SCRATCH TO REVEAL" : drawStyle === "lotto" ? "DRAWING" : "SPINNING";
@@ -244,9 +259,10 @@ export default function RaffleDetail() {
                 <CertRow k="Drawn" v={new Date(draw.drawn_at).toLocaleString()} />
                 <Text style={styles.sigLabel}>SIGNATURE</Text>
                 <Text style={styles.sig} numberOfLines={1}>{draw.randomorg_signed?.signature ?? ""}</Text>
-                <TouchableOpacity onPress={() => Linking.openURL(verifyUrl(draw))}>
-                  <Text style={styles.verify}>Verify this draw on Random.org →</Text>
+                <TouchableOpacity onPress={verifyDraw} disabled={verifying}>
+                  <Text style={styles.verify}>{verifying ? "Verifying…" : "Verify with Random.org"}</Text>
                 </TouchableOpacity>
+                {verifyMsg && <Text style={styles.verifyMsg}>{verifyMsg}</Text>}
               </View>
             ) : (
               <Text style={styles.singleNote}>Single entrant — awarded directly (no draw needed).</Text>
@@ -522,6 +538,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   sigLabel: { color: colors.faint, fontSize: 9, fontWeight: "800", letterSpacing: 1, marginTop: 10 },
   sig: { color: colors.faint, fontSize: 10, fontFamily: "monospace" as any, marginTop: 3 },
   verify: { color: colors.red, fontSize: 13, fontWeight: "700", marginTop: 10 },
+  verifyMsg: { color: colors.text, fontSize: 13, fontWeight: "700", marginTop: 8 },
   counts: { flexDirection: "row", gap: 12, marginTop: 18, marginBottom: 6 },
   countItem: { flex: 1, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, padding: 12, alignItems: "center" },
   countVal: { color: colors.text, fontSize: 22, fontWeight: "800" },
