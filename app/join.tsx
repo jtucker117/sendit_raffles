@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
+import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/lib/supabase";
-import { colors, radius } from "@/lib/theme";
+import { radius, AppColors } from "@/lib/theme";
 
 export default function Join() {
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const isHost = user?.role === "host";
   const [code, setCode] = useState("");
@@ -59,7 +62,7 @@ export default function Join() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg, padding: 24, paddingTop: 64 },
   h1: { color: colors.text, fontSize: 24, fontWeight: "800", letterSpacing: -0.3 },
   sub: { color: colors.muted, fontSize: 14, marginTop: 8, marginBottom: 24, lineHeight: 20 },

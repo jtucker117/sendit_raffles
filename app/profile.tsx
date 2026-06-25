@@ -1,19 +1,22 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   View, Text, Image, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, TextInput, Alert,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
+import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/lib/supabase";
 import { pickAndUploadImage } from "@/lib/upload";
 import { useHostRaffles } from "@/lib/use-host-raffles";
-import { colors, radius } from "@/lib/theme";
+import { radius, AppColors } from "@/lib/theme";
 import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 import { RaffleGrid } from "@/components/RaffleGrid";
 
 export default function Profile() {
   const { user, refreshProfile, signOut } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const isHost = user?.role === "host";
   const { raffles, loading: rafflesLoading, reload: reloadRaffles } = useHostRaffles(isHost ? user?.id : undefined);
@@ -158,7 +161,7 @@ export default function Profile() {
 const COVER_H = 170;
 const AVATAR = 96;
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg },
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -9,13 +9,16 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
+import { useTheme } from "@/lib/theme-context";
 import { useMessaging } from "@/lib/use-messaging";
-import { colors, radius } from "@/lib/theme";
+import { radius, AppColors } from "@/lib/theme";
 import { BottomNav, BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 
 export default function DirectMessagesScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { fetchDirectMessageConversations, loading } = useMessaging();
   const [conversations, setConversations] = useState<any[]>([]);
 
@@ -79,7 +82,7 @@ export default function DirectMessagesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingVertical: 16, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
   title: { fontSize: 24, fontWeight: "800", color: colors.text },

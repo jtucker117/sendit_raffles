@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
   Image, TextInput, Alert, Linking, Modal, useWindowDimensions,
 } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
+import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/lib/supabase";
-import { colors, radius } from "@/lib/theme";
+import { radius, AppColors } from "@/lib/theme";
 import { DrawWheel, WheelEntrant } from "@/components/DrawWheel";
 
 interface Raffle {
@@ -22,6 +23,8 @@ const COUNTDOWN_SECONDS = 60;
 export default function RaffleDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user, isSuperadmin } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
   const { width } = useWindowDimensions();
 
@@ -170,6 +173,19 @@ export default function RaffleDetail() {
   }
 
   const wheelSize = Math.min(width - 64, 340);
+
+  const Count = ({ label, value }: { label: string; value: number }) => (
+    <View style={styles.countItem}>
+      <Text style={styles.countVal}>{value}</Text>
+      <Text style={styles.countLabel}>{label}</Text>
+    </View>
+  );
+  const CertRow = ({ k, v }: { k: string; v: string }) => (
+    <View style={styles.certRow}>
+      <Text style={styles.certK}>{k}</Text>
+      <Text style={styles.certV}>{v}</Text>
+    </View>
+  );
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 48 }}>
@@ -384,25 +400,7 @@ export default function RaffleDetail() {
   );
 }
 
-function Count({ label, value }: { label: string; value: number }) {
-  return (
-    <View style={styles.countItem}>
-      <Text style={styles.countVal}>{value}</Text>
-      <Text style={styles.countLabel}>{label}</Text>
-    </View>
-  );
-}
-
-function CertRow({ k, v }: { k: string; v: string }) {
-  return (
-    <View style={styles.certRow}>
-      <Text style={styles.certK}>{k}</Text>
-      <Text style={styles.certV}>{v}</Text>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
+const makeStyles = (colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg },
   muted: { color: colors.muted },

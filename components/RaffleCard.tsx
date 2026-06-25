@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { View, Text, ImageBackground, TouchableOpacity, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, radius } from "@/lib/theme";
+import { useTheme } from "@/lib/theme-context";
+import { radius, AppColors } from "@/lib/theme";
 
 export interface RaffleCardData {
   id: string;
@@ -17,9 +19,18 @@ export interface RaffleCardData {
 // Editorial full-bleed card: cover photo + gradient + bold uppercase title,
 // a stat row, and a circular arrow. Canceled raffles show a badge + dim.
 export function RaffleCard({ raffle, onPress }: { raffle: RaffleCardData; onPress: () => void }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const money = `$${(raffle.amount_cents / 100).toFixed(0)}`;
   const canceled = raffle.status === "canceled";
   const complete = raffle.status === "complete";
+
+  const Stat = ({ label, value }: { label: string; value: string }) => (
+    <View style={styles.stat}>
+      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={styles.statVal} numberOfLines={1}>{value}</Text>
+    </View>
+  );
 
   return (
     <TouchableOpacity activeOpacity={0.9} onPress={onPress} style={[styles.card, canceled && styles.cardDim]}>
@@ -52,16 +63,7 @@ export function RaffleCard({ raffle, onPress }: { raffle: RaffleCardData; onPres
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.stat}>
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text style={styles.statVal} numberOfLines={1}>{value}</Text>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
+const makeStyles = (colors: AppColors) => StyleSheet.create({
   card: { backgroundColor: colors.surface, borderRadius: radius.xl, overflow: "hidden", marginBottom: 16, borderWidth: 1, borderColor: colors.border },
   cardDim: { opacity: 0.6 },
   cover: { width: "100%", height: 210, justifyContent: "flex-end" },

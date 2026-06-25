@@ -1,18 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView,
   ActivityIndicator, Image, Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
+import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/lib/supabase";
 import { pickAndUploadImage } from "@/lib/upload";
-import { colors, radius } from "@/lib/theme";
+import { radius, AppColors } from "@/lib/theme";
 
 const TERMS = ["Donation", "Purchase", "Entry"] as const;
 
 export default function CreateRaffleScreen() {
   const { user, isHostApproved } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
 
   const [title, setTitle] = useState("");
@@ -88,6 +91,13 @@ export default function CreateRaffleScreen() {
     }
   }
 
+  const Field = ({ label, children, style }: { label: string; children: React.ReactNode; style?: any }) => (
+    <View style={[{ marginBottom: 16 }, style]}>
+      <Text style={styles.label}>{label}</Text>
+      {children}
+    </View>
+  );
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: 48 }}>
       <Text style={styles.h1}>🎡 Create Raffle</Text>
@@ -160,16 +170,7 @@ export default function CreateRaffleScreen() {
   );
 }
 
-function Field({ label, children, style }: { label: string; children: React.ReactNode; style?: any }) {
-  return (
-    <View style={[{ marginBottom: 16 }, style]}>
-      <Text style={styles.label}>{label}</Text>
-      {children}
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
+const makeStyles = (colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg, gap: 12, padding: 24 },
   gate: { color: colors.text, fontSize: 15, textAlign: "center" },

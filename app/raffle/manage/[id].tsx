@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
+import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/lib/supabase";
-import { colors, radius } from "@/lib/theme";
+import { radius, AppColors } from "@/lib/theme";
 
 interface Raffle { id: string; host_id: string; title: string; status: string; amount_cents: number; }
 interface Ticket { id: string; seat_number: number; owner_id: string; type: "free" | "paid"; status: string; paid_method: string | null; }
@@ -13,6 +14,8 @@ const PAYMENT_METHODS = ["Venmo", "Cash App", "Card", "PayPal", "Zelle"] as cons
 export default function ManageEntries() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
 
   const [raffle, setRaffle] = useState<Raffle | null>(null);
@@ -163,7 +166,7 @@ export default function ManageEntries() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg, gap: 10 },
   muted: { color: colors.muted },
