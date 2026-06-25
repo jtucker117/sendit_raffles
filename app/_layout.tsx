@@ -13,12 +13,12 @@ function RootLayoutNav() {
 
     const inAuthGroup = segments[0] === "auth";
 
-    if (session && user && !inAuthGroup) {
-      // User is signed in and we're not in the auth group, go to home
-      router.replace("/");
-    } else if (!session && !user && !inAuthGroup) {
-      // User is not signed in and we're not in the auth group, go to login
-      router.replace("/auth");
+    if (session && user) {
+      // Signed in — if we're still on the login screen, go to home.
+      if (inAuthGroup) router.replace("/");
+    } else {
+      // Signed out — if we're not already on the login screen, go there.
+      if (!inAuthGroup) router.replace("/auth");
     }
   }, [session, user, loading, segments]);
 
