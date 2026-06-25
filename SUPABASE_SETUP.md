@@ -227,11 +227,18 @@ CREATE POLICY "Group admins can manage members"
   ON group_members
   FOR INSERT
   WITH CHECK (
+    -- the group owner can add members (incl. themselves at creation)
     EXISTS (
-      SELECT 1 FROM group_members
-      WHERE group_members.group_id = host_groups.id
-        AND group_members.host_id = auth.uid()
-        AND group_members.role IN ('owner', 'admin')
+      SELECT 1 FROM host_groups hg
+      WHERE hg.id = group_members.group_id
+        AND hg.owner_id = auth.uid()
+    )
+    -- or an existing owner/admin of the group
+    OR EXISTS (
+      SELECT 1 FROM group_members gm
+      WHERE gm.group_id = group_members.group_id
+        AND gm.host_id = auth.uid()
+        AND gm.role IN ('owner', 'admin')
     )
   );
 
