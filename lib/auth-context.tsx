@@ -13,6 +13,8 @@ interface UserProfile {
   avatar_url?: string | null;
   cover_url?: string | null;
   bio?: string | null;
+  host_code?: string | null;
+  is_superadmin?: boolean;
 }
 
 interface AuthContextType {
@@ -25,6 +27,7 @@ interface AuthContextType {
   isHostApproved: boolean;
   isHostPending: boolean;
   isHostRejected: boolean;
+  isSuperadmin: boolean;
   error: string | null;
   refreshProfile: () => Promise<void>;
 }
@@ -210,6 +213,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isHostApproved = user?.role === "host" && user?.host_approved === true;
   const isHostPending = user?.role === "host" && user?.host_approved === null;
   const isHostRejected = user?.role === "host" && user?.host_approved === false;
+  const isSuperadmin = user?.is_superadmin === true;
 
   return (
     <AuthContext.Provider 
@@ -224,6 +228,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isHostApproved,
         isHostPending,
         isHostRejected,
+        isSuperadmin,
         refreshProfile,
       }}
     >

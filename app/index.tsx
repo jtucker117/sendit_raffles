@@ -6,7 +6,7 @@ import { colors, radius } from "@/lib/theme";
 const LOGO = require("../assets/logo.png");
 
 export default function Home() {
-  const { user, loading, signOut, isHostApproved, isHostPending, isHostRejected } = useAuth();
+  const { user, loading, signOut, isHostApproved, isHostPending, isHostRejected, isSuperadmin } = useAuth();
   const router = useRouter();
 
   if (loading) {
@@ -45,6 +45,12 @@ export default function Home() {
       <TouchableOpacity style={styles.profileButton} onPress={() => router.push("/profile")}>
         <Text style={styles.profileButtonText}>🪪 My Profile</Text>
       </TouchableOpacity>
+
+      {isSuperadmin && (
+        <TouchableOpacity style={styles.adminButton} onPress={() => router.push("/admin/users")}>
+          <Text style={styles.adminButtonText}>🛡️ All Accounts (Superadmin)</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Host approval status */}
       {user.role === "host" && (
@@ -85,6 +91,9 @@ export default function Home() {
           <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/host/create-raffle")}>
             <Text style={styles.actionButtonText}>🎡 Create Raffle</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/join")}>
+            <Text style={styles.actionButtonText}>🔑 Join a Group (code)</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -92,6 +101,9 @@ export default function Home() {
         <View style={styles.actionButtons}>
           <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/player/browse")}>
             <Text style={styles.actionButtonText}>🎫 Browse Raffles</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/join")}>
+            <Text style={styles.actionButtonText}>🔑 Follow a Host (code)</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -153,6 +165,8 @@ const styles = StyleSheet.create({
   nextItem: { fontSize: 14, color: colors.muted, lineHeight: 24 },
   profileButton: { width: "100%", borderRadius: radius.md, paddingVertical: 14, alignItems: "center", borderWidth: 1, borderColor: colors.red, marginBottom: 16 },
   profileButtonText: { color: colors.red, fontSize: 15, fontWeight: "700" },
+  adminButton: { width: "100%", borderRadius: radius.md, paddingVertical: 14, alignItems: "center", backgroundColor: colors.navy, marginBottom: 16 },
+  adminButtonText: { color: colors.text, fontSize: 15, fontWeight: "700" },
   signOutButton: { width: "100%", borderRadius: radius.md, paddingVertical: 14, alignItems: "center", borderWidth: 1, borderColor: colors.border },
   signOutText: { color: colors.red, fontSize: 15, fontWeight: "600" },
 });

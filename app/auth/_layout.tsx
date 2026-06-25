@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { SignUpScreen } from "./signup";
 import { SignInScreen } from "./signin";
+import { colors } from "@/lib/theme";
 
 type AuthMode = "signup" | "signin";
 
@@ -22,5 +23,6 @@ export default function AuthLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.bg,
   },
 });

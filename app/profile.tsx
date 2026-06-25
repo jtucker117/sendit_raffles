@@ -92,6 +92,14 @@ export default function Profile() {
         <Text style={styles.name}>{user.display_name}</Text>
         <Text style={styles.role}>{isHost ? "🎡 Host" : "🎫 Player"}{hostStatus}</Text>
 
+        {isHost && user.host_code ? (
+          <View style={styles.codeChip}>
+            <Text style={styles.codeLabel}>YOUR HOST CODE</Text>
+            <Text style={styles.codeValue}>{user.host_code}</Text>
+            <Text style={styles.codeHint}>Share this so players can follow you</Text>
+          </View>
+        ) : null}
+
         {/* Bio */}
         {editingBio ? (
           <View style={styles.bioEdit}>
@@ -174,6 +182,10 @@ const styles = StyleSheet.create({
 
   name: { color: colors.text, fontSize: 22, fontWeight: "800", marginTop: 10, letterSpacing: -0.3 },
   role: { color: colors.muted, fontSize: 14, marginTop: 2 },
+  codeChip: { alignItems: "center", marginTop: 14, backgroundColor: colors.surfaceAlt, borderColor: colors.red, borderWidth: 1, borderRadius: radius.md, paddingVertical: 10, paddingHorizontal: 18 },
+  codeLabel: { color: colors.muted, fontSize: 10, fontWeight: "700", letterSpacing: 1 },
+  codeValue: { color: colors.red, fontSize: 22, fontWeight: "800", letterSpacing: 3, marginTop: 2 },
+  codeHint: { color: colors.faint, fontSize: 11, marginTop: 4 },
 
   bio: { color: colors.text, fontSize: 14, textAlign: "center", marginTop: 12, lineHeight: 20, maxWidth: 460 },
   bioMuted: { color: colors.red, fontWeight: "600" },

@@ -1,6 +1,9 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Image } from "react-native";
 import { useAuth } from "@/lib/auth-context";
+import { colors, radius } from "@/lib/theme";
+
+const LOGO = require("../../assets/logo.png");
 
 interface SignUpScreenProps {
   onSwitchToSignIn: () => void;
@@ -53,6 +56,7 @@ export function SignUpScreen({ onSwitchToSignIn }: SignUpScreenProps) {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
+        <Image source={LOGO} style={styles.logo} resizeMode="contain" />
         <Text style={styles.title}>Create Account</Text>
         <Text style={styles.subtitle}>Join Send It Raffles</Text>
 
@@ -167,130 +171,28 @@ export function SignUpScreen({ onSwitchToSignIn }: SignUpScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f2f2f7",
-  },
-  content: {
-    padding: 24,
-    paddingTop: 40,
-    paddingBottom: 60,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#1c1c1e",
-    marginBottom: 6,
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: "#8a8a8e",
-    marginBottom: 24,
-  },
-  errorBox: {
-    backgroundColor: "#ff3b30",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-  },
-  errorText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#1c1c1e",
-    marginBottom: 10,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  roleButtons: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 24,
-  },
-  roleButton: {
-    flex: 1,
-    paddingVertical: 11,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#d1d1d6",
-    backgroundColor: "#fff",
-    alignItems: "center",
-  },
-  roleButtonActive: {
-    borderColor: "#007aff",
-    backgroundColor: "#007aff",
-  },
-  roleButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#1c1c1e",
-  },
-  roleButtonTextActive: {
-    color: "#fff",
-  },
-  field: {
-    marginBottom: 16,
-  },
-  fieldLabel: {
-    fontSize: 12.5,
-    fontWeight: "600",
-    color: "#1c1c1e",
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#d1d1d6",
-    borderRadius: 12,
-    paddingVertical: 11,
-    paddingHorizontal: 12,
-    fontSize: 15,
-    color: "#1c1c1e",
-    backgroundColor: "#fff",
-  },
-  button: {
-    backgroundColor: "#007aff",
-    paddingVertical: 13,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginBottom: 20,
-  },
-  footerText: {
-    color: "#8a8a8e",
-    fontSize: 13,
-  },
-  footerLink: {
-    color: "#007aff",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  securityNote: {
-    backgroundColor: "#34c75915",
-    borderRadius: 11,
-    padding: 12,
-  },
-  securityText: {
-    fontSize: 12,
-    color: "#34c759",
-    lineHeight: 18,
-    fontWeight: "500",
-  },
+  container: { flex: 1, backgroundColor: colors.bg },
+  content: { padding: 24, paddingTop: 48, paddingBottom: 60 },
+  logo: { width: 120, height: 120, alignSelf: "center", marginBottom: 8 },
+  title: { fontSize: 26, fontWeight: "800", color: colors.text, marginBottom: 6, letterSpacing: -0.5, textAlign: "center" },
+  subtitle: { fontSize: 15, color: colors.muted, marginBottom: 24, textAlign: "center" },
+  errorBox: { backgroundColor: colors.red, borderRadius: radius.md, padding: 12, marginBottom: 16 },
+  errorText: { color: "#fff", fontSize: 13, fontWeight: "600" },
+  label: { fontSize: 13, fontWeight: "700", color: colors.text, marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 },
+  roleButtons: { flexDirection: "row", gap: 10, marginBottom: 24 },
+  roleButton: { flex: 1, paddingVertical: 12, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.inputBorder, backgroundColor: colors.surfaceAlt, alignItems: "center" },
+  roleButtonActive: { borderColor: colors.red, backgroundColor: colors.red },
+  roleButtonText: { fontSize: 15, fontWeight: "600", color: colors.text },
+  roleButtonTextActive: { color: colors.onAccent },
+  field: { marginBottom: 16 },
+  fieldLabel: { fontSize: 12.5, fontWeight: "600", color: colors.text, marginBottom: 8 },
+  input: { borderWidth: 1, borderColor: colors.inputBorder, borderRadius: radius.md, paddingVertical: 12, paddingHorizontal: 12, fontSize: 15, color: colors.text, backgroundColor: colors.surfaceAlt },
+  button: { backgroundColor: colors.red, paddingVertical: 14, borderRadius: radius.md, alignItems: "center", marginTop: 8, marginBottom: 16 },
+  buttonDisabled: { opacity: 0.6 },
+  buttonText: { color: colors.onAccent, fontSize: 16, fontWeight: "700" },
+  footer: { flexDirection: "row", justifyContent: "center", marginBottom: 20 },
+  footerText: { color: colors.muted, fontSize: 13 },
+  footerLink: { color: colors.red, fontSize: 13, fontWeight: "700" },
+  securityNote: { backgroundColor: colors.greenSoft, borderRadius: radius.md, padding: 12 },
+  securityText: { fontSize: 12, color: colors.green, lineHeight: 18, fontWeight: "500" },
 });
