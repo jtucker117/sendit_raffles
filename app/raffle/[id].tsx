@@ -32,8 +32,6 @@ export default function RaffleDetail() {
   const [claiming, setClaiming] = useState(false);
   const [pickNum, setPickNum] = useState("");
   const [confirmCancel, setConfirmCancel] = useState(false);
-  const [busyTicket, setBusyTicket] = useState<string | null>(null);
-  const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
   const [draw, setDraw] = useState<any | null>(null);
   const [winnerName, setWinnerName] = useState("");
 
@@ -116,29 +114,6 @@ export default function RaffleDetail() {
     const n = parseInt(pickNum, 10);
     if (!(n >= 1 && n <= raffle!.capacity)) { Alert.alert("Enter a seat number", `1–${raffle!.capacity}`); return; }
     claim("paid", n);
-  }
-
-  async function confirmPaid(ticketId: string) {
-    setBusyTicket(ticketId);
-    const { error } = await supabase.from("tickets").update({ status: "confirmed" }).eq("id", ticketId);
-    if (error) Alert.alert("Couldn't confirm", error.message);
-    await load();
-    setBusyTicket(null);
-  }
-
-  async function removeTicket(ticketId: string) {
-    // two-tap confirm (web-safe; Alert callbacks don't fire on web)
-    if (confirmRemove !== ticketId) {
-      setConfirmRemove(ticketId);
-      setTimeout(() => setConfirmRemove((c) => (c === ticketId ? null : c)), 3000);
-      return;
-    }
-    setBusyTicket(ticketId);
-    const { error } = await supabase.from("tickets").delete().eq("id", ticketId);
-    if (error) Alert.alert("Couldn't remove", error.message);
-    setConfirmRemove(null);
-    await load();
-    setBusyTicket(null);
   }
 
   // ---- Draw event flow ----
@@ -246,46 +221,18 @@ export default function RaffleDetail() {
           </View>
         )}
 
-        {/* Host: pending payments to confirm */}
-        {isHost && pendingPaid.length > 0 && (
-          <View style={styles.manageBox}>
-            <Text style={styles.manageTitle}>Pending payments · {pendingPaid.length}</Text>
-            <Text style={styles.manageHint}>Confirm once you’ve received payment — only confirmed seats are entered in the draw.</Text>
-            {pendingPaid.map((t) => (
-              <View key={t.id} style={styles.row}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.rowName}>{nameFor(t.owner_id)}</Text>
-                  <Text style={styles.rowMeta}>Seat #{t.seat_number} · paid</Text>
-                </View>
-                <TouchableOpacity style={[styles.pill, styles.pillGreen, busyTicket === t.id && styles.btnDim]} disabled={busyTicket === t.id} onPress={() => confirmPaid(t.id)}>
-                  <Text style={styles.pillGreenText}>Confirm</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.pill, styles.pillRed, busyTicket === t.id && styles.btnDim]} disabled={busyTicket === t.id} onPress={() => removeTicket(t.id)}>
-                  <Text style={styles.pillRedText}>{confirmRemove === t.id ? "Sure?" : "Reject"}</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* Host: confirmed entries (remove / refund) */}
-        {isHost && confirmedTickets.length > 0 && (
-          <View style={styles.manageBox}>
-            <Text style={styles.manageTitle}>Entries · {confirmedTickets.length}</Text>
-            {confirmedTickets.map((t) => (
-              <View key={t.id} style={styles.row}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.rowName}>{nameFor(t.owner_id)}</Text>
-                  <Text style={styles.rowMeta}>Seat #{t.seat_number} · {t.type}</Text>
-                </View>
-                {raffle.status === "open" && (
-                  <TouchableOpacity style={[styles.pill, styles.pillRed, busyTicket === t.id && styles.btnDim]} disabled={busyTicket === t.id} onPress={() => removeTicket(t.id)}>
-                    <Text style={styles.pillRedText}>{confirmRemove === t.id ? "Sure?" : "Remove"}</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            ))}
-          </View>
+        {/* Host: manage entries lives on its own page */}
+        {isHost && (
+          <TouchableOpacity style={styles.manageLink} onPress={() => router.push(`/raffle/manage/${raffle.id}`)}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.manageLinkTitle}>Manage entries</Text>
+              <Text style={styles.manageLinkSub}>
+                {pendingPaid.length > 0 ? `${pendingPaid.length} pending payment${pendingPaid.length === 1 ? "" : "s"} · ` : ""}
+                {confirmedTickets.length} confirmed
+              </Text>
+            </View>
+            <Text style={styles.manageChevron}>›</Text>
+          </TouchableOpacity>
         )}
 
         {/* Seat board */}
@@ -447,18 +394,11 @@ const styles = StyleSheet.create({
   countLabel: { color: colors.muted, fontSize: 11, marginTop: 2, textAlign: "center" },
   claimBox: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, padding: 16, marginTop: 16, gap: 10 },
   claimTitle: { color: colors.text, fontSize: 14, fontWeight: "700", marginBottom: 2 },
-  // manage (host)
-  manageBox: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, padding: 16, marginTop: 16 },
-  manageTitle: { color: colors.text, fontSize: 13, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.6 },
-  manageHint: { color: colors.faint, fontSize: 12, marginTop: 4, marginBottom: 6, lineHeight: 16 },
-  row: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border },
-  rowName: { color: colors.text, fontSize: 15, fontWeight: "700" },
-  rowMeta: { color: colors.muted, fontSize: 12, marginTop: 1, textTransform: "capitalize" },
-  pill: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.pill },
-  pillGreen: { backgroundColor: colors.greenSoft },
-  pillGreenText: { color: colors.green, fontWeight: "700", fontSize: 13 },
-  pillRed: { borderWidth: 1, borderColor: colors.red },
-  pillRedText: { color: colors.red, fontWeight: "700", fontSize: 13 },
+  // manage link (host) -> sub-page
+  manageLink: { flexDirection: "row", alignItems: "center", backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, padding: 16, marginTop: 16 },
+  manageLinkTitle: { color: colors.text, fontSize: 15, fontWeight: "700" },
+  manageLinkSub: { color: colors.muted, fontSize: 12, marginTop: 2 },
+  manageChevron: { color: colors.muted, fontSize: 26, fontWeight: "700", marginLeft: 8 },
   btn: { paddingVertical: 13, borderRadius: radius.md, alignItems: "center", marginTop: 8 },
   btnGreen: { backgroundColor: colors.greenSoft },
   btnRed: { backgroundColor: colors.red },
