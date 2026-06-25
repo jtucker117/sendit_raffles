@@ -6,7 +6,9 @@ import { supabase } from "@/lib/supabase";
 import { colors, radius } from "@/lib/theme";
 
 interface Raffle { id: string; host_id: string; title: string; status: string; amount_cents: number; }
-interface Ticket { id: string; seat_number: number; owner_id: string; type: "free" | "paid"; status: string; }
+interface Ticket { id: string; seat_number: number; owner_id: string; type: "free" | "paid"; status: string; paid_method: string | null; }
+
+const PAYMENT_METHODS = ["Venmo", "Cash App", "Card", "PayPal", "Zelle"] as const;
 
 export default function ManageEntries() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -19,6 +21,7 @@ export default function ManageEntries() {
   const [loading, setLoading] = useState(true);
   const [busyTicket, setBusyTicket] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
+  const [methodFor, setMethodFor] = useState<string | null>(null); // ticket currently choosing a method
   const [tab, setTab] = useState<"pending" | "confirmed">("pending");
 
   const load = useCallback(async () => {
@@ -59,10 +62,14 @@ export default function ManageEntries() {
   const pending = tickets.filter((t) => t.type === "paid" && t.status === "held").sort((a, b) => a.seat_number - b.seat_number);
   const confirmed = tickets.filter((t) => t.status === "confirmed").sort((a, b) => a.seat_number - b.seat_number);
 
-  async function confirmPaid(ticketId: string) {
+  async function confirmPaid(ticketId: string, method: string) {
     setBusyTicket(ticketId);
-    const { error } = await supabase.from("tickets").update({ status: "confirmed" }).eq("id", ticketId);
+    const { error } = await supabase
+      .from("tickets")
+      .update({ status: "confirmed", paid_method: method, paid_at: new Date().toISOString() })
+      .eq("id", ticketId);
     if (error) Alert.alert("Couldn't confirm", error.message);
+    setMethodFor(null);
     await load();
     setBusyTicket(null);
   }
@@ -107,20 +114,44 @@ export default function ManageEntries() {
       ) : (
         <View style={styles.card}>
           {list.map((t) => (
-            <View key={t.id} style={styles.row}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.rowName}>{nameFor(t.owner_id)}</Text>
-                <Text style={styles.rowMeta}>Seat #{t.seat_number} · {t.type}</Text>
+            <View key={t.id} style={styles.rowWrap}>
+              <View style={styles.row}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowName}>{nameFor(t.owner_id)}</Text>
+                  <Text style={styles.rowMeta}>
+                    Seat #{t.seat_number} · {t.type}{t.paid_method ? ` · ${t.paid_method}` : ""}
+                  </Text>
+                </View>
+                {tab === "pending" && (
+                  methodFor === t.id ? (
+                    <TouchableOpacity style={[styles.pill, styles.pillGhost]} onPress={() => setMethodFor(null)}>
+                      <Text style={styles.pillGhostText}>Cancel</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity style={[styles.pill, styles.pillGreen, busyTicket === t.id && styles.dim]} disabled={busyTicket === t.id} onPress={() => setMethodFor(t.id)}>
+                      <Text style={styles.pillGreenText}>Confirm</Text>
+                    </TouchableOpacity>
+                  )
+                )}
+                {raffle.status === "open" && methodFor !== t.id && (
+                  <TouchableOpacity style={[styles.pill, styles.pillRed, busyTicket === t.id && styles.dim]} disabled={busyTicket === t.id} onPress={() => removeTicket(t.id)}>
+                    <Text style={styles.pillRedText}>{confirmRemove === t.id ? "Sure?" : tab === "pending" ? "Reject" : "Remove"}</Text>
+                  </TouchableOpacity>
+                )}
               </View>
-              {tab === "pending" && (
-                <TouchableOpacity style={[styles.pill, styles.pillGreen, busyTicket === t.id && styles.dim]} disabled={busyTicket === t.id} onPress={() => confirmPaid(t.id)}>
-                  <Text style={styles.pillGreenText}>Confirm</Text>
-                </TouchableOpacity>
-              )}
-              {raffle.status === "open" && (
-                <TouchableOpacity style={[styles.pill, styles.pillRed, busyTicket === t.id && styles.dim]} disabled={busyTicket === t.id} onPress={() => removeTicket(t.id)}>
-                  <Text style={styles.pillRedText}>{confirmRemove === t.id ? "Sure?" : tab === "pending" ? "Reject" : "Remove"}</Text>
-                </TouchableOpacity>
+
+              {/* Payment-method picker (appears when confirming a pending seat) */}
+              {tab === "pending" && methodFor === t.id && (
+                <View style={styles.methodBox}>
+                  <Text style={styles.methodLabel}>How were they paid?</Text>
+                  <View style={styles.methodRow}>
+                    {PAYMENT_METHODS.map((m) => (
+                      <TouchableOpacity key={m} style={[styles.methodChip, busyTicket === t.id && styles.dim]} disabled={busyTicket === t.id} onPress={() => confirmPaid(t.id, m)}>
+                        <Text style={styles.methodChipText}>{m}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
               )}
             </View>
           ))}
@@ -147,7 +178,8 @@ const styles = StyleSheet.create({
   hint: { color: colors.faint, fontSize: 12, marginTop: 12, lineHeight: 16 },
   empty: { color: colors.muted, fontSize: 14, marginTop: 24, textAlign: "center" },
   card: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, paddingHorizontal: 16, marginTop: 14 },
-  row: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 12, borderTopWidth: 1, borderTopColor: colors.border },
+  rowWrap: { borderTopWidth: 1, borderTopColor: colors.border },
+  row: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 12 },
   rowName: { color: colors.text, fontSize: 15, fontWeight: "700" },
   rowMeta: { color: colors.muted, fontSize: 12, marginTop: 1, textTransform: "capitalize" },
   pill: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.pill },
@@ -155,6 +187,13 @@ const styles = StyleSheet.create({
   pillGreenText: { color: colors.green, fontWeight: "700", fontSize: 13 },
   pillRed: { borderWidth: 1, borderColor: colors.red },
   pillRedText: { color: colors.red, fontWeight: "700", fontSize: 13 },
+  pillGhost: { borderWidth: 1, borderColor: colors.border },
+  pillGhostText: { color: colors.muted, fontWeight: "700", fontSize: 13 },
+  methodBox: { paddingBottom: 14, paddingTop: 2 },
+  methodLabel: { color: colors.muted, fontSize: 12, marginBottom: 8 },
+  methodRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  methodChip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: radius.pill, backgroundColor: colors.greenSoft, borderWidth: 1, borderColor: colors.green },
+  methodChipText: { color: colors.green, fontWeight: "700", fontSize: 13 },
   dim: { opacity: 0.45 },
   backBtn: { alignSelf: "center", marginTop: 26, padding: 10 },
   back: { color: colors.red, fontSize: 15, fontWeight: "600" },

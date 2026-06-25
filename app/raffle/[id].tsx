@@ -21,7 +21,7 @@ const COUNTDOWN_SECONDS = 60;
 
 export default function RaffleDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, isSuperadmin } = useAuth();
   const router = useRouter();
   const { width } = useWindowDimensions();
 
@@ -32,6 +32,7 @@ export default function RaffleDetail() {
   const [claiming, setClaiming] = useState(false);
   const [pickNum, setPickNum] = useState("");
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [draw, setDraw] = useState<any | null>(null);
   const [winnerName, setWinnerName] = useState("");
 
@@ -158,6 +159,14 @@ export default function RaffleDetail() {
     await load();
   }
 
+  // Superadmin only — permanent delete (cascades tickets + draws).
+  async function onDelete() {
+    if (!confirmDelete) { setConfirmDelete(true); setTimeout(() => setConfirmDelete(false), 3000); return; }
+    const { error } = await supabase.from("raffles").delete().eq("id", raffle!.id);
+    if (error) { Alert.alert("Delete failed", error.message); return; }
+    router.replace("/");
+  }
+
   const wheelSize = Math.min(width - 64, 340);
 
   return (
@@ -272,6 +281,18 @@ export default function RaffleDetail() {
               </TouchableOpacity>
             )}
             {raffle.status === "canceled" && <Text style={styles.canceledNote}>This raffle is canceled</Text>}
+          </View>
+        )}
+
+        {/* Superadmin only — permanent delete (hosts can only cancel) */}
+        {isSuperadmin && (
+          <View style={{ marginTop: isHost ? 10 : 20, gap: 6 }}>
+            <TouchableOpacity style={[styles.btn, styles.btnDanger]} onPress={onDelete}>
+              <Text style={[styles.btnText, { color: colors.onAccent }]}>
+                {confirmDelete ? "Tap again to permanently delete" : "Delete raffle (superadmin)"}
+              </Text>
+            </TouchableOpacity>
+            <Text style={styles.dangerNote}>Permanent — removes the raffle and all its seats and draw records.</Text>
           </View>
         )}
 
@@ -431,6 +452,8 @@ const styles = StyleSheet.create({
   seatNumClaimed: { color: colors.text },
   bigNote: { color: colors.muted, fontSize: 13, lineHeight: 20 },
   canceledNote: { color: colors.red, textAlign: "center", fontWeight: "700", marginTop: 4 },
+  btnDanger: { backgroundColor: colors.redDark },
+  dangerNote: { color: colors.faint, fontSize: 11, textAlign: "center" },
   backBtn: { alignSelf: "center", marginTop: 22, padding: 10 },
   back: { color: colors.red, fontSize: 15, fontWeight: "600" },
   // overlay
