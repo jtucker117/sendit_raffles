@@ -15,10 +15,10 @@ export const darkColors = {
   text: "#f3f4f6",
   muted: "#9aa0a6",
   faint: "#6b7280",
-  // brand
-  red: "#e6232f",          // primary accent — key name kept for compatibility
-  redDark: "#b3151f",
-  redSoft: "rgba(230,35,47,0.16)",
+  // brand (Loot Vault — deep emerald accent, key name kept for compatibility)
+  red: "#13a55c",          // primary accent (emerald)
+  redDark: "#0e8047",
+  redSoft: "rgba(19,165,92,0.16)",
   navy: "#1b2b4d",
   navySoft: "rgba(27,43,77,0.4)",
   // status
@@ -43,10 +43,10 @@ export const lightColors: typeof darkColors = {
   text: "#0d0f14",
   muted: "#5b626c",
   faint: "#9aa0a6",
-  // brand
-  red: "#d11f2d",
-  redDark: "#b3151f",
-  redSoft: "rgba(209,31,45,0.10)",
+  // brand (Loot Vault — deep emerald accent)
+  red: "#0f9050",          // primary accent (emerald, deeper for light surfaces)
+  redDark: "#0b6e3d",
+  redSoft: "rgba(15,144,80,0.12)",
   navy: "#1b2b4d",
   navySoft: "rgba(27,43,77,0.10)",
   // status
