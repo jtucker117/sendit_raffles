@@ -27,6 +27,7 @@ export default function CreateRaffleScreen() {
   const [amount, setAmount] = useState("10");
   const [goal, setGoal] = useState("");
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [drawStyle, setDrawStyle] = useState<"wheel" | "scratch" | "lotto">("wheel");
 
   // Revenue goal → per-seat price: goal ÷ PAID seats (free seats raise $0, so the
   // paid seats have to cover the whole goal), rounded UP to the next whole dollar
@@ -79,6 +80,7 @@ export default function CreateRaffleScreen() {
         free_seat_limit: free,
         entry_word: term.toLowerCase(),
         amount_cents: Math.round((parseFloat(amount) || 0) * 100),
+        draw_style: drawStyle,
         status: "open",
       });
       if (error) throw error;
@@ -157,6 +159,17 @@ export default function CreateRaffleScreen() {
               : `Full board ≈ $${raised.toFixed(0)} from ${paid} paid seat${paid === 1 ? "" : "s"} (${free} free)`;
           })()}
         </Text>
+      </Field>
+
+      <Field label="Winner reveal style">
+        <View style={styles.segment}>
+          {([["wheel", "Wheel"], ["scratch", "Scratch"], ["lotto", "Lotto"]] as const).map(([k, label]) => (
+            <TouchableOpacity key={k} style={[styles.segItem, drawStyle === k && styles.segItemActive]} onPress={() => setDrawStyle(k)}>
+              <Text style={[styles.segText, drawStyle === k && styles.segTextActive]}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Text style={styles.helper}>How the winner is revealed. The winner is always drawn fairly via Random.org — the graphic just lands on it.</Text>
       </Field>
 
       <TouchableOpacity style={[styles.button, saving && { opacity: 0.6 }]} onPress={create} disabled={saving}>

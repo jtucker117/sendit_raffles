@@ -9,11 +9,13 @@ import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/lib/supabase";
 import { radius, AppColors } from "@/lib/theme";
 import { DrawWheel, WheelEntrant } from "@/components/DrawWheel";
+import { DrawScratch } from "@/components/DrawScratch";
+import { DrawLotto } from "@/components/DrawLotto";
 
 interface Raffle {
   id: string; host_id: string; title: string; prize: string | null; description: string | null;
   cover_url: string | null; capacity: number; free_seat_limit: number; entry_word: string;
-  amount_cents: number; status: string;
+  amount_cents: number; status: string; draw_style?: "wheel" | "scratch" | "lotto";
 }
 interface Ticket { id: string; seat_number: number; owner_id: string; type: "free" | "paid"; status: string; }
 
@@ -173,6 +175,8 @@ export default function RaffleDetail() {
   }
 
   const wheelSize = Math.min(width - 64, 340);
+  const drawStyle = raffle.draw_style ?? "wheel";
+  const revealLabel = drawStyle === "scratch" ? "SCRATCH TO REVEAL" : drawStyle === "lotto" ? "DRAWING" : "SPINNING";
 
   const Count = ({ label, value }: { label: string; value: number }) => (
     <View style={styles.countItem}>
@@ -364,9 +368,17 @@ export default function RaffleDetail() {
 
             {(stage === "drawing" || stage === "spinning" || stage === "done") && (
               <>
-                <Text style={styles.sheetEyebrow}>{stage === "done" ? "🎉 WINNER" : "SPINNING"}</Text>
-                <View style={{ alignItems: "center", marginVertical: 12 }}>
-                  <DrawWheel entrants={wheelEntrants} spinTo={spinTo} onSpinEnd={onSpinEnd} size={wheelSize} />
+                <Text style={styles.sheetEyebrow}>{stage === "done" ? "🎉 WINNER" : revealLabel}</Text>
+                <View style={{ alignItems: "center", marginVertical: 12, width: "100%" }}>
+                  {stage === "drawing" ? (
+                    <ActivityIndicator color={colors.red} size="large" style={{ marginVertical: 30 }} />
+                  ) : drawStyle === "wheel" ? (
+                    <DrawWheel entrants={wheelEntrants} spinTo={spinTo} onSpinEnd={onSpinEnd} size={wheelSize} />
+                  ) : drawStyle === "scratch" && liveWinner ? (
+                    <DrawScratch winnerName={liveWinner.name} winnerSeat={liveWinner.seat} onDone={onSpinEnd} />
+                  ) : drawStyle === "lotto" && liveWinner ? (
+                    <DrawLotto winnerSeat={liveWinner.seat} capacity={raffle.capacity} onDone={onSpinEnd} />
+                  ) : null}
                 </View>
                 {stage === "drawing" && <Text style={styles.sheetBody}>Selecting the winner…</Text>}
                 {stage === "done" && liveWinner && (
