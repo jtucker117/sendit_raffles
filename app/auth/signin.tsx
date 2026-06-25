@@ -32,7 +32,7 @@ export function SignInScreen({ onSwitchToSignUp }: SignInScreenProps) {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Image source={LOGO} style={styles.logo} resizeMode="contain" />
       <Text style={styles.title}>Welcome back</Text>
-      <Text style={styles.subtitle}>Sign in to Send It Raffles</Text>
+      <Text style={styles.subtitle}>Sign in to Loot Vault</Text>
 
       {displayError && (
         <View style={styles.errorBox}>

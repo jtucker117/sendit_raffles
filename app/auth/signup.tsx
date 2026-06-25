@@ -58,7 +58,7 @@ export function SignUpScreen({ onSwitchToSignIn }: SignUpScreenProps) {
       <View style={styles.content}>
         <Image source={LOGO} style={styles.logo} resizeMode="contain" />
         <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Join Send It Raffles</Text>
+        <Text style={styles.subtitle}>Join Loot Vault · Real People. Real Prizes.</Text>
 
         {displayError && <View style={styles.errorBox}>
             <Text style={styles.errorText}>{displayError}</Text>

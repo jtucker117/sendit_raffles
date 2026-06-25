@@ -57,7 +57,7 @@ export default function Home() {
     return (
       <View style={styles.center}>
         <Image source={LOGO} style={styles.bigLogo} resizeMode="contain" />
-        <Text style={styles.tag}>Provably-fair raffles</Text>
+        <Text style={styles.tag}>Real People. Real Prizes.</Text>
       </View>
     );
   }

@@ -16,7 +16,7 @@ export const darkColors = {
   muted: "#9aa0a6",
   faint: "#6b7280",
   // brand
-  red: "#e6232f",
+  red: "#e6232f",          // primary accent — key name kept for compatibility
   redDark: "#b3151f",
   redSoft: "rgba(230,35,47,0.16)",
   navy: "#1b2b4d",

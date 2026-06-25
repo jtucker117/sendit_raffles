@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Send It Raffles",
-    "slug": "sendit-raffles",
-    "scheme": "senditraffles",
+    "name": "Loot Vault",
+    "slug": "loot-vault",
+    "scheme": "lootvault",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
