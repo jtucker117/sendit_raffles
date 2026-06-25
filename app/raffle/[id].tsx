@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
   Image, TextInput, Alert, Linking, Modal, useWindowDimensions,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { colors, radius } from "@/lib/theme";
@@ -70,7 +70,9 @@ export default function RaffleDetail() {
     if (!silent) setLoading(false);
   }, [id]);
 
-  useEffect(() => { load(); }, [load]);
+  // Reload whenever the screen regains focus (e.g. returning from Manage entries)
+  // so confirmed/pending counts and the draw button stay in sync.
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   // Countdown ticker -> when it hits 0, run the draw.
   useEffect(() => {
