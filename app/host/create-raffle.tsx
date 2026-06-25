@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView,
   ActivityIndicator, Image, Alert,
@@ -22,7 +22,16 @@ export default function CreateRaffleScreen() {
   const [freeLimit, setFreeLimit] = useState("0");
   const [term, setTerm] = useState<(typeof TERMS)[number]>("Donation");
   const [amount, setAmount] = useState("10");
+  const [goal, setGoal] = useState("");
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
+
+  // Revenue goal → per-seat price: goal ÷ total seats. Auto-fills the amount
+  // whenever the goal or seat count changes (still manually editable after).
+  useEffect(() => {
+    const cap = parseInt(capacity, 10);
+    const g = parseFloat(goal);
+    if (cap > 0 && g > 0) setAmount((g / cap).toFixed(2));
+  }, [goal, capacity]);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -118,8 +127,17 @@ export default function CreateRaffleScreen() {
         </View>
       </Field>
 
+      <Field label="Revenue goal for this raffle ($, optional)">
+        <TextInput style={styles.input} value={goal} onChangeText={setGoal} keyboardType="decimal-pad" placeholder="e.g. 1000" placeholderTextColor={colors.faint} />
+      </Field>
+
       <Field label={`Amount per ${term.toLowerCase()} ($)`}>
         <TextInput style={styles.input} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="10" placeholderTextColor={colors.faint} />
+        <Text style={styles.helper}>
+          {goal.trim()
+            ? `Goal $${goal} ÷ ${parseInt(capacity, 10) || 0} seats = $${amount}/seat`
+            : `Full board ≈ $${(((parseFloat(amount) || 0) * (parseInt(capacity, 10) || 0))).toFixed(0)} at ${parseInt(capacity, 10) || 0} seats`}
+        </Text>
       </Field>
 
       <TouchableOpacity style={[styles.button, saving && { opacity: 0.6 }]} onPress={create} disabled={saving}>
@@ -153,6 +171,7 @@ const styles = StyleSheet.create({
   label: { color: colors.muted, fontSize: 12.5, fontWeight: "600", marginBottom: 8 },
   input: { backgroundColor: colors.surfaceAlt, borderColor: colors.inputBorder, borderWidth: 1, borderRadius: radius.md, padding: 12, color: colors.text, fontSize: 15 },
   multiline: { minHeight: 80, textAlignVertical: "top" },
+  helper: { color: colors.faint, fontSize: 12, marginTop: 6 },
   row2: { flexDirection: "row", gap: 12 },
   segment: { flexDirection: "row", gap: 8 },
   segItem: { flex: 1, paddingVertical: 11, borderRadius: radius.md, borderWidth: 1, borderColor: colors.inputBorder, alignItems: "center", backgroundColor: colors.surfaceAlt },

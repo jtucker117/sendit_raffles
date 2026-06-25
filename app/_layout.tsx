@@ -28,9 +28,13 @@ function RootLayoutNav() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <StatusBar style="light" />
-      {showChrome && <AppHeader onMenu={() => setMenuOpen(true)} />}
-      <View style={{ flex: 1 }}>
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
+      {/* Center everything in a max-width column so content doesn't stretch
+          edge-to-edge on wide/desktop windows. */}
+      <View style={{ flex: 1, width: "100%", maxWidth: 760, alignSelf: "center" }}>
+        {showChrome && <AppHeader onMenu={() => setMenuOpen(true)} />}
+        <View style={{ flex: 1 }}>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
+        </View>
       </View>
       {showChrome && menuOpen && <SideMenu onClose={() => setMenuOpen(false)} />}
     </View>

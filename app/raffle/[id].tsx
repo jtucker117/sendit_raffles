@@ -24,6 +24,7 @@ export default function RaffleDetail() {
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(false);
   const [pickNum, setPickNum] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -68,6 +69,13 @@ export default function RaffleDetail() {
     const n = parseInt(pickNum, 10);
     if (!(n >= 1 && n <= raffle!.capacity)) { Alert.alert("Enter a seat number", `1–${raffle!.capacity}`); return; }
     claim("paid", n);
+  }
+
+  async function onDelete() {
+    if (!confirmDelete) { setConfirmDelete(true); setTimeout(() => setConfirmDelete(false), 3000); return; }
+    const { error } = await supabase.from("raffles").delete().eq("id", raffle!.id);
+    if (error) { Alert.alert("Delete failed", error.message); return; }
+    router.back();
   }
 
   return (
@@ -128,9 +136,14 @@ export default function RaffleDetail() {
         )}
 
         {isHost && (
-          <TouchableOpacity style={[styles.btn, styles.btnRed, { marginTop: 20 }]} onPress={() => Alert.alert("Draw coming soon", "The Random.org signed draw + wheel is the next build.")}>
-            <Text style={[styles.btnText, { color: colors.onAccent }]}>🎡 Run the draw</Text>
-          </TouchableOpacity>
+          <View style={{ marginTop: 20, gap: 10 }}>
+            <TouchableOpacity style={[styles.btn, styles.btnRed]} onPress={() => Alert.alert("Draw coming soon", "The Random.org signed draw + wheel is the next build.")}>
+              <Text style={[styles.btnText, { color: colors.onAccent }]}>Run the draw</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.btn, styles.btnOutline, { borderColor: colors.red }]} onPress={onDelete}>
+              <Text style={[styles.btnText, { color: colors.red }]}>{confirmDelete ? "Tap again to delete" : "Delete raffle"}</Text>
+            </TouchableOpacity>
+          </View>
         )}
 
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}><Text style={styles.back}>← Back</Text></TouchableOpacity>
