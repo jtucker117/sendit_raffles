@@ -25,13 +25,16 @@ export default function CreateRaffleScreen() {
   const [goal, setGoal] = useState("");
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
 
-  // Revenue goal → per-seat price: goal ÷ total seats. Auto-fills the amount
-  // whenever the goal or seat count changes (still manually editable after).
+  // Revenue goal → per-seat price: goal ÷ PAID seats (free seats raise $0, so the
+  // paid seats have to cover the whole goal). Auto-fills whenever the goal, seat
+  // count, or free-seat count changes (still manually editable after).
   useEffect(() => {
-    const cap = parseInt(capacity, 10);
+    const cap = parseInt(capacity, 10) || 0;
+    const free = parseInt(freeLimit, 10) || 0;
+    const paid = Math.max(cap - free, 1);
     const g = parseFloat(goal);
-    if (cap > 0 && g > 0) setAmount((g / cap).toFixed(2));
-  }, [goal, capacity]);
+    if (paid > 0 && g > 0) setAmount((g / paid).toFixed(2));
+  }, [goal, capacity, freeLimit]);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -133,9 +136,14 @@ export default function CreateRaffleScreen() {
       <Field label={`Amount per ${term.toLowerCase()} ($)`}>
         <TextInput style={styles.input} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="10" placeholderTextColor={colors.faint} />
         <Text style={styles.helper}>
-          {goal.trim()
-            ? `Goal $${goal} ÷ ${parseInt(capacity, 10) || 0} seats = $${amount}/seat`
-            : `Full board ≈ $${(((parseFloat(amount) || 0) * (parseInt(capacity, 10) || 0))).toFixed(0)} at ${parseInt(capacity, 10) || 0} seats`}
+          {(() => {
+            const cap = parseInt(capacity, 10) || 0;
+            const free = parseInt(freeLimit, 10) || 0;
+            const paid = Math.max(cap - free, 0);
+            return goal.trim()
+              ? `Goal $${goal} ÷ ${paid} paid seat${paid === 1 ? "" : "s"} = $${amount}/seat (${free} free)`
+              : `Full board ≈ $${((parseFloat(amount) || 0) * paid).toFixed(0)} from ${paid} paid seat${paid === 1 ? "" : "s"} (${free} free)`;
+          })()}
         </Text>
       </Field>
 

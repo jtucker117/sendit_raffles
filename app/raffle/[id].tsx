@@ -290,6 +290,19 @@ export default function RaffleDetail() {
                   {wheelEntrants.length >= 2 ? " using a signed Random.org draw" : ""}.
                 </Text>
                 <Text style={styles.sheetBody}>{wheelEntrants.length} confirmed {wheelEntrants.length === 1 ? "entry" : "entries"}.</Text>
+                {open > 0 && (
+                  <View style={styles.warnBox}>
+                    <Text style={styles.warnText}>
+                      ⚠️ The board isn’t full — {open} of {raffle.capacity} seat{raffle.capacity === 1 ? "" : "s"} still open.
+                      You can draw now, but make sure you’re okay running it early.
+                    </Text>
+                  </View>
+                )}
+                {pendingPaid.length > 0 && (
+                  <Text style={styles.sheetWarnSub}>
+                    {pendingPaid.length} pending payment{pendingPaid.length === 1 ? "" : "s"} won’t be entered — confirm them first if you want them in.
+                  </Text>
+                )}
                 <TouchableOpacity style={[styles.btn, styles.btnRed]} onPress={startCountdown}>
                   <Text style={[styles.btnText, { color: colors.onAccent }]}>Start the draw</Text>
                 </TouchableOpacity>
@@ -428,4 +441,7 @@ const styles = StyleSheet.create({
   sheetBody: { color: colors.muted, fontSize: 14, textAlign: "center", marginTop: 8, lineHeight: 20 },
   countNum: { color: colors.text, fontSize: 84, fontWeight: "900", marginVertical: 6 },
   winnerBig: { color: colors.text, fontSize: 30, fontWeight: "900", marginTop: 10, textAlign: "center" },
+  warnBox: { backgroundColor: colors.amberSoft, borderColor: colors.amber, borderWidth: 1, borderRadius: radius.md, padding: 12, marginTop: 12 },
+  warnText: { color: colors.text, fontSize: 13, lineHeight: 18, textAlign: "center" },
+  sheetWarnSub: { color: colors.amber, fontSize: 12, marginTop: 10, textAlign: "center", lineHeight: 16 },
 });
