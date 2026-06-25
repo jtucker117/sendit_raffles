@@ -86,7 +86,16 @@ export default function RaffleDetail() {
     setDrawMsg("Drawing…");
     try {
       const { data, error } = await supabase.functions.invoke("draw", { body: { raffle_id: raffle!.id } });
-      if (error || (data as any)?.error) throw new Error((data as any)?.error || error?.message || "Draw failed");
+      if (error) {
+        // supabase-js hides the function's JSON body on non-2xx; pull it out of the Response.
+        let detail = error.message;
+        try {
+          const body = await (error as any).context?.json?.();
+          if (body?.error) detail = body.error;
+        } catch {}
+        throw new Error(detail);
+      }
+      if ((data as any)?.error) throw new Error((data as any).error);
       setDrawMsg(`🎉 Winner: ${(data as any).winner_name} — seat #${(data as any).winning_seat}`);
       await load();
     } catch (e: any) {
