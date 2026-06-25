@@ -1,38 +1,40 @@
+import { useMemo } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter, usePathname } from "expo-router";
-import { useAuth } from "@/lib/auth-context";
-import { colors } from "@/lib/theme";
+import { useTheme } from "@/lib/theme-context";
+import { AppColors } from "@/lib/theme";
 
 interface Tab {
   href: string;
   label: string;
-  icon: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  active: keyof typeof Ionicons.glyphMap;
   match: (p: string) => boolean;
-  super?: boolean;
 }
 
+// Primary mobile chrome from the design handoff: Browse · Tickets · Live · Profile.
 const TABS: Tab[] = [
-  { href: "/", label: "Home", icon: "🏠", match: (p) => p === "/" },
-  { href: "/player/browse", label: "Raffles", icon: "🎟️", match: (p) => p.startsWith("/player") || p.startsWith("/raffle") },
-  { href: "/messages", label: "Messages", icon: "💬", match: (p) => p.startsWith("/messages") },
-  { href: "/profile", label: "Profile", icon: "👤", match: (p) => p.startsWith("/profile") },
-  { href: "/admin/users", label: "Admin", icon: "🛡️", match: (p) => p.startsWith("/admin"), super: true },
+  { href: "/", label: "Browse", icon: "compass-outline", active: "compass", match: (p) => p === "/" || p.startsWith("/player") || p.startsWith("/raffle") },
+  { href: "/tickets", label: "Tickets", icon: "pricetags-outline", active: "pricetags", match: (p) => p.startsWith("/tickets") },
+  { href: "/live", label: "Live", icon: "flame-outline", active: "flame", match: (p) => p.startsWith("/live") },
+  { href: "/profile", label: "Profile", icon: "person-outline", active: "person", match: (p) => p.startsWith("/profile") },
 ];
 
 export function BottomNav() {
   const router = useRouter();
   const pathname = usePathname();
-  const { isSuperadmin } = useAuth();
-  const tabs = TABS.filter((t) => !t.super || isSuperadmin);
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
     <View style={styles.bar}>
-      {tabs.map((t) => {
+      {TABS.map((t) => {
         const active = t.match(pathname);
         return (
           <TouchableOpacity key={t.href} style={styles.tab} onPress={() => router.replace(t.href as any)} activeOpacity={0.7}>
-            <Text style={[styles.icon, active && styles.iconActive]}>{t.icon}</Text>
-            <Text style={[styles.label, active && styles.labelActive]}>{t.label}</Text>
+            <Ionicons name={active ? t.active : t.icon} size={22} color={active ? colors.red : colors.muted} />
+            <Text style={[styles.label, active && { color: colors.red }]}>{t.label}</Text>
           </TouchableOpacity>
         );
       })}
@@ -43,7 +45,7 @@ export function BottomNav() {
 // Height to pad screen content so the bar never covers it.
 export const BOTTOM_NAV_HEIGHT = 64;
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: AppColors) => StyleSheet.create({
   bar: {
     position: "absolute",
     left: 0, right: 0, bottom: 0,
@@ -53,11 +55,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
     paddingBottom: 6,
-    paddingTop: 6,
+    paddingTop: 8,
   },
-  tab: { flex: 1, alignItems: "center", justifyContent: "center", gap: 2 },
-  icon: { fontSize: 20, opacity: 0.5 },
-  iconActive: { opacity: 1 },
-  label: { fontSize: 10, color: colors.muted, fontWeight: "600" },
-  labelActive: { color: colors.red },
+  tab: { flex: 1, alignItems: "center", justifyContent: "center", gap: 3 },
+  label: { fontSize: 10.5, color: colors.muted, fontWeight: "700" },
 });

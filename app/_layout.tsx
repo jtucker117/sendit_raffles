@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { ThemeProvider, useTheme } from "@/lib/theme-context";
 import { AppHeader, SideMenu } from "@/components/nav";
+import { BottomNav } from "@/components/BottomNav";
 
 function RootLayoutNav() {
   const { user, session, loading } = useAuth();
@@ -36,6 +37,7 @@ function RootLayoutNav() {
         <View style={{ flex: 1 }}>
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
         </View>
+        {showChrome && <BottomNav />}
       </View>
       {showChrome && menuOpen && <SideMenu onClose={() => setMenuOpen(false)} />}
     </View>
