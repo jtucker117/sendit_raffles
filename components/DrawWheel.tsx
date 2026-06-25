@@ -32,6 +32,7 @@ export function DrawWheel({
   size?: number;
 }) {
   const rotation = useRef(new Animated.Value(0)).current;
+  const spunFor = useRef<number | null>(null);
   const N = Math.max(entrants.length, 1);
   const slice = 360 / N;
   const cx = size / 2;
@@ -55,6 +56,8 @@ export function DrawWheel({
 
   useEffect(() => {
     if (spinTo == null) return;
+    if (spunFor.current === spinTo) return; // already spun for this result — don't re-spin
+    spunFor.current = spinTo;
     // Land the winner's slice center under the top pointer after 6 full turns.
     const target = 360 * 6 - (spinTo + 0.5) * slice;
     rotation.setValue(0);

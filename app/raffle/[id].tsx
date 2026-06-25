@@ -42,9 +42,9 @@ export default function RaffleDetail() {
   const [liveWinner, setLiveWinner] = useState<{ name: string; seat: number } | null>(null);
   const [drawErr, setDrawErr] = useState("");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (silent = false) => {
     if (!id) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     const [{ data: r }, { data: t }, { data: d }] = await Promise.all([
       supabase.from("raffles").select("*").eq("id", id).single(),
       supabase.from("tickets").select("*").eq("raffle_id", id).order("seat_number"),
@@ -66,7 +66,7 @@ export default function RaffleDetail() {
       const { data: w } = await supabase.from("profiles").select("display_name").eq("id", d.winner_id).single();
       setWinnerName(w?.display_name ?? "Winner");
     } else { setDraw(null); }
-    setLoading(false);
+    if (!silent) setLoading(false);
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
@@ -147,7 +147,7 @@ export default function RaffleDetail() {
     }
   }
 
-  function onSpinEnd() { setStage("done"); load(); }
+  function onSpinEnd() { setStage("done"); load(true); } // silent refresh — don't unmount the wheel
   function closeDraw() { setStage("idle"); setSpinTo(null); }
 
   async function onCancel() {
