@@ -1,32 +1,39 @@
 import { Stack, useSegments, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { View } from "react-native";
+import { useEffect, useState } from "react";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
-import { useEffect } from "react";
+import { AppHeader, SideMenu } from "@/components/nav";
+import { colors } from "@/lib/theme";
 
 function RootLayoutNav() {
   const { user, session, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    if (loading) return; // Still checking auth state
-
+    if (loading) return;
     const inAuthGroup = segments[0] === "auth";
-
     if (session && user) {
-      // Signed in — if we're still on the login screen, go to home.
       if (inAuthGroup) router.replace("/");
     } else {
-      // Signed out — if we're not already on the login screen, go there.
       if (!inAuthGroup) router.replace("/auth");
     }
   }, [session, user, loading, segments]);
 
+  const inAuthGroup = segments[0] === "auth";
+  const showChrome = !!(session && user) && !inAuthGroup;
+
   return (
-    <>
-      <StatusBar style="auto" />
-      <Stack screenOptions={{ headerShown: false }} />
-    </>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <StatusBar style="light" />
+      {showChrome && <AppHeader onMenu={() => setMenuOpen(true)} />}
+      <View style={{ flex: 1 }}>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
+      </View>
+      {showChrome && menuOpen && <SideMenu onClose={() => setMenuOpen(false)} />}
+    </View>
   );
 }
 

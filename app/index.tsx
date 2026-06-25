@@ -114,7 +114,6 @@ export default function Home() {
           ))
         )}
       </ScrollView>
-      <BottomNav />
     </View>
   );
 }

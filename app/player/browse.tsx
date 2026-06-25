@@ -71,7 +71,6 @@ export default function BrowseRafflesScreen() {
       )}
 
     </ScrollView>
-    <BottomNav />
     </View>
   );
 }

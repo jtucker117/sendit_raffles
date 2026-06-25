@@ -158,7 +158,6 @@ export default function Profile() {
         <Text style={styles.signOutText}>Sign out</Text>
       </TouchableOpacity>
     </ScrollView>
-    <BottomNav />
     </View>
   );
 }

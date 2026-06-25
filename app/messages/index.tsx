@@ -75,7 +75,6 @@ export default function DirectMessagesScreen() {
           ))
         )}
       </ScrollView>
-      <BottomNav />
     </View>
   );
 }
