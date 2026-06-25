@@ -1,13 +1,17 @@
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useMemo } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { colors, radius } from "@/lib/theme";
+import { useTheme } from "@/lib/theme-context";
+import { radius, AppColors } from "@/lib/theme";
 
 const LOGO = require("../assets/logo.png");
 
 // Persistent top bar with a hamburger that opens the side menu.
 export function AppHeader({ onMenu }: { onMenu: () => void }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.header}>
       <TouchableOpacity onPress={onMenu} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -25,6 +29,8 @@ type Item = { label: string; icon: keyof typeof Ionicons.glyphMap; href: string 
 export function SideMenu({ onClose }: { onClose: () => void }) {
   const router = useRouter();
   const { user, isSuperadmin, isHostApproved, signOut } = useAuth();
+  const { colors, mode, toggle } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const items: Item[] = [
     { label: "Home", icon: "home-outline", href: "/" },
@@ -64,6 +70,12 @@ export function SideMenu({ onClose }: { onClose: () => void }) {
           ))}
         </View>
 
+        {/* Light / dark toggle */}
+        <TouchableOpacity style={styles.toggle} onPress={toggle}>
+          <Ionicons name={mode === "dark" ? "sunny-outline" : "moon-outline"} size={22} color={colors.text} />
+          <Text style={styles.itemText}>{mode === "dark" ? "Light mode" : "Dark mode"}</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.signOut} onPress={() => { onClose(); signOut(); }}>
           <Ionicons name="log-out-outline" size={22} color={colors.red} />
           <Text style={styles.signOutText}>Sign out</Text>
@@ -75,7 +87,7 @@ export function SideMenu({ onClose }: { onClose: () => void }) {
 
 export const HEADER_HEIGHT = 56;
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: AppColors) => StyleSheet.create({
   header: {
     height: HEADER_HEIGHT,
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
@@ -95,6 +107,7 @@ const styles = StyleSheet.create({
   items: { gap: 4 },
   item: { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 13, paddingHorizontal: 10, borderRadius: radius.md },
   itemText: { color: colors.text, fontSize: 16, fontWeight: "600" },
-  signOut: { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 13, paddingHorizontal: 10, marginTop: 8, borderTopWidth: 1, borderTopColor: colors.border },
+  toggle: { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 13, paddingHorizontal: 10, marginTop: 8, borderTopWidth: 1, borderTopColor: colors.border },
+  signOut: { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 13, paddingHorizontal: 10, borderTopWidth: 1, borderTopColor: colors.border },
   signOutText: { color: colors.red, fontSize: 16, fontWeight: "700" },
 });
