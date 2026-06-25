@@ -21,3 +21,6 @@ android/
 *.log
 npm-debug.*
 .vscode/
+
+# Supabase CLI local link metadata
+supabase/.temp/
