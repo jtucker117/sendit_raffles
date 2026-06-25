@@ -210,7 +210,8 @@ export default function RaffleDetail() {
                 <CertRow k="Entrants" v={String(draw.randomorg_signed?.random?.max ?? "—")} />
                 <CertRow k="Winning number" v={String(draw.randomorg_signed?.random?.data?.[0] ?? "—")} />
                 <CertRow k="Drawn" v={new Date(draw.drawn_at).toLocaleString()} />
-                <Text style={styles.sig} numberOfLines={3}>{draw.randomorg_signed?.signature ?? ""}</Text>
+                <Text style={styles.sigLabel}>SIGNATURE</Text>
+                <Text style={styles.sig} numberOfLines={1}>{draw.randomorg_signed?.signature ?? ""}</Text>
                 <TouchableOpacity onPress={() => Linking.openURL(draw.verify_url || "https://www.random.org/")}>
                   <Text style={styles.verify}>Verify on Random.org →</Text>
                 </TouchableOpacity>
@@ -298,8 +299,8 @@ export default function RaffleDetail() {
               </TouchableOpacity>
             )}
             {raffle.status !== "canceled" && raffle.status !== "complete" && (
-              <TouchableOpacity style={[styles.btn, styles.btnOutline, { borderColor: colors.red }]} onPress={onCancel}>
-                <Text style={[styles.btnText, { color: colors.red }]}>{confirmCancel ? "Tap again to cancel" : "Cancel raffle"}</Text>
+              <TouchableOpacity style={[styles.btn, styles.btnOutline, { borderColor: colors.danger }]} onPress={onCancel}>
+                <Text style={[styles.btnText, { color: colors.danger }]}>{confirmCancel ? "Tap again to cancel" : "Cancel raffle"}</Text>
               </TouchableOpacity>
             )}
             {raffle.status === "canceled" && <Text style={styles.canceledNote}>This raffle is canceled</Text>}
@@ -432,7 +433,8 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   certRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 },
   certK: { color: colors.muted, fontSize: 13 },
   certV: { color: colors.text, fontSize: 13, fontWeight: "600", fontFamily: "monospace" as any },
-  sig: { color: colors.faint, fontSize: 10, fontFamily: "monospace" as any, marginTop: 8, lineHeight: 14 },
+  sigLabel: { color: colors.faint, fontSize: 9, fontWeight: "800", letterSpacing: 1, marginTop: 10 },
+  sig: { color: colors.faint, fontSize: 10, fontFamily: "monospace" as any, marginTop: 3 },
   verify: { color: colors.red, fontSize: 13, fontWeight: "700", marginTop: 10 },
   counts: { flexDirection: "row", gap: 12, marginTop: 18, marginBottom: 6 },
   countItem: { flex: 1, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, padding: 12, alignItems: "center" },
@@ -464,7 +466,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   seatNumClaimed: { color: colors.text },
   bigNote: { color: colors.muted, fontSize: 13, lineHeight: 20 },
   canceledNote: { color: colors.red, textAlign: "center", fontWeight: "700", marginTop: 4 },
-  btnDanger: { backgroundColor: colors.redDark },
+  btnDanger: { backgroundColor: colors.danger },
   dangerNote: { color: colors.faint, fontSize: 11, textAlign: "center" },
   backBtn: { alignSelf: "center", marginTop: 22, padding: 10 },
   back: { color: colors.red, fontSize: 15, fontWeight: "600" },

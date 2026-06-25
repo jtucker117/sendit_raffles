@@ -26,6 +26,8 @@ export const darkColors = {
   greenSoft: "rgba(47,191,107,0.16)",
   amber: "#f4b740",
   amberSoft: "rgba(244,183,64,0.16)",
+  danger: "#ef4444",            // destructive actions — always red, never the brand accent
+  dangerSoft: "rgba(239,68,68,0.16)",
   // misc
   onAccent: "#ffffff",
   white: "#ffffff",
@@ -54,6 +56,8 @@ export const lightColors: typeof darkColors = {
   greenSoft: "rgba(31,157,87,0.12)",
   amber: "#c98a00",
   amberSoft: "rgba(201,138,0,0.14)",
+  danger: "#dc2626",            // destructive actions — always red, never the brand accent
+  dangerSoft: "rgba(220,38,38,0.10)",
   // misc
   onAccent: "#ffffff",
   white: "#ffffff",
