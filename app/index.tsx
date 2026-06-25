@@ -223,7 +223,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
 
   empty: { alignItems: "center", marginTop: 40, gap: 8 },
   emptyCard: { alignItems: "center", gap: 10, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingVertical: 40, paddingHorizontal: 24, marginTop: 8 },
-  emptyLogo: { width: 64, height: 64, opacity: 0.55, marginBottom: 4 },
+  emptyLogo: { width: 96, height: 96, marginBottom: 4 },
   emptyText: { color: colors.text, fontSize: 18, fontWeight: "800" },
   emptyHint: { color: colors.muted, fontSize: 13, textAlign: "center", maxWidth: 280 },
   followBtn: { marginTop: 12, backgroundColor: colors.red, paddingVertical: 12, paddingHorizontal: 22, borderRadius: radius.md },
