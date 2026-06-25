@@ -93,13 +93,6 @@ export default function CreateRaffleScreen() {
     }
   }
 
-  const Field = ({ label, children, style }: { label: string; children: React.ReactNode; style?: any }) => (
-    <View style={[{ marginBottom: 16 }, style]}>
-      <Text style={styles.label}>{label}</Text>
-      {children}
-    </View>
-  );
-
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: 48 }}>
       <Text style={styles.h1}>🎡 Create Raffle</Text>
@@ -180,6 +173,17 @@ export default function CreateRaffleScreen() {
         <Text style={styles.back}>← Back</Text>
       </TouchableOpacity>
     </ScrollView>
+  );
+}
+
+// Stable top-level component so text inputs don't lose focus on every keystroke.
+function Field({ label, children, style }: { label: string; children: React.ReactNode; style?: any }) {
+  const { colors } = useTheme();
+  return (
+    <View style={[{ marginBottom: 16 }, style]}>
+      <Text style={{ color: colors.muted, fontSize: 12.5, fontWeight: "600", marginBottom: 8 }}>{label}</Text>
+      {children}
+    </View>
   );
 }
 
