@@ -92,15 +92,12 @@ export default function RaffleDetail() {
     } finally { setDrawing(false); }
   }
 
-  async function onDelete() {
-    if (tickets.length > 0) {
-      Alert.alert("Can't delete yet", `This raffle has ${tickets.length} claimed seat${tickets.length === 1 ? "" : "s"}. Remove and refund all players first.`);
-      return;
-    }
+  async function onCancel() {
     if (!confirmDelete) { setConfirmDelete(true); setTimeout(() => setConfirmDelete(false), 3000); return; }
-    const { error } = await supabase.from("raffles").delete().eq("id", raffle!.id);
-    if (error) { Alert.alert("Delete failed", error.message); return; }
-    router.back();
+    const { error } = await supabase.from("raffles").update({ status: "canceled" }).eq("id", raffle!.id);
+    if (error) { Alert.alert("Cancel failed", error.message); return; }
+    setConfirmDelete(false);
+    await load(); // stays on page showing the canceled state; players remain for refunds
   }
 
   return (
@@ -180,14 +177,17 @@ export default function RaffleDetail() {
 
         {isHost && (
           <View style={{ marginTop: 20, gap: 10 }}>
-            {raffle.status !== "complete" && (
+            {raffle.status === "open" && (
               <TouchableOpacity style={[styles.btn, styles.btnRed, drawing && styles.btnDim]} disabled={drawing} onPress={runDraw}>
                 {drawing ? <ActivityIndicator color={colors.onAccent} /> : <Text style={[styles.btnText, { color: colors.onAccent }]}>Run the draw</Text>}
               </TouchableOpacity>
             )}
-            <TouchableOpacity style={[styles.btn, styles.btnOutline, { borderColor: colors.red }]} onPress={onDelete}>
-              <Text style={[styles.btnText, { color: colors.red }]}>{confirmDelete ? "Tap again to delete" : "Delete raffle"}</Text>
-            </TouchableOpacity>
+            {raffle.status !== "canceled" && raffle.status !== "complete" && (
+              <TouchableOpacity style={[styles.btn, styles.btnOutline, { borderColor: colors.red }]} onPress={onCancel}>
+                <Text style={[styles.btnText, { color: colors.red }]}>{confirmDelete ? "Tap again to cancel" : "Cancel raffle"}</Text>
+              </TouchableOpacity>
+            )}
+            {raffle.status === "canceled" && <Text style={styles.canceledNote}>This raffle is canceled</Text>}
           </View>
         )}
 
@@ -260,6 +260,7 @@ const styles = StyleSheet.create({
   seatNum: { color: colors.muted, fontSize: 12, fontWeight: "700" },
   seatNumClaimed: { color: colors.text },
   bigNote: { color: colors.muted, fontSize: 13, lineHeight: 20 },
+  canceledNote: { color: colors.red, textAlign: "center", fontWeight: "700", marginTop: 4 },
   backBtn: { alignSelf: "center", marginTop: 22, padding: 10 },
   back: { color: colors.red, fontSize: 15, fontWeight: "600" },
 });

@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { useRouter, useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { colors, radius } from "@/lib/theme";
-import { BottomNav, BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
+import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
+import { RaffleCard } from "@/components/RaffleCard";
 
 interface RaffleRow {
   id: string;
@@ -59,14 +60,7 @@ export default function BrowseRafflesScreen() {
         </View>
       ) : (
         raffles.map((r) => (
-          <TouchableOpacity key={r.id} style={styles.card} activeOpacity={0.85} onPress={() => router.push(`/raffle/${r.id}`)}>
-            {r.cover_url ? <Image source={{ uri: r.cover_url }} style={styles.cover} /> : <View style={[styles.cover, styles.coverPlaceholder]} />}
-            <View style={styles.body}>
-              <Text style={styles.title}>{r.title}</Text>
-              {r.prize ? <Text style={styles.prize}>🏆 {r.prize}</Text> : null}
-              <Text style={styles.meta}>{r.capacity} seats · {money(r.amount_cents)} / {r.entry_word}</Text>
-            </View>
-          </TouchableOpacity>
+          <RaffleCard key={r.id} raffle={r as any} onPress={() => router.push(`/raffle/${r.id}`)} />
         ))
       )}
 

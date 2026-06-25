@@ -9,7 +9,8 @@ import { supabase } from "@/lib/supabase";
 import { pickAndUploadImage } from "@/lib/upload";
 import { useHostRaffles } from "@/lib/use-host-raffles";
 import { colors, radius } from "@/lib/theme";
-import { BottomNav, BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
+import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
+import { RaffleCard } from "@/components/RaffleCard";
 
 export default function Profile() {
   const { user, refreshProfile, signOut } = useAuth();
@@ -142,14 +143,7 @@ export default function Profile() {
             <Text style={styles.empty}>No raffles yet — create your first one from Home.</Text>
           ) : (
             raffles.map((r) => (
-              <TouchableOpacity key={r.id} style={styles.raffleCard} activeOpacity={0.85} onPress={() => router.push(`/raffle/${r.id}`)}>
-                {r.cover_url ? <Image source={{ uri: r.cover_url }} style={styles.raffleCover} /> : null}
-                <View style={styles.raffleBody}>
-                  <Text style={styles.raffleTitle}>{r.title}</Text>
-                  {r.prize ? <Text style={styles.rafflePrize}>🏆 {r.prize}</Text> : null}
-                  <Text style={styles.raffleMeta}>{r.status} · {r.capacity} seats</Text>
-                </View>
-              </TouchableOpacity>
+              <RaffleCard key={r.id} raffle={r as any} onPress={() => router.push(`/raffle/${r.id}`)} />
             ))
           )}
         </View>

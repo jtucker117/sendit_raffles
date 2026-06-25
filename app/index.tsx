@@ -6,7 +6,8 @@ import { useAuth } from "@/lib/auth-context";
 import { useRouter, useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { colors, radius } from "@/lib/theme";
-import { BottomNav, BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
+import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
+import { RaffleCard } from "@/components/RaffleCard";
 
 const LOGO = require("../assets/logo.png");
 
@@ -103,14 +104,7 @@ export default function Home() {
           </View>
         ) : (
           raffles.map((r) => (
-            <TouchableOpacity key={r.id} style={styles.card} activeOpacity={0.85} onPress={() => router.push(`/raffle/${r.id}`)}>
-              {r.cover_url ? <Image source={{ uri: r.cover_url }} style={styles.cover} /> : <View style={[styles.cover, styles.coverPh]} />}
-              <View style={styles.cardBody}>
-                <Text style={styles.cardTitle}>{r.title}</Text>
-                {r.prize ? <Text style={styles.cardPrize}>🏆 {r.prize}</Text> : null}
-                <Text style={styles.cardMeta}>{r.capacity} seats · {money(r.amount_cents)} / {r.entry_word}</Text>
-              </View>
-            </TouchableOpacity>
+            <RaffleCard key={r.id} raffle={r as any} onPress={() => router.push(`/raffle/${r.id}`)} />
           ))
         )}
       </ScrollView>
