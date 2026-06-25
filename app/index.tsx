@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, Image, RefreshControl,
 } from "react-native";
 import { useAuth } from "@/lib/auth-context";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { colors, radius } from "@/lib/theme";
 import { BottomNav, BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
@@ -29,7 +29,7 @@ export default function Home() {
     setLoadingRaffles(false);
   }, [user]);
 
-  useEffect(() => { loadRaffles(); }, [loadRaffles]);
+  useFocusEffect(useCallback(() => { loadRaffles(); }, [loadRaffles]));
 
   if (loading) {
     return <View style={styles.center}><ActivityIndicator size="large" color={colors.red} /></View>;

@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   View, Text, Image, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, TextInput, Alert,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { pickAndUploadImage } from "@/lib/upload";
@@ -15,7 +15,8 @@ export default function Profile() {
   const { user, refreshProfile, signOut } = useAuth();
   const router = useRouter();
   const isHost = user?.role === "host";
-  const { raffles, loading: rafflesLoading } = useHostRaffles(isHost ? user?.id : undefined);
+  const { raffles, loading: rafflesLoading, reload: reloadRaffles } = useHostRaffles(isHost ? user?.id : undefined);
+  useFocusEffect(useCallback(() => { reloadRaffles(); }, [reloadRaffles]));
 
   const [uploading, setUploading] = useState<null | "avatar" | "cover">(null);
   const [editingBio, setEditingBio] = useState(false);

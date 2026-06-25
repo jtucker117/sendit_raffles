@@ -93,6 +93,10 @@ export default function RaffleDetail() {
   }
 
   async function onDelete() {
+    if (tickets.length > 0) {
+      Alert.alert("Can't delete yet", `This raffle has ${tickets.length} claimed seat${tickets.length === 1 ? "" : "s"}. Remove and refund all players first.`);
+      return;
+    }
     if (!confirmDelete) { setConfirmDelete(true); setTimeout(() => setConfirmDelete(false), 3000); return; }
     const { error } = await supabase.from("raffles").delete().eq("id", raffle!.id);
     if (error) { Alert.alert("Delete failed", error.message); return; }
