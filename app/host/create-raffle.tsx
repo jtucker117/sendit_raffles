@@ -26,14 +26,15 @@ export default function CreateRaffleScreen() {
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
 
   // Revenue goal → per-seat price: goal ÷ PAID seats (free seats raise $0, so the
-  // paid seats have to cover the whole goal). Auto-fills whenever the goal, seat
-  // count, or free-seat count changes (still manually editable after).
+  // paid seats have to cover the whole goal), rounded UP to the next whole dollar
+  // so the goal is always met. Auto-fills whenever the goal, seat count, or
+  // free-seat count changes (still manually editable after).
   useEffect(() => {
     const cap = parseInt(capacity, 10) || 0;
     const free = parseInt(freeLimit, 10) || 0;
     const paid = Math.max(cap - free, 1);
     const g = parseFloat(goal);
-    if (paid > 0 && g > 0) setAmount((g / paid).toFixed(2));
+    if (paid > 0 && g > 0) setAmount(String(Math.ceil(g / paid)));
   }, [goal, capacity, freeLimit]);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -140,9 +141,10 @@ export default function CreateRaffleScreen() {
             const cap = parseInt(capacity, 10) || 0;
             const free = parseInt(freeLimit, 10) || 0;
             const paid = Math.max(cap - free, 0);
+            const raised = (parseFloat(amount) || 0) * paid;
             return goal.trim()
-              ? `Goal $${goal} ÷ ${paid} paid seat${paid === 1 ? "" : "s"} = $${amount}/seat (${free} free)`
-              : `Full board ≈ $${((parseFloat(amount) || 0) * paid).toFixed(0)} from ${paid} paid seat${paid === 1 ? "" : "s"} (${free} free)`;
+              ? `Goal $${goal} ÷ ${paid} paid seat${paid === 1 ? "" : "s"} = $${amount}/seat → raises $${raised.toFixed(0)} (${free} free)`
+              : `Full board ≈ $${raised.toFixed(0)} from ${paid} paid seat${paid === 1 ? "" : "s"} (${free} free)`;
           })()}
         </Text>
       </Field>
