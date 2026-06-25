@@ -386,7 +386,7 @@ export default function RaffleDetail() {
               <>
                 <Text style={styles.sheetTitle}>Run the draw</Text>
                 <Text style={styles.sheetBody}>
-                  This notifies entrants and starts a {COUNTDOWN_SECONDS}-second countdown, then the wheel spins to pick the winner
+                  This notifies entrants and starts a {COUNTDOWN_SECONDS}-second countdown, then the winner is revealed
                   {wheelEntrants.length >= 2 ? " using a signed Random.org draw" : ""}.
                 </Text>
                 <Text style={styles.sheetBody}>{wheelEntrants.length} confirmed {wheelEntrants.length === 1 ? "entry" : "entries"}.</Text>
@@ -549,11 +549,11 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   back: { color: colors.red, fontSize: 15, fontWeight: "600" },
   // overlay
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.8)", alignItems: "center", justifyContent: "center", padding: 20 },
-  sheet: { width: "100%", maxWidth: 420, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.xl, padding: 22, alignItems: "center" },
-  sheetTitle: { color: colors.text, fontSize: 22, fontWeight: "800" },
-  sheetEyebrow: { color: colors.red, fontSize: 13, fontWeight: "800", letterSpacing: 1.5 },
+  sheet: { width: "100%", maxWidth: 420, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.xl, padding: 24, alignItems: "stretch" },
+  sheetTitle: { color: colors.text, fontSize: 22, fontWeight: "800", textAlign: "center" },
+  sheetEyebrow: { color: colors.red, fontSize: 13, fontWeight: "800", letterSpacing: 1.5, textAlign: "center" },
   sheetBody: { color: colors.muted, fontSize: 14, textAlign: "center", marginTop: 8, lineHeight: 20 },
-  countNum: { color: colors.text, fontSize: 84, fontWeight: "900", marginVertical: 6 },
+  countNum: { color: colors.text, fontSize: 84, fontWeight: "900", marginVertical: 6, textAlign: "center" },
   winnerBig: { color: colors.text, fontSize: 30, fontWeight: "900", marginTop: 10, textAlign: "center" },
   warnBox: { backgroundColor: colors.amberSoft, borderColor: colors.amber, borderWidth: 1, borderRadius: radius.md, padding: 12, marginTop: 12 },
   warnText: { color: colors.text, fontSize: 13, lineHeight: 18, textAlign: "center" },
