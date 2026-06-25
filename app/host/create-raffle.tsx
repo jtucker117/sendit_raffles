@@ -75,12 +75,11 @@ export default function CreateRaffleScreen() {
         status: "open",
       });
       if (error) throw error;
-      Alert.alert("Raffle created", `"${title.trim()}" is live.`, [
-        { text: "OK", onPress: () => router.replace("/profile") },
-      ]);
+      // Navigate straight to home (web ignores Alert button callbacks, which
+      // is why the button "did nothing" before and created duplicates).
+      router.replace("/");
     } catch (e: any) {
       Alert.alert("Couldn't create raffle", e?.message ?? "Try again.");
-    } finally {
       setSaving(false);
     }
   }
