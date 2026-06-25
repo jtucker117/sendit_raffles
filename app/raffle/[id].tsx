@@ -28,6 +28,7 @@ export default function RaffleDetail() {
   const [draw, setDraw] = useState<any | null>(null);
   const [winnerName, setWinnerName] = useState("");
   const [drawing, setDrawing] = useState(false);
+  const [drawMsg, setDrawMsg] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -82,13 +83,14 @@ export default function RaffleDetail() {
 
   async function runDraw() {
     setDrawing(true);
+    setDrawMsg("Drawing…");
     try {
       const { data, error } = await supabase.functions.invoke("draw", { body: { raffle_id: raffle!.id } });
       if (error || (data as any)?.error) throw new Error((data as any)?.error || error?.message || "Draw failed");
+      setDrawMsg(`🎉 Winner: ${(data as any).winner_name} — seat #${(data as any).winning_seat}`);
       await load();
-      Alert.alert("Winner drawn! 🎉", `${(data as any).winner_name} — seat #${(data as any).winning_seat}`);
     } catch (e: any) {
-      Alert.alert("Draw failed", e?.message ?? "Try again.");
+      setDrawMsg(`Draw failed: ${e?.message ?? "Try again."}`);
     } finally { setDrawing(false); }
   }
 
@@ -188,6 +190,7 @@ export default function RaffleDetail() {
               </TouchableOpacity>
             )}
             {raffle.status === "canceled" && <Text style={styles.canceledNote}>This raffle is canceled</Text>}
+            {drawMsg && <Text style={styles.drawMsg}>{drawMsg}</Text>}
           </View>
         )}
 
@@ -261,6 +264,7 @@ const styles = StyleSheet.create({
   seatNumClaimed: { color: colors.text },
   bigNote: { color: colors.muted, fontSize: 13, lineHeight: 20 },
   canceledNote: { color: colors.red, textAlign: "center", fontWeight: "700", marginTop: 4 },
+  drawMsg: { color: colors.text, textAlign: "center", fontSize: 13, marginTop: 6, lineHeight: 18 },
   backBtn: { alignSelf: "center", marginTop: 22, padding: 10 },
   back: { color: colors.red, fontSize: 15, fontWeight: "600" },
 });
