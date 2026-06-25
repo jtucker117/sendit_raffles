@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
-  Image, TextInput, Alert,
+  Image, TextInput, Alert, Linking,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
@@ -25,16 +25,25 @@ export default function RaffleDetail() {
   const [claiming, setClaiming] = useState(false);
   const [pickNum, setPickNum] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [draw, setDraw] = useState<any | null>(null);
+  const [winnerName, setWinnerName] = useState("");
+  const [drawing, setDrawing] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
-    const [{ data: r }, { data: t }] = await Promise.all([
+    const [{ data: r }, { data: t }, { data: d }] = await Promise.all([
       supabase.from("raffles").select("*").eq("id", id).single(),
       supabase.from("tickets").select("*").eq("raffle_id", id).order("seat_number"),
+      supabase.from("draws").select("*").eq("raffle_id", id).maybeSingle(),
     ]);
     if (r) setRaffle(r as Raffle);
     if (t) setTickets(t as Ticket[]);
+    if (d) {
+      setDraw(d);
+      const { data: w } = await supabase.from("profiles").select("display_name").eq("id", d.winner_id).single();
+      setWinnerName(w?.display_name ?? "Winner");
+    } else { setDraw(null); }
     setLoading(false);
   }, [id]);
 
@@ -71,6 +80,18 @@ export default function RaffleDetail() {
     claim("paid", n);
   }
 
+  async function runDraw() {
+    setDrawing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("draw", { body: { raffle_id: raffle!.id } });
+      if (error || (data as any)?.error) throw new Error((data as any)?.error || error?.message || "Draw failed");
+      await load();
+      Alert.alert("Winner drawn! 🎉", `${(data as any).winner_name} — seat #${(data as any).winning_seat}`);
+    } catch (e: any) {
+      Alert.alert("Draw failed", e?.message ?? "Try again.");
+    } finally { setDrawing(false); }
+  }
+
   async function onDelete() {
     if (!confirmDelete) { setConfirmDelete(true); setTimeout(() => setConfirmDelete(false), 3000); return; }
     const { error } = await supabase.from("raffles").delete().eq("id", raffle!.id);
@@ -85,6 +106,24 @@ export default function RaffleDetail() {
         <Text style={styles.title}>{raffle.title}</Text>
         {raffle.prize ? <Text style={styles.prize}>🏆 {raffle.prize}</Text> : null}
         {raffle.description ? <Text style={styles.desc}>{raffle.description}</Text> : null}
+
+        {draw && (
+          <View style={styles.winnerCard}>
+            <Text style={styles.winnerEyebrow}>WINNER</Text>
+            <Text style={styles.winnerName}>{winnerName}</Text>
+            <Text style={styles.winnerSeat}>Seat #{draw.winning_seat}</Text>
+            <View style={styles.certBox}>
+              <Text style={styles.certTitle}>Random.org Signed Draw</Text>
+              <CertRow k="Entrants" v={String(draw.randomorg_signed?.random?.max ?? "—")} />
+              <CertRow k="Winning number" v={String(draw.randomorg_signed?.random?.data?.[0] ?? "—")} />
+              <CertRow k="Drawn" v={new Date(draw.drawn_at).toLocaleString()} />
+              <Text style={styles.sig} numberOfLines={3}>{draw.randomorg_signed?.signature ?? ""}</Text>
+              <TouchableOpacity onPress={() => Linking.openURL(draw.verify_url || "https://www.random.org/")}>
+                <Text style={styles.verify}>Verify on Random.org →</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         <View style={styles.counts}>
           <Count label="Open" value={open} />
@@ -137,9 +176,11 @@ export default function RaffleDetail() {
 
         {isHost && (
           <View style={{ marginTop: 20, gap: 10 }}>
-            <TouchableOpacity style={[styles.btn, styles.btnRed]} onPress={() => Alert.alert("Draw coming soon", "The Random.org signed draw + wheel is the next build.")}>
-              <Text style={[styles.btnText, { color: colors.onAccent }]}>Run the draw</Text>
-            </TouchableOpacity>
+            {raffle.status !== "complete" && (
+              <TouchableOpacity style={[styles.btn, styles.btnRed, drawing && styles.btnDim]} disabled={drawing} onPress={runDraw}>
+                {drawing ? <ActivityIndicator color={colors.onAccent} /> : <Text style={[styles.btnText, { color: colors.onAccent }]}>Run the draw</Text>}
+              </TouchableOpacity>
+            )}
             <TouchableOpacity style={[styles.btn, styles.btnOutline, { borderColor: colors.red }]} onPress={onDelete}>
               <Text style={[styles.btnText, { color: colors.red }]}>{confirmDelete ? "Tap again to delete" : "Delete raffle"}</Text>
             </TouchableOpacity>
@@ -161,6 +202,15 @@ function Count({ label, value }: { label: string; value: number }) {
   );
 }
 
+function CertRow({ k, v }: { k: string; v: string }) {
+  return (
+    <View style={styles.certRow}>
+      <Text style={styles.certK}>{k}</Text>
+      <Text style={styles.certV}>{v}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg },
@@ -171,6 +221,17 @@ const styles = StyleSheet.create({
   title: { color: colors.text, fontSize: 24, fontWeight: "800", letterSpacing: -0.3 },
   prize: { color: colors.muted, fontSize: 16, marginTop: 6 },
   desc: { color: colors.muted, fontSize: 14, marginTop: 10, lineHeight: 20 },
+  winnerCard: { backgroundColor: colors.surface, borderColor: colors.red, borderWidth: 1, borderRadius: radius.lg, padding: 18, marginTop: 18, alignItems: "center" },
+  winnerEyebrow: { color: colors.red, fontSize: 12, fontWeight: "800", letterSpacing: 1.5 },
+  winnerName: { color: colors.text, fontSize: 28, fontWeight: "800", marginTop: 6 },
+  winnerSeat: { color: colors.muted, fontSize: 14, marginTop: 2 },
+  certBox: { width: "100%", backgroundColor: colors.surfaceAlt, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, padding: 12, marginTop: 14 },
+  certTitle: { color: colors.text, fontSize: 13, fontWeight: "700", marginBottom: 8 },
+  certRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 },
+  certK: { color: colors.muted, fontSize: 13 },
+  certV: { color: colors.text, fontSize: 13, fontWeight: "600", fontFamily: "monospace" as any },
+  sig: { color: colors.faint, fontSize: 10, fontFamily: "monospace" as any, marginTop: 8, lineHeight: 14 },
+  verify: { color: colors.red, fontSize: 13, fontWeight: "700", marginTop: 10 },
   counts: { flexDirection: "row", gap: 12, marginTop: 18, marginBottom: 6 },
   countItem: { flex: 1, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, padding: 12, alignItems: "center" },
   countVal: { color: colors.text, fontSize: 22, fontWeight: "800" },
