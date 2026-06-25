@@ -1,172 +1,147 @@
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, Image } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import {
+  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, Image, RefreshControl,
+} from "react-native";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "expo-router";
+import { supabase } from "@/lib/supabase";
 import { colors, radius } from "@/lib/theme";
+import { BottomNav, BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 
 const LOGO = require("../assets/logo.png");
 
+interface RaffleRow {
+  id: string; title: string; prize: string | null; cover_url: string | null;
+  capacity: number; entry_word: string; amount_cents: number;
+}
+
 export default function Home() {
-  const { user, loading, signOut, isHostApproved, isHostPending, isHostRejected, isSuperadmin } = useAuth();
+  const { user, loading, isHostApproved, isHostPending, isSuperadmin } = useAuth();
   const router = useRouter();
+  const [raffles, setRaffles] = useState<RaffleRow[]>([]);
+  const [loadingRaffles, setLoadingRaffles] = useState(true);
+
+  const loadRaffles = useCallback(async () => {
+    if (!user) return;
+    setLoadingRaffles(true);
+    const { data } = await supabase.from("raffles").select("*").eq("status", "open").order("created_at", { ascending: false });
+    if (data) setRaffles(data as RaffleRow[]);
+    setLoadingRaffles(false);
+  }, [user]);
+
+  useEffect(() => { loadRaffles(); }, [loadRaffles]);
 
   if (loading) {
+    return <View style={styles.center}><ActivityIndicator size="large" color={colors.red} /></View>;
+  }
+  if (!user) {
     return (
-      <View style={styles.screen}>
-        <ActivityIndicator size="large" color={colors.red} />
+      <View style={styles.center}>
+        <Image source={LOGO} style={styles.bigLogo} resizeMode="contain" />
+        <Text style={styles.tag}>Provably-fair raffles</Text>
       </View>
     );
   }
 
-  if (!user) {
-    return (
-      <View style={styles.screen}>
-        <Image source={LOGO} style={styles.bigLogo} resizeMode="contain" />
-        <Text style={styles.tag}>Provably-fair raffles</Text>
-        <View style={styles.rule} />
-        <Text style={styles.note}>Milestone 1 — app scaffold is live. Sign in to continue.</Text>
-      </View>
-    );
+  const money = (c: number) => `$${(c / 100).toFixed(0)}`;
+  const isHost = user.role === "host";
+
+  const chips: { label: string; onPress: () => void }[] = [];
+  if (isHost && isHostApproved) {
+    chips.push({ label: "🎡 Create raffle", onPress: () => router.push("/host/create-raffle") });
+    chips.push({ label: "👥 Groups", onPress: () => router.push("/host/groups") });
+    chips.push({ label: "🔑 Join group", onPress: () => router.push("/join") });
+  }
+  if (!isHost) {
+    chips.push({ label: "🔑 Follow a host", onPress: () => router.push("/join") });
+  }
+  if (isSuperadmin) {
+    chips.push({ label: "🛡️ All accounts", onPress: () => router.push("/admin/users") });
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <Image source={LOGO} style={styles.logo} resizeMode="contain" />
-        <Text style={styles.subtitle}>{user.role === "host" ? "🎡 Host" : "🎫 Player"}</Text>
-      </View>
-
-      {/* User card */}
-      <View style={styles.card}>
-        <Text style={styles.cardLabel}>Signed in as</Text>
-        <Text style={styles.displayName}>{user.display_name}</Text>
-        <Text style={styles.email}>{user.email}</Text>
-      </View>
-
-      <TouchableOpacity style={styles.profileButton} onPress={() => router.push("/profile")}>
-        <Text style={styles.profileButtonText}>🪪 My Profile</Text>
-      </TouchableOpacity>
-
-      {isSuperadmin && (
-        <TouchableOpacity style={styles.adminButton} onPress={() => router.push("/admin/users")}>
-          <Text style={styles.adminButtonText}>🛡️ All Accounts (Superadmin)</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Host approval status */}
-      {user.role === "host" && (
-        <View style={[
-          styles.statusCard,
-          isHostApproved ? styles.statusApproved : isHostRejected ? styles.statusRejected : styles.statusPending,
-        ]}>
-          {isHostPending && (
-            <>
-              <Text style={styles.statusIcon}>⏳</Text>
-              <Text style={styles.statusTitle}>Approval Pending</Text>
-              <Text style={styles.statusMessage}>Your host account is under review. You'll be able to create raffles once approved.</Text>
-            </>
-          )}
-          {isHostApproved && (
-            <>
-              <Text style={styles.statusIcon}>✅</Text>
-              <Text style={styles.statusTitle}>Host Approved</Text>
-              <Text style={styles.statusMessage}>You're ready to create raffles and manage host groups.</Text>
-            </>
-          )}
-          {isHostRejected && (
-            <>
-              <Text style={styles.statusIcon}>❌</Text>
-              <Text style={styles.statusTitle}>Application Rejected</Text>
-              <Text style={styles.statusMessage}>Your host application was not approved. Please contact support for more information.</Text>
-            </>
-          )}
+    <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={{ padding: 16, paddingBottom: BOTTOM_NAV_HEIGHT + 24 }}
+        refreshControl={<RefreshControl refreshing={loadingRaffles} onRefresh={loadRaffles} tintColor={colors.red} />}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Image source={LOGO} style={styles.logo} resizeMode="contain" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.hi}>{user.display_name}</Text>
+            <Text style={styles.role}>{isHost ? "🎡 Host" : "🎫 Player"}{isSuperadmin ? " · 🛡️ Superadmin" : ""}</Text>
+          </View>
         </View>
-      )}
 
-      {/* Action buttons */}
-      {user.role === "host" && isHostApproved && (
-        <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/host/groups")}>
-            <Text style={styles.actionButtonText}>👥 Manage Groups</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/host/create-raffle")}>
-            <Text style={styles.actionButtonText}>🎡 Create Raffle</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/join")}>
-            <Text style={styles.actionButtonText}>🔑 Join a Group (code)</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {user.role === "player" && (
-        <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/player/browse")}>
-            <Text style={styles.actionButtonText}>🎫 Browse Raffles</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/join")}>
-            <Text style={styles.actionButtonText}>🔑 Follow a Host (code)</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* Next steps */}
-      <View style={styles.cardContent}>
-        <Text style={styles.nextSteps}>What's next:</Text>
-        {user.role === "host" ? (
-          <>
-            <Text style={styles.nextItem}>• {isHostPending ? "Wait for approval" : "Create a raffle"}</Text>
-            <Text style={styles.nextItem}>• Join or create a host group</Text>
-            <Text style={styles.nextItem}>• Configure seat board and pricing</Text>
-            <Text style={styles.nextItem}>• Run draws with Random.org verification</Text>
-          </>
-        ) : (
-          <>
-            <Text style={styles.nextItem}>• Browse available raffles</Text>
-            <Text style={styles.nextItem}>• Purchase or claim free seats</Text>
-            <Text style={styles.nextItem}>• Watch the wheel spin live</Text>
-            <Text style={styles.nextItem}>• Verify winners on Random.org</Text>
-          </>
+        {/* Host approval banner */}
+        {isHost && isHostPending && (
+          <View style={styles.banner}>
+            <Text style={styles.bannerText}>⏳ Your host account is pending approval. You can browse, but can't create raffles yet.</Text>
+          </View>
         )}
-      </View>
 
-      <TouchableOpacity style={styles.signOutButton} onPress={signOut}>
-        <Text style={styles.signOutText}>Sign Out</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        {/* Quick action chips */}
+        {chips.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+            {chips.map((c) => (
+              <TouchableOpacity key={c.label} style={styles.chip} onPress={c.onPress}>
+                <Text style={styles.chipText}>{c.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+
+        {/* Feed */}
+        <Text style={styles.feedTitle}>{isHost ? "Open raffles" : "Raffles from hosts you follow"}</Text>
+        {loadingRaffles ? (
+          <ActivityIndicator color={colors.red} style={{ marginTop: 24 }} />
+        ) : raffles.length === 0 ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>No raffles yet.</Text>
+            <Text style={styles.emptyHint}>{isHost ? "Create your first raffle." : "Follow a host with their code to see raffles."}</Text>
+          </View>
+        ) : (
+          raffles.map((r) => (
+            <TouchableOpacity key={r.id} style={styles.card} activeOpacity={0.85} onPress={() => router.push(`/raffle/${r.id}`)}>
+              {r.cover_url ? <Image source={{ uri: r.cover_url }} style={styles.cover} /> : <View style={[styles.cover, styles.coverPh]} />}
+              <View style={styles.cardBody}>
+                <Text style={styles.cardTitle}>{r.title}</Text>
+                {r.prize ? <Text style={styles.cardPrize}>🏆 {r.prize}</Text> : null}
+                <Text style={styles.cardMeta}>{r.capacity} seats · {money(r.amount_cents)} / {r.entry_word}</Text>
+              </View>
+            </TouchableOpacity>
+          ))
+        )}
+      </ScrollView>
+      <BottomNav />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: 24, paddingTop: 48, paddingBottom: 60, alignItems: "center" },
-  screen: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg, padding: 24 },
-  bigLogo: { width: 200, height: 200, marginBottom: 8 },
-  logo: { width: 96, height: 96 },
-  tag: { fontSize: 15, color: colors.muted, letterSpacing: 0.3 },
-  rule: { width: 48, height: 3, borderRadius: 2, backgroundColor: colors.red, marginVertical: 18 },
-  note: { fontSize: 13, color: colors.muted, textAlign: "center", maxWidth: 320, lineHeight: 19 },
-  header: { alignItems: "center", marginBottom: 24 },
-  subtitle: { fontSize: 15, color: colors.muted, marginTop: 6 },
-  card: { width: "100%", backgroundColor: colors.surface, borderRadius: radius.lg, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border },
-  cardLabel: { fontSize: 12, fontWeight: "600", color: colors.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 },
-  displayName: { fontSize: 18, fontWeight: "700", color: colors.text, marginBottom: 4 },
-  email: { fontSize: 13, color: colors.muted },
-  statusCard: { width: "100%", borderRadius: radius.lg, padding: 16, marginBottom: 20, alignItems: "center", borderWidth: 1 },
-  statusPending: { backgroundColor: colors.amberSoft, borderColor: colors.amber },
-  statusApproved: { backgroundColor: colors.greenSoft, borderColor: colors.green },
-  statusRejected: { backgroundColor: colors.redSoft, borderColor: colors.red },
-  statusIcon: { fontSize: 40, marginBottom: 8 },
-  statusTitle: { fontSize: 16, fontWeight: "700", color: colors.text, marginBottom: 6 },
-  statusMessage: { fontSize: 13, color: colors.muted, textAlign: "center", lineHeight: 20 },
-  actionButtons: { width: "100%", gap: 10, marginBottom: 16 },
-  actionButton: { backgroundColor: colors.red, borderRadius: radius.md, paddingVertical: 15, alignItems: "center" },
-  actionButtonText: { color: colors.onAccent, fontSize: 16, fontWeight: "700" },
-  cardContent: { width: "100%", backgroundColor: colors.surface, borderRadius: radius.lg, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border },
-  nextSteps: { fontSize: 14, fontWeight: "700", color: colors.text, marginBottom: 10 },
-  nextItem: { fontSize: 14, color: colors.muted, lineHeight: 24 },
-  profileButton: { width: "100%", borderRadius: radius.md, paddingVertical: 14, alignItems: "center", borderWidth: 1, borderColor: colors.red, marginBottom: 16 },
-  profileButtonText: { color: colors.red, fontSize: 15, fontWeight: "700" },
-  adminButton: { width: "100%", borderRadius: radius.md, paddingVertical: 14, alignItems: "center", backgroundColor: colors.navy, marginBottom: 16 },
-  adminButtonText: { color: colors.text, fontSize: 15, fontWeight: "700" },
-  signOutButton: { width: "100%", borderRadius: radius.md, paddingVertical: 14, alignItems: "center", borderWidth: 1, borderColor: colors.border },
-  signOutText: { color: colors.red, fontSize: 15, fontWeight: "600" },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg, gap: 8 },
+  bigLogo: { width: 200, height: 200 },
+  tag: { color: colors.muted, fontSize: 15 },
+  header: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 },
+  logo: { width: 48, height: 48 },
+  hi: { color: colors.text, fontSize: 20, fontWeight: "800", letterSpacing: -0.3 },
+  role: { color: colors.muted, fontSize: 13, marginTop: 1 },
+  banner: { backgroundColor: colors.amberSoft, borderColor: colors.amber, borderWidth: 1, borderRadius: radius.md, padding: 12, marginBottom: 16 },
+  bannerText: { color: colors.text, fontSize: 13, lineHeight: 18 },
+  chipsRow: { gap: 8, paddingBottom: 4, marginBottom: 12 },
+  chip: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 9 },
+  chipText: { color: colors.text, fontWeight: "700", fontSize: 13 },
+  feedTitle: { color: colors.muted, fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.6, marginTop: 6, marginBottom: 12 },
+  empty: { alignItems: "center", marginTop: 30, gap: 6 },
+  emptyText: { color: colors.text, fontSize: 16, fontWeight: "700" },
+  emptyHint: { color: colors.muted, fontSize: 13, textAlign: "center", maxWidth: 280 },
+  card: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, overflow: "hidden", marginBottom: 14 },
+  cover: { width: "100%", height: 160 },
+  coverPh: { backgroundColor: colors.navy },
+  cardBody: { padding: 14 },
+  cardTitle: { color: colors.text, fontSize: 17, fontWeight: "700" },
+  cardPrize: { color: colors.muted, fontSize: 14, marginTop: 4 },
+  cardMeta: { color: colors.faint, fontSize: 12, marginTop: 8, textTransform: "capitalize" },
 });

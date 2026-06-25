@@ -10,6 +10,8 @@ import {
 import { useRouter } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { useMessaging } from "@/lib/use-messaging";
+import { colors, radius } from "@/lib/theme";
+import { BottomNav, BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 
 export default function DirectMessagesScreen() {
   const router = useRouter();
@@ -36,10 +38,10 @@ export default function DirectMessagesScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.listContainer}>
+      <ScrollView style={styles.listContainer} contentContainerStyle={{ paddingBottom: BOTTOM_NAV_HEIGHT + 24 }}>
         {loading ? (
           <View style={styles.center}>
-            <ActivityIndicator size="large" color="#007aff" />
+            <ActivityIndicator size="large" color={colors.red} />
           </View>
         ) : conversations.length === 0 ? (
           <View style={styles.center}>
@@ -73,92 +75,25 @@ export default function DirectMessagesScreen() {
           ))
         )}
       </ScrollView>
+      <BottomNav />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f2f2f7",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e5",
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#1c1c1e",
-  },
-  newButton: {
-    backgroundColor: "#007aff",
-    borderRadius: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-  },
-  newButtonText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  listContainer: {
-    flex: 1,
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 16,
-  },
-  emptyText: {
-    fontSize: 15,
-    color: "#8a8a8e",
-    marginBottom: 16,
-  },
-  startButton: {
-    backgroundColor: "#007aff",
-    borderRadius: 12,
-    paddingVertical: 11,
-    paddingHorizontal: 20,
-  },
-  startButtonText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  conversationCard: {
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e5",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  conversationContent: {
-    flex: 1,
-  },
-  otherUserName: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#1c1c1e",
-    marginBottom: 4,
-  },
-  lastMessage: {
-    fontSize: 13,
-    color: "#8a8a8e",
-  },
-  timestamp: {
-    fontSize: 12,
-    color: "#8a8a8e",
-    marginLeft: 12,
-  },
+  container: { flex: 1, backgroundColor: colors.bg },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingVertical: 16, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
+  title: { fontSize: 24, fontWeight: "800", color: colors.text },
+  newButton: { backgroundColor: colors.red, borderRadius: radius.md, paddingVertical: 8, paddingHorizontal: 14 },
+  newButtonText: { color: colors.onAccent, fontSize: 13, fontWeight: "700" },
+  listContainer: { flex: 1 },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 16, paddingTop: 60 },
+  emptyText: { fontSize: 15, color: colors.muted, marginBottom: 16 },
+  startButton: { backgroundColor: colors.red, borderRadius: radius.md, paddingVertical: 11, paddingHorizontal: 20 },
+  startButtonText: { color: colors.onAccent, fontSize: 15, fontWeight: "700" },
+  conversationCard: { backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: 16, paddingVertical: 12, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  conversationContent: { flex: 1 },
+  otherUserName: { fontSize: 15, fontWeight: "600", color: colors.text, marginBottom: 4 },
+  lastMessage: { fontSize: 13, color: colors.muted },
+  timestamp: { fontSize: 12, color: colors.faint, marginLeft: 12 },
 });

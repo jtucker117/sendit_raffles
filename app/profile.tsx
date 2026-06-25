@@ -9,9 +9,10 @@ import { supabase } from "@/lib/supabase";
 import { pickAndUploadImage } from "@/lib/upload";
 import { useHostRaffles } from "@/lib/use-host-raffles";
 import { colors, radius } from "@/lib/theme";
+import { BottomNav, BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 
 export default function Profile() {
-  const { user, refreshProfile } = useAuth();
+  const { user, refreshProfile, signOut } = useAuth();
   const router = useRouter();
   const isHost = user?.role === "host";
   const { raffles, loading: rafflesLoading } = useHostRaffles(isHost ? user?.id : undefined);
@@ -65,7 +66,8 @@ export default function Profile() {
     : "";
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 48 }}>
+    <View style={styles.container}>
+    <ScrollView contentContainerStyle={{ paddingBottom: BOTTOM_NAV_HEIGHT + 24 }}>
       {/* Cover photo */}
       <View style={styles.coverWrap}>
         {user.cover_url
@@ -152,10 +154,12 @@ export default function Profile() {
         </View>
       )}
 
-      <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-        <Text style={styles.backText}>← Back</Text>
+      <TouchableOpacity style={styles.signOut} onPress={signOut}>
+        <Text style={styles.signOutText}>Sign out</Text>
       </TouchableOpacity>
     </ScrollView>
+    <BottomNav />
+    </View>
   );
 }
 
@@ -208,4 +212,6 @@ const styles = StyleSheet.create({
 
   backBtn: { alignSelf: "center", marginTop: 26, paddingVertical: 10, paddingHorizontal: 20 },
   backText: { color: colors.red, fontSize: 15, fontWeight: "600" },
+  signOut: { alignSelf: "center", marginTop: 26, paddingVertical: 12, paddingHorizontal: 28, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
+  signOutText: { color: colors.red, fontSize: 15, fontWeight: "600" },
 });

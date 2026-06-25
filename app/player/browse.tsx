@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { useRouter } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { colors, radius } from "@/lib/theme";
+import { BottomNav, BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 
 interface RaffleRow {
   id: string;
@@ -38,9 +39,9 @@ export default function BrowseRafflesScreen() {
   const money = (c: number) => `$${(c / 100).toFixed(0)}`;
 
   return (
+    <View style={styles.container}>
     <ScrollView
-      style={styles.container}
-      contentContainerStyle={{ padding: 20, paddingBottom: 48 }}
+      contentContainerStyle={{ padding: 20, paddingBottom: BOTTOM_NAV_HEIGHT + 24 }}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.red} />}
     >
       <Text style={styles.h1}>🎫 Raffles</Text>
@@ -69,10 +70,9 @@ export default function BrowseRafflesScreen() {
         ))
       )}
 
-      <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-        <Text style={styles.back}>← Back</Text>
-      </TouchableOpacity>
     </ScrollView>
+    <BottomNav />
+    </View>
   );
 }
 
