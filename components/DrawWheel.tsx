@@ -71,7 +71,11 @@ export function DrawWheel({
 
   const spin = rotation.interpolate({ inputRange: [0, 360], outputRange: ["0deg", "360deg"] });
   const logoSize = size * 0.26;
-  const fontSize = Math.max(9, Math.min(16, (slice / 360) * 220));
+  const fontSize = Math.max(8, Math.min(16, (slice / 360) * 220));
+  // Always one slice per seat. Thin out the dividers and hide the seat numbers
+  // once slices get too small to label, so it never *looks* batched.
+  const strokeWidth = N > 80 ? 0.4 : N > 40 ? 0.8 : N > 16 ? 1.2 : 2;
+  const showLabels = slice >= 7; // ~N <= 51
 
   return (
     <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
@@ -83,19 +87,21 @@ export function DrawWheel({
           <G>
             {slices.map((s, i) => (
               <G key={i}>
-                <Path d={s.d} fill={s.fill} stroke={colors.bg} strokeWidth={2} />
-                <SvgText
-                  x={s.label.x}
-                  y={s.label.y}
-                  fill="#ffffff"
-                  fontSize={fontSize}
-                  fontWeight="bold"
-                  textAnchor="middle"
-                  alignmentBaseline="central"
-                  transform={`rotate(${s.mid + 90}, ${s.label.x}, ${s.label.y})`}
-                >
-                  {s.seat}
-                </SvgText>
+                <Path d={s.d} fill={s.fill} stroke={colors.bg} strokeWidth={strokeWidth} />
+                {showLabels && (
+                  <SvgText
+                    x={s.label.x}
+                    y={s.label.y}
+                    fill="#ffffff"
+                    fontSize={fontSize}
+                    fontWeight="bold"
+                    textAnchor="middle"
+                    alignmentBaseline="central"
+                    transform={`rotate(${s.mid + 90}, ${s.label.x}, ${s.label.y})`}
+                  >
+                    {s.seat}
+                  </SvgText>
+                )}
               </G>
             ))}
           </G>
