@@ -6,7 +6,7 @@
 //
 // Deploy: supabase functions deploy draw   (secret: RANDOM_ORG_KEY)
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
