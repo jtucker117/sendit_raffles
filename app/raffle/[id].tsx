@@ -23,6 +23,15 @@ interface Ticket { id: string; seat_number: number; owner_id: string; type: "fre
 type DrawStage = "idle" | "confirm" | "countdown" | "drawing" | "spinning" | "done" | "error";
 const COUNTDOWN_SECONDS = 60;
 
+// Deep-link to THIS draw's signed result on Random.org's public verification form.
+function verifyUrl(draw: any): string {
+  const r = draw?.randomorg_signed;
+  if (r?.random && r?.signature) {
+    return `https://api.random.org/signatures/form?format=json&random=${encodeURIComponent(JSON.stringify(r.random))}&signature=${encodeURIComponent(r.signature)}`;
+  }
+  return draw?.verify_url || "https://www.random.org/";
+}
+
 export default function RaffleDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user, isSuperadmin } = useAuth();
@@ -235,8 +244,8 @@ export default function RaffleDetail() {
                 <CertRow k="Drawn" v={new Date(draw.drawn_at).toLocaleString()} />
                 <Text style={styles.sigLabel}>SIGNATURE</Text>
                 <Text style={styles.sig} numberOfLines={1}>{draw.randomorg_signed?.signature ?? ""}</Text>
-                <TouchableOpacity onPress={() => Linking.openURL(draw.verify_url || "https://www.random.org/")}>
-                  <Text style={styles.verify}>Verify on Random.org →</Text>
+                <TouchableOpacity onPress={() => Linking.openURL(verifyUrl(draw))}>
+                  <Text style={styles.verify}>Verify this draw on Random.org →</Text>
                 </TouchableOpacity>
               </View>
             ) : (
