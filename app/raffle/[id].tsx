@@ -11,6 +11,7 @@ import { radius, AppColors } from "@/lib/theme";
 import { DrawWheel, WheelEntrant } from "@/components/DrawWheel";
 import { DrawScratch } from "@/components/DrawScratch";
 import { DrawLotto } from "@/components/DrawLotto";
+import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 
 interface Raffle {
   id: string; host_id: string; title: string; prize: string | null; description: string | null;
@@ -36,6 +37,8 @@ export default function RaffleDetail() {
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(false);
   const [pickNum, setPickNum] = useState("");
+  const [selected, setSelected] = useState<number[]>([]);
+  const [buying, setBuying] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [draw, setDraw] = useState<any | null>(null);
@@ -96,6 +99,8 @@ export default function RaffleDetail() {
   const open = raffle.capacity - claimed;
   const myFree = tickets.some((t) => t.type === "free" && t.owner_id === user?.id);
   const gridMode = raffle.capacity <= 120;
+  const canPick = !isHost && raffle.status === "open";
+  const soldPct = Math.min(100, Math.round((claimed / Math.max(raffle.capacity, 1)) * 100));
   const money = (c: number) => `$${(c / 100).toFixed(0)}`;
   const nameFor = (oid: string) => names[oid] ?? (oid === user?.id ? "You" : "Player");
 
@@ -122,6 +127,29 @@ export default function RaffleDetail() {
     const n = parseInt(pickNum, 10);
     if (!(n >= 1 && n <= raffle!.capacity)) { Alert.alert("Enter a seat number", `1–${raffle!.capacity}`); return; }
     claim("paid", n);
+  }
+
+  function toggleSeat(n: number) {
+    setSelected((prev) => (prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n]));
+  }
+
+  // Reserve all selected seats (each becomes a held paid ticket pending host confirm).
+  async function buySelected() {
+    if (!selected.length) return;
+    setBuying(true);
+    try {
+      for (const n of selected) {
+        const { error } = await supabase.rpc("claim_seat", { p_raffle: raffle!.id, p_seat: n, p_type: "paid" });
+        if (error) throw error;
+      }
+      setSelected([]);
+      await load();
+    } catch (e: any) {
+      Alert.alert("Couldn't reserve", e?.message ?? "Try again.");
+      await load();
+    } finally {
+      setBuying(false);
+    }
   }
 
   // ---- Draw event flow ----
@@ -178,12 +206,6 @@ export default function RaffleDetail() {
   const drawStyle = raffle.draw_style ?? "wheel";
   const revealLabel = drawStyle === "scratch" ? "SCRATCH TO REVEAL" : drawStyle === "lotto" ? "DRAWING" : "SPINNING";
 
-  const Count = ({ label, value }: { label: string; value: number }) => (
-    <View style={styles.countItem}>
-      <Text style={styles.countVal}>{value}</Text>
-      <Text style={styles.countLabel}>{label}</Text>
-    </View>
-  );
   const CertRow = ({ k, v }: { k: string; v: string }) => (
     <View style={styles.certRow}>
       <Text style={styles.certK}>{k}</Text>
@@ -192,7 +214,8 @@ export default function RaffleDetail() {
   );
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 48 }}>
+    <View style={styles.screen}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: canPick && selected.length > 0 ? 170 : 48 }}>
       {raffle.cover_url ? <Image source={{ uri: raffle.cover_url }} style={styles.cover} /> : <View style={[styles.cover, styles.coverPh]} />}
       <View style={styles.pad}>
         <Text style={styles.title}>{raffle.title}</Text>
@@ -222,36 +245,15 @@ export default function RaffleDetail() {
           </View>
         )}
 
-        <View style={styles.counts}>
-          <Count label="Open" value={open} />
-          <Count label={`Free (${raffle.free_seat_limit} max)`} value={freeUsed} />
-          <Count label="Claimed" value={claimed} />
-        </View>
-
-        {!isHost && raffle.status === "open" && (
-          <View style={styles.claimBox}>
-            <Text style={styles.claimTitle}>Claim a seat</Text>
-            <TouchableOpacity
-              style={[styles.btn, styles.btnGreen, (claiming || myFree || freeUsed >= raffle.free_seat_limit || open <= 0) && styles.btnDim]}
-              disabled={claiming || myFree || freeUsed >= raffle.free_seat_limit || open <= 0}
-              onPress={() => claim("free", 0)}
-            >
-              <Text style={[styles.btnText, { color: colors.green }]}>
-                🎟️ Free seat — random {myFree ? "(already claimed)" : ""}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.btn, styles.btnRed, (claiming || open <= 0) && styles.btnDim]} disabled={claiming || open <= 0} onPress={() => claim("paid", 0)}>
-              <Text style={[styles.btnText, { color: colors.onAccent }]}>💳 Paid — random seat · {money(raffle.amount_cents)}</Text>
-            </TouchableOpacity>
-            <View style={styles.pickRow}>
-              <TextInput style={styles.pickInput} placeholder="Seat #" placeholderTextColor={colors.faint} keyboardType="number-pad" value={pickNum} onChangeText={setPickNum} />
-              <TouchableOpacity style={[styles.btn, styles.btnOutline, { flex: 1 }, (claiming || open <= 0) && styles.btnDim]} disabled={claiming || open <= 0} onPress={paidPick}>
-                <Text style={[styles.btnText, { color: colors.text }]}>🎯 Paid — pick seat</Text>
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.payNote}>Paid seats are confirmed by the host after payment (Venmo/Zelle/Cash App/PayPal).</Text>
+        {/* Sellout progress */}
+        <View style={styles.sellout}>
+          <View style={styles.selloutTop}>
+            <Text style={styles.selloutSold}>{claimed} / {raffle.capacity} sold</Text>
+            <Text style={styles.selloutPct}>{soldPct}%</Text>
           </View>
-        )}
+          <View style={styles.bar}><View style={[styles.barFill, { width: `${soldPct}%` }]} /></View>
+          <Text style={styles.selloutMeta}>{open} open · {freeUsed}/{raffle.free_seat_limit} free claimed · {money(raffle.amount_cents)}/seat</Text>
+        </View>
 
         {/* Host: manage entries lives on its own page */}
         {isHost && (
@@ -267,22 +269,62 @@ export default function RaffleDetail() {
           </TouchableOpacity>
         )}
 
-        {/* Seat board */}
-        <Text style={styles.boardTitle}>Seat board</Text>
+        {/* Seat board / pick-your-seats */}
+        <Text style={styles.boardTitle}>{canPick ? "Pick your seats" : "Seat board"}</Text>
         {gridMode ? (
           <View style={styles.board}>
             {Array.from({ length: raffle.capacity }, (_, i) => {
               const seat = i + 1;
-              const t = tickets.find((x) => x.seat_number === seat);
+              const taken = tickets.some((x) => x.seat_number === seat);
+              const sel = selected.includes(seat);
+              const tappable = canPick && !taken;
               return (
-                <View key={seat} style={[styles.seat, t?.type === "free" ? styles.seatFree : t?.type === "paid" ? styles.seatPaid : styles.seatOpen]}>
-                  <Text style={[styles.seatNum, t ? styles.seatNumClaimed : null]}>{seat}</Text>
-                </View>
+                <TouchableOpacity
+                  key={seat}
+                  activeOpacity={tappable ? 0.7 : 1}
+                  disabled={!tappable}
+                  onPress={() => toggleSeat(seat)}
+                  style={[styles.seat, taken ? styles.seatTaken : sel ? styles.seatSelected : styles.seatOpen]}
+                >
+                  <Text style={[styles.seatNum, sel ? styles.seatNumSelected : taken ? styles.seatNumTaken : null]}>{seat}</Text>
+                </TouchableOpacity>
               );
             })}
           </View>
         ) : (
-          <Text style={styles.bigNote}>{raffle.capacity} seats · {claimed} claimed · use “Pick seat” above to choose a number.</Text>
+          <View>
+            <Text style={styles.bigNote}>{raffle.capacity} seats · {claimed} claimed.</Text>
+            {canPick && (
+              <View style={[styles.pickRow, { marginTop: 12 }]}>
+                <TextInput style={styles.pickInput} placeholder="Seat #" placeholderTextColor={colors.faint} keyboardType="number-pad" value={pickNum} onChangeText={setPickNum} />
+                <TouchableOpacity style={[styles.btn, styles.btnRed, { flex: 1, marginTop: 0 }]} onPress={paidPick}>
+                  <Text style={[styles.btnText, { color: colors.onAccent }]}>Reserve seat — {money(raffle.amount_cents)}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+        {canPick && gridMode && (
+          <Text style={styles.legend}>Tap open seats to select · amber = your pick · grey = taken</Text>
+        )}
+
+        {/* Player extras: lucky dip + free seat */}
+        {canPick && (
+          <View style={{ gap: 10, marginTop: 14 }}>
+            <TouchableOpacity style={[styles.btn, styles.btnOutline, (claiming || open <= 0) && styles.btnDim]} disabled={claiming || open <= 0} onPress={() => claim("paid", 0)}>
+              <Text style={[styles.btnText, { color: colors.text }]}>🎲 Lucky dip — random paid seat · {money(raffle.amount_cents)}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.btn, styles.btnGreen, (claiming || myFree || freeUsed >= raffle.free_seat_limit || open <= 0) && styles.btnDim]}
+              disabled={claiming || myFree || freeUsed >= raffle.free_seat_limit || open <= 0}
+              onPress={() => claim("free", 0)}
+            >
+              <Text style={[styles.btnText, { color: colors.green }]}>
+                {myFree ? "Free seat claimed" : freeUsed >= raffle.free_seat_limit ? "No free seats left" : "Claim free seat — random"}
+              </Text>
+            </TouchableOpacity>
+            <Text style={styles.payNote}>Paid seats are confirmed by the host after payment (Venmo / Cash App / Card / PayPal / Zelle).</Text>
+          </View>
         )}
 
         {isHost && (
@@ -321,6 +363,20 @@ export default function RaffleDetail() {
 
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}><Text style={styles.back}>← Back</Text></TouchableOpacity>
       </View>
+      </ScrollView>
+
+      {/* Sticky buy bar (B-layout) */}
+      {canPick && selected.length > 0 && (
+        <View style={styles.buyBar}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.buyCount}>{selected.length} seat{selected.length === 1 ? "" : "s"} selected</Text>
+            <Text style={styles.buySeats} numberOfLines={1}>{[...selected].sort((a, b) => a - b).map((n) => `#${n}`).join(", ")}</Text>
+          </View>
+          <TouchableOpacity style={[styles.buyBtn, buying && styles.btnDim]} disabled={buying} onPress={buySelected}>
+            {buying ? <ActivityIndicator color={colors.onAccent} /> : <Text style={styles.buyBtnText}>Reserve — {money(raffle.amount_cents * selected.length)}</Text>}
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* ---- Draw event overlay ---- */}
       <Modal visible={stage !== "idle"} transparent animationType="fade" onRequestClose={closeDraw}>
@@ -409,14 +465,35 @@ export default function RaffleDetail() {
           </View>
         </View>
       </Modal>
-    </ScrollView>
+    </View>
   );
 }
 
 const makeStyles = (colors: AppColors) => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.bg },
   container: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg },
   muted: { color: colors.muted },
+  // sellout progress
+  sellout: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, padding: 16, marginTop: 18 },
+  selloutTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 },
+  selloutSold: { color: colors.text, fontSize: 16, fontWeight: "800" },
+  selloutPct: { color: colors.red, fontSize: 16, fontWeight: "900" },
+  bar: { height: 8, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, overflow: "hidden" },
+  barFill: { height: "100%", backgroundColor: colors.red },
+  selloutMeta: { color: colors.muted, fontSize: 12, marginTop: 8 },
+  legend: { color: colors.faint, fontSize: 12, marginTop: 10 },
+  // selectable seats
+  seatTaken: { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border },
+  seatSelected: { backgroundColor: colors.red },
+  seatNumSelected: { color: colors.onAccent },
+  seatNumTaken: { color: colors.faint },
+  // sticky buy bar
+  buyBar: { position: "absolute", left: 0, right: 0, bottom: BOTTOM_NAV_HEIGHT, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border, paddingHorizontal: 16, paddingVertical: 12 },
+  buyCount: { color: colors.text, fontSize: 14, fontWeight: "800" },
+  buySeats: { color: colors.muted, fontSize: 12, marginTop: 1 },
+  buyBtn: { backgroundColor: colors.red, borderRadius: radius.md, paddingVertical: 14, paddingHorizontal: 20, minWidth: 150, alignItems: "center" },
+  buyBtnText: { color: colors.onAccent, fontSize: 15, fontWeight: "800" },
   cover: { width: "100%", height: 180 },
   coverPh: { backgroundColor: colors.navy },
   pad: { padding: 20 },
