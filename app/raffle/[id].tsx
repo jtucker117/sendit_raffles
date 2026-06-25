@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
-  Image, TextInput, Alert, Linking,
+  Image, TextInput, Alert, Linking, Modal, useWindowDimensions,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { colors, radius } from "@/lib/theme";
+import { DrawWheel, WheelEntrant } from "@/components/DrawWheel";
 
 interface Raffle {
   id: string; host_id: string; title: string; prize: string | null; description: string | null;
@@ -15,20 +16,33 @@ interface Raffle {
 }
 interface Ticket { id: string; seat_number: number; owner_id: string; type: "free" | "paid"; status: string; }
 
+type DrawStage = "idle" | "confirm" | "countdown" | "drawing" | "spinning" | "done" | "error";
+const COUNTDOWN_SECONDS = 60;
+
 export default function RaffleDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const router = useRouter();
+  const { width } = useWindowDimensions();
+
   const [raffle, setRaffle] = useState<Raffle | null>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [names, setNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(false);
   const [pickNum, setPickNum] = useState("");
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [busyTicket, setBusyTicket] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
   const [draw, setDraw] = useState<any | null>(null);
   const [winnerName, setWinnerName] = useState("");
-  const [drawing, setDrawing] = useState(false);
-  const [drawMsg, setDrawMsg] = useState<string | null>(null);
+
+  // Draw event state
+  const [stage, setStage] = useState<DrawStage>("idle");
+  const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
+  const [spinTo, setSpinTo] = useState<number | null>(null);
+  const [liveWinner, setLiveWinner] = useState<{ name: string; seat: number } | null>(null);
+  const [drawErr, setDrawErr] = useState("");
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -39,7 +53,16 @@ export default function RaffleDetail() {
       supabase.from("draws").select("*").eq("raffle_id", id).maybeSingle(),
     ]);
     if (r) setRaffle(r as Raffle);
-    if (t) setTickets(t as Ticket[]);
+    const ts = (t ?? []) as Ticket[];
+    setTickets(ts);
+    // Resolve owner display names (host/superadmin can read followers; players read what RLS allows)
+    const ownerIds = [...new Set(ts.map((x) => x.owner_id))];
+    if (ownerIds.length) {
+      const { data: profs } = await supabase.from("profiles").select("id, display_name").in("id", ownerIds);
+      const map: Record<string, string> = {};
+      (profs ?? []).forEach((p: any) => { map[p.id] = p.display_name; });
+      setNames(map);
+    } else setNames({});
     if (d) {
       setDraw(d);
       const { data: w } = await supabase.from("profiles").select("display_name").eq("id", d.winner_id).single();
@@ -49,6 +72,14 @@ export default function RaffleDetail() {
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Countdown ticker -> when it hits 0, run the draw.
+  useEffect(() => {
+    if (stage !== "countdown") return;
+    if (countdown <= 0) { executeDraw(); return; }
+    const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [stage, countdown]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return <View style={styles.center}><ActivityIndicator color={colors.red} /></View>;
   if (!raffle) return <View style={styles.center}><Text style={styles.muted}>Raffle not found.</Text></View>;
@@ -60,6 +91,12 @@ export default function RaffleDetail() {
   const myFree = tickets.some((t) => t.type === "free" && t.owner_id === user?.id);
   const gridMode = raffle.capacity <= 120;
   const money = (c: number) => `$${(c / 100).toFixed(0)}`;
+  const nameFor = (oid: string) => names[oid] ?? (oid === user?.id ? "You" : "Player");
+
+  // Eligible entrants for the draw — confirmed only, ordered by seat to match the Edge Function.
+  const confirmedTickets = tickets.filter((t) => t.status === "confirmed").sort((a, b) => a.seat_number - b.seat_number);
+  const wheelEntrants: WheelEntrant[] = confirmedTickets.map((t) => ({ seat: t.seat_number, name: nameFor(t.owner_id) }));
+  const pendingPaid = tickets.filter((t) => t.type === "paid" && t.status === "held");
 
   async function claim(type: "free" | "paid", seat: number) {
     setClaiming(true);
@@ -81,35 +118,72 @@ export default function RaffleDetail() {
     claim("paid", n);
   }
 
-  async function runDraw() {
-    setDrawing(true);
-    setDrawMsg("Drawing…");
+  async function confirmPaid(ticketId: string) {
+    setBusyTicket(ticketId);
+    const { error } = await supabase.from("tickets").update({ status: "confirmed" }).eq("id", ticketId);
+    if (error) Alert.alert("Couldn't confirm", error.message);
+    await load();
+    setBusyTicket(null);
+  }
+
+  async function removeTicket(ticketId: string) {
+    // two-tap confirm (web-safe; Alert callbacks don't fire on web)
+    if (confirmRemove !== ticketId) {
+      setConfirmRemove(ticketId);
+      setTimeout(() => setConfirmRemove((c) => (c === ticketId ? null : c)), 3000);
+      return;
+    }
+    setBusyTicket(ticketId);
+    const { error } = await supabase.from("tickets").delete().eq("id", ticketId);
+    if (error) Alert.alert("Couldn't remove", error.message);
+    setConfirmRemove(null);
+    await load();
+    setBusyTicket(null);
+  }
+
+  // ---- Draw event flow ----
+  function openDraw() {
+    if (confirmedTickets.length < 1) { Alert.alert("No entries yet", "Confirm at least one entry before drawing."); return; }
+    setDrawErr(""); setSpinTo(null); setLiveWinner(null);
+    setCountdown(COUNTDOWN_SECONDS);
+    setStage("confirm");
+  }
+  function startCountdown() { setCountdown(COUNTDOWN_SECONDS); setStage("countdown"); }
+  function skipCountdown() { setCountdown(0); }
+
+  async function executeDraw() {
+    setStage("drawing");
     try {
       const { data, error } = await supabase.functions.invoke("draw", { body: { raffle_id: raffle!.id } });
       if (error) {
-        // supabase-js hides the function's JSON body on non-2xx; pull it out of the Response.
         let detail = error.message;
-        try {
-          const body = await (error as any).context?.json?.();
-          if (body?.error) detail = body.error;
-        } catch {}
+        try { const body = await (error as any).context?.json?.(); if (body?.error) detail = body.error; } catch {}
         throw new Error(detail);
       }
       if ((data as any)?.error) throw new Error((data as any).error);
-      setDrawMsg(`🎉 Winner: ${(data as any).winner_name} — seat #${(data as any).winning_seat}`);
-      await load();
+      const seat = (data as any).winning_seat as number;
+      const idx = wheelEntrants.findIndex((e) => e.seat === seat);
+      setLiveWinner({ name: (data as any).winner_name, seat });
+      setSpinTo(idx >= 0 ? idx : 0);
+      setStage("spinning");
     } catch (e: any) {
-      setDrawMsg(`Draw failed: ${e?.message ?? "Try again."}`);
-    } finally { setDrawing(false); }
+      setDrawErr(e?.message ?? "Draw failed. Try again.");
+      setStage("error");
+    }
   }
 
+  function onSpinEnd() { setStage("done"); load(); }
+  function closeDraw() { setStage("idle"); setSpinTo(null); }
+
   async function onCancel() {
-    if (!confirmDelete) { setConfirmDelete(true); setTimeout(() => setConfirmDelete(false), 3000); return; }
+    if (!confirmCancel) { setConfirmCancel(true); setTimeout(() => setConfirmCancel(false), 3000); return; }
     const { error } = await supabase.from("raffles").update({ status: "canceled" }).eq("id", raffle!.id);
     if (error) { Alert.alert("Cancel failed", error.message); return; }
-    setConfirmDelete(false);
-    await load(); // stays on page showing the canceled state; players remain for refunds
+    setConfirmCancel(false);
+    await load();
   }
+
+  const wheelSize = Math.min(width - 64, 340);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 48 }}>
@@ -124,16 +198,20 @@ export default function RaffleDetail() {
             <Text style={styles.winnerEyebrow}>WINNER</Text>
             <Text style={styles.winnerName}>{winnerName}</Text>
             <Text style={styles.winnerSeat}>Seat #{draw.winning_seat}</Text>
-            <View style={styles.certBox}>
-              <Text style={styles.certTitle}>Random.org Signed Draw</Text>
-              <CertRow k="Entrants" v={String(draw.randomorg_signed?.random?.max ?? "—")} />
-              <CertRow k="Winning number" v={String(draw.randomorg_signed?.random?.data?.[0] ?? "—")} />
-              <CertRow k="Drawn" v={new Date(draw.drawn_at).toLocaleString()} />
-              <Text style={styles.sig} numberOfLines={3}>{draw.randomorg_signed?.signature ?? ""}</Text>
-              <TouchableOpacity onPress={() => Linking.openURL(draw.verify_url || "https://www.random.org/")}>
-                <Text style={styles.verify}>Verify on Random.org →</Text>
-              </TouchableOpacity>
-            </View>
+            {draw.randomorg_signed ? (
+              <View style={styles.certBox}>
+                <Text style={styles.certTitle}>Random.org Signed Draw</Text>
+                <CertRow k="Entrants" v={String(draw.randomorg_signed?.random?.max ?? "—")} />
+                <CertRow k="Winning number" v={String(draw.randomorg_signed?.random?.data?.[0] ?? "—")} />
+                <CertRow k="Drawn" v={new Date(draw.drawn_at).toLocaleString()} />
+                <Text style={styles.sig} numberOfLines={3}>{draw.randomorg_signed?.signature ?? ""}</Text>
+                <TouchableOpacity onPress={() => Linking.openURL(draw.verify_url || "https://www.random.org/")}>
+                  <Text style={styles.verify}>Verify on Random.org →</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <Text style={styles.singleNote}>Single entrant — awarded directly (no draw needed).</Text>
+            )}
           </View>
         )}
 
@@ -168,6 +246,48 @@ export default function RaffleDetail() {
           </View>
         )}
 
+        {/* Host: pending payments to confirm */}
+        {isHost && pendingPaid.length > 0 && (
+          <View style={styles.manageBox}>
+            <Text style={styles.manageTitle}>Pending payments · {pendingPaid.length}</Text>
+            <Text style={styles.manageHint}>Confirm once you’ve received payment — only confirmed seats are entered in the draw.</Text>
+            {pendingPaid.map((t) => (
+              <View key={t.id} style={styles.row}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowName}>{nameFor(t.owner_id)}</Text>
+                  <Text style={styles.rowMeta}>Seat #{t.seat_number} · paid</Text>
+                </View>
+                <TouchableOpacity style={[styles.pill, styles.pillGreen, busyTicket === t.id && styles.btnDim]} disabled={busyTicket === t.id} onPress={() => confirmPaid(t.id)}>
+                  <Text style={styles.pillGreenText}>Confirm</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.pill, styles.pillRed, busyTicket === t.id && styles.btnDim]} disabled={busyTicket === t.id} onPress={() => removeTicket(t.id)}>
+                  <Text style={styles.pillRedText}>{confirmRemove === t.id ? "Sure?" : "Reject"}</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Host: confirmed entries (remove / refund) */}
+        {isHost && confirmedTickets.length > 0 && (
+          <View style={styles.manageBox}>
+            <Text style={styles.manageTitle}>Entries · {confirmedTickets.length}</Text>
+            {confirmedTickets.map((t) => (
+              <View key={t.id} style={styles.row}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowName}>{nameFor(t.owner_id)}</Text>
+                  <Text style={styles.rowMeta}>Seat #{t.seat_number} · {t.type}</Text>
+                </View>
+                {raffle.status === "open" && (
+                  <TouchableOpacity style={[styles.pill, styles.pillRed, busyTicket === t.id && styles.btnDim]} disabled={busyTicket === t.id} onPress={() => removeTicket(t.id)}>
+                    <Text style={styles.pillRedText}>{confirmRemove === t.id ? "Sure?" : "Remove"}</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
+          </View>
+        )}
+
         {/* Seat board */}
         <Text style={styles.boardTitle}>Seat board</Text>
         {gridMode ? (
@@ -189,22 +309,94 @@ export default function RaffleDetail() {
         {isHost && (
           <View style={{ marginTop: 20, gap: 10 }}>
             {raffle.status === "open" && (
-              <TouchableOpacity style={[styles.btn, styles.btnRed, drawing && styles.btnDim]} disabled={drawing} onPress={runDraw}>
-                {drawing ? <ActivityIndicator color={colors.onAccent} /> : <Text style={[styles.btnText, { color: colors.onAccent }]}>Run the draw</Text>}
+              <TouchableOpacity
+                style={[styles.btn, styles.btnRed, confirmedTickets.length < 1 && styles.btnDim]}
+                disabled={confirmedTickets.length < 1}
+                onPress={openDraw}
+              >
+                <Text style={[styles.btnText, { color: colors.onAccent }]}>
+                  {confirmedTickets.length < 1 ? "Run the draw (need 1+ entry)" : "Run the draw"}
+                </Text>
               </TouchableOpacity>
             )}
             {raffle.status !== "canceled" && raffle.status !== "complete" && (
               <TouchableOpacity style={[styles.btn, styles.btnOutline, { borderColor: colors.red }]} onPress={onCancel}>
-                <Text style={[styles.btnText, { color: colors.red }]}>{confirmDelete ? "Tap again to cancel" : "Cancel raffle"}</Text>
+                <Text style={[styles.btnText, { color: colors.red }]}>{confirmCancel ? "Tap again to cancel" : "Cancel raffle"}</Text>
               </TouchableOpacity>
             )}
             {raffle.status === "canceled" && <Text style={styles.canceledNote}>This raffle is canceled</Text>}
-            {drawMsg && <Text style={styles.drawMsg}>{drawMsg}</Text>}
           </View>
         )}
 
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}><Text style={styles.back}>← Back</Text></TouchableOpacity>
       </View>
+
+      {/* ---- Draw event overlay ---- */}
+      <Modal visible={stage !== "idle"} transparent animationType="fade" onRequestClose={closeDraw}>
+        <View style={styles.overlay}>
+          <View style={styles.sheet}>
+            {stage === "confirm" && (
+              <>
+                <Text style={styles.sheetTitle}>Run the draw</Text>
+                <Text style={styles.sheetBody}>
+                  This notifies entrants and starts a {COUNTDOWN_SECONDS}-second countdown, then the wheel spins to pick the winner
+                  {wheelEntrants.length >= 2 ? " using a signed Random.org draw" : ""}.
+                </Text>
+                <Text style={styles.sheetBody}>{wheelEntrants.length} confirmed {wheelEntrants.length === 1 ? "entry" : "entries"}.</Text>
+                <TouchableOpacity style={[styles.btn, styles.btnRed]} onPress={startCountdown}>
+                  <Text style={[styles.btnText, { color: colors.onAccent }]}>Start the draw</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.btn, styles.btnOutline]} onPress={closeDraw}>
+                  <Text style={[styles.btnText, { color: colors.text }]}>Cancel</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {stage === "countdown" && (
+              <>
+                <Text style={styles.sheetEyebrow}>📣 DRAW STARTING</Text>
+                <Text style={styles.countNum}>{countdown}</Text>
+                <Text style={styles.sheetBody}>Get ready — the wheel spins when the timer hits zero.</Text>
+                <TouchableOpacity style={[styles.btn, styles.btnOutline]} onPress={skipCountdown}>
+                  <Text style={[styles.btnText, { color: colors.text }]}>Skip countdown</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {(stage === "drawing" || stage === "spinning" || stage === "done") && (
+              <>
+                <Text style={styles.sheetEyebrow}>{stage === "done" ? "🎉 WINNER" : "SPINNING"}</Text>
+                <View style={{ alignItems: "center", marginVertical: 12 }}>
+                  <DrawWheel entrants={wheelEntrants} spinTo={spinTo} onSpinEnd={onSpinEnd} size={wheelSize} />
+                </View>
+                {stage === "drawing" && <Text style={styles.sheetBody}>Selecting the winner…</Text>}
+                {stage === "done" && liveWinner && (
+                  <>
+                    <Text style={styles.winnerBig}>{liveWinner.name}</Text>
+                    <Text style={styles.sheetBody}>Seat #{liveWinner.seat}</Text>
+                    <TouchableOpacity style={[styles.btn, styles.btnRed]} onPress={closeDraw}>
+                      <Text style={[styles.btnText, { color: colors.onAccent }]}>Done</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </>
+            )}
+
+            {stage === "error" && (
+              <>
+                <Text style={styles.sheetEyebrow}>DRAW FAILED</Text>
+                <Text style={styles.sheetBody}>{drawErr}</Text>
+                <TouchableOpacity style={[styles.btn, styles.btnRed]} onPress={openDraw}>
+                  <Text style={[styles.btnText, { color: colors.onAccent }]}>Try again</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.btn, styles.btnOutline]} onPress={closeDraw}>
+                  <Text style={[styles.btnText, { color: colors.text }]}>Close</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -241,6 +433,7 @@ const styles = StyleSheet.create({
   winnerEyebrow: { color: colors.red, fontSize: 12, fontWeight: "800", letterSpacing: 1.5 },
   winnerName: { color: colors.text, fontSize: 28, fontWeight: "800", marginTop: 6 },
   winnerSeat: { color: colors.muted, fontSize: 14, marginTop: 2 },
+  singleNote: { color: colors.muted, fontSize: 12, marginTop: 12, textAlign: "center" },
   certBox: { width: "100%", backgroundColor: colors.surfaceAlt, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, padding: 12, marginTop: 14 },
   certTitle: { color: colors.text, fontSize: 13, fontWeight: "700", marginBottom: 8 },
   certRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 },
@@ -254,7 +447,19 @@ const styles = StyleSheet.create({
   countLabel: { color: colors.muted, fontSize: 11, marginTop: 2, textAlign: "center" },
   claimBox: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, padding: 16, marginTop: 16, gap: 10 },
   claimTitle: { color: colors.text, fontSize: 14, fontWeight: "700", marginBottom: 2 },
-  btn: { paddingVertical: 13, borderRadius: radius.md, alignItems: "center" },
+  // manage (host)
+  manageBox: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, padding: 16, marginTop: 16 },
+  manageTitle: { color: colors.text, fontSize: 13, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.6 },
+  manageHint: { color: colors.faint, fontSize: 12, marginTop: 4, marginBottom: 6, lineHeight: 16 },
+  row: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border },
+  rowName: { color: colors.text, fontSize: 15, fontWeight: "700" },
+  rowMeta: { color: colors.muted, fontSize: 12, marginTop: 1, textTransform: "capitalize" },
+  pill: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.pill },
+  pillGreen: { backgroundColor: colors.greenSoft },
+  pillGreenText: { color: colors.green, fontWeight: "700", fontSize: 13 },
+  pillRed: { borderWidth: 1, borderColor: colors.red },
+  pillRedText: { color: colors.red, fontWeight: "700", fontSize: 13 },
+  btn: { paddingVertical: 13, borderRadius: radius.md, alignItems: "center", marginTop: 8 },
   btnGreen: { backgroundColor: colors.greenSoft },
   btnRed: { backgroundColor: colors.red },
   btnOutline: { borderWidth: 1, borderColor: colors.border },
@@ -273,7 +478,14 @@ const styles = StyleSheet.create({
   seatNumClaimed: { color: colors.text },
   bigNote: { color: colors.muted, fontSize: 13, lineHeight: 20 },
   canceledNote: { color: colors.red, textAlign: "center", fontWeight: "700", marginTop: 4 },
-  drawMsg: { color: colors.text, textAlign: "center", fontSize: 13, marginTop: 6, lineHeight: 18 },
   backBtn: { alignSelf: "center", marginTop: 22, padding: 10 },
   back: { color: colors.red, fontSize: 15, fontWeight: "600" },
+  // overlay
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.8)", alignItems: "center", justifyContent: "center", padding: 20 },
+  sheet: { width: "100%", maxWidth: 420, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.xl, padding: 22, alignItems: "center" },
+  sheetTitle: { color: colors.text, fontSize: 22, fontWeight: "800" },
+  sheetEyebrow: { color: colors.red, fontSize: 13, fontWeight: "800", letterSpacing: 1.5 },
+  sheetBody: { color: colors.muted, fontSize: 14, textAlign: "center", marginTop: 8, lineHeight: 20 },
+  countNum: { color: colors.text, fontSize: 84, fontWeight: "900", marginVertical: 6 },
+  winnerBig: { color: colors.text, fontSize: 30, fontWeight: "900", marginTop: 10, textAlign: "center" },
 });
