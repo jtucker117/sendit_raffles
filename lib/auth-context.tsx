@@ -10,6 +10,9 @@ interface UserProfile {
   host_approved: boolean | null; // null = pending, false = rejected, true = approved
   host_approved_at: string | null;
   created_at: string;
+  avatar_url?: string | null;
+  cover_url?: string | null;
+  bio?: string | null;
 }
 
 interface AuthContextType {
@@ -23,6 +26,7 @@ interface AuthContextType {
   isHostPending: boolean;
   isHostRejected: boolean;
   error: string | null;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -90,6 +94,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else if (data) {
       setUser(data as UserProfile);
     }
+  }
+
+  // Re-fetch the current user's profile (after a photo/bio update, etc.)
+  async function refreshProfile() {
+    if (session?.user) await fetchUserProfile(session.user.id);
   }
 
   async function signUp(
@@ -215,6 +224,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isHostApproved,
         isHostPending,
         isHostRejected,
+        refreshProfile,
       }}
     >
       {children}

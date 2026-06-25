@@ -42,6 +42,10 @@ export default function Home() {
         <Text style={styles.email}>{user.email}</Text>
       </View>
 
+      <TouchableOpacity style={styles.profileButton} onPress={() => router.push("/profile")}>
+        <Text style={styles.profileButtonText}>🪪 My Profile</Text>
+      </TouchableOpacity>
+
       {/* Host approval status */}
       {user.role === "host" && (
         <View style={[
@@ -147,6 +151,8 @@ const styles = StyleSheet.create({
   cardContent: { width: "100%", backgroundColor: colors.surface, borderRadius: radius.lg, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border },
   nextSteps: { fontSize: 14, fontWeight: "700", color: colors.text, marginBottom: 10 },
   nextItem: { fontSize: 14, color: colors.muted, lineHeight: 24 },
+  profileButton: { width: "100%", borderRadius: radius.md, paddingVertical: 14, alignItems: "center", borderWidth: 1, borderColor: colors.red, marginBottom: 16 },
+  profileButtonText: { color: colors.red, fontSize: 15, fontWeight: "700" },
   signOutButton: { width: "100%", borderRadius: radius.md, paddingVertical: 14, alignItems: "center", borderWidth: 1, borderColor: colors.border },
   signOutText: { color: colors.red, fontSize: 15, fontWeight: "600" },
 });
