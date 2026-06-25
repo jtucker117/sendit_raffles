@@ -51,19 +51,27 @@ Deno.serve(async (req) => {
     const N = tickets?.length ?? 0;
     if (N < 1) return json({ error: "No confirmed entrants to draw from" }, 400);
 
-    // Random.org Signed API — one integer in [1, N].
-    const rngRes = await fetch("https://api.random.org/json-rpc/4/invoke", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0", id: 1, method: "generateSignedIntegers",
-        params: { apiKey: RANDOM_ORG_KEY, n: 1, min: 1, max: N, replacement: true },
-      }),
-    });
-    const rng = await rngRes.json();
-    if (rng.error) return json({ error: `Random.org: ${rng.error.message}` }, 502);
-
-    const pick = rng.result.random.data[0] as number; // 1..N
+    // Pick the winner. Random.org's signed integers require min < max, so with a
+    // single eligible entrant there's nothing to randomize — they win outright.
+    let pick: number;        // 1..N
+    let signed: unknown = null;
+    if (N === 1) {
+      pick = 1;
+    } else {
+      // Random.org Signed API — one integer in [1, N].
+      const rngRes = await fetch("https://api.random.org/json-rpc/4/invoke", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0", id: 1, method: "generateSignedIntegers",
+          params: { apiKey: RANDOM_ORG_KEY, n: 1, min: 1, max: N, replacement: true },
+        }),
+      });
+      const rng = await rngRes.json();
+      if (rng.error) return json({ error: `Random.org: ${rng.error.message}` }, 502);
+      pick = rng.result.random.data[0] as number;
+      signed = rng.result;
+    }
     const winner = tickets![pick - 1];
 
     const { data: winnerProfile } = await admin.from("profiles").select("display_name").eq("id", winner.owner_id).single();
@@ -74,7 +82,7 @@ Deno.serve(async (req) => {
       winning_ticket_id: winner.id,
       winning_seat: winner.seat_number,
       winner_id: winner.owner_id,
-      randomorg_signed: rng.result,
+      randomorg_signed: signed,
       verify_url: "https://api.random.org/",
     }).select().single();
     if (drawErr) return json({ error: drawErr.message }, 500);
