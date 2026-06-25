@@ -20,14 +20,11 @@ export default function Join() {
       const fn = isHost ? "join_group_by_code" : "join_host_by_code";
       const { error } = await supabase.rpc(fn, { p_code: c });
       if (error) throw error;
-      Alert.alert(
-        "Success",
-        isHost ? "You've joined the group." : "You're now following this host — their raffles will show up for you.",
-        [{ text: "OK", onPress: () => router.back() }],
-      );
+      // Navigate straight to where the result shows (web ignores Alert button
+      // callbacks). Player -> home (the host's raffles now appear); host -> groups.
+      router.replace(isHost ? "/host/groups" : "/");
     } catch (e: any) {
       Alert.alert("Couldn't join", e?.message ?? "Check the code and try again.");
-    } finally {
       setBusy(false);
     }
   }
