@@ -7,7 +7,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { colors, radius } from "@/lib/theme";
 import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
-import { RaffleCard } from "@/components/RaffleCard";
+import { RaffleGrid } from "@/components/RaffleGrid";
 
 const LOGO = require("../assets/logo.png");
 
@@ -103,9 +103,7 @@ export default function Home() {
             <Text style={styles.emptyHint}>{isHost ? "Create your first raffle." : "Follow a host with their code to see raffles."}</Text>
           </View>
         ) : (
-          raffles.map((r) => (
-            <RaffleCard key={r.id} raffle={r as any} onPress={() => router.push(`/raffle/${r.id}`)} />
-          ))
+          <RaffleGrid raffles={raffles as any} onPress={(id) => router.push(`/raffle/${id}`)} />
         )}
       </ScrollView>
     </View>

@@ -30,7 +30,7 @@ function RootLayoutNav() {
       <StatusBar style="light" />
       {/* Center everything in a max-width column so content doesn't stretch
           edge-to-edge on wide/desktop windows. */}
-      <View style={{ flex: 1, width: "100%", maxWidth: 760, alignSelf: "center" }}>
+      <View style={{ flex: 1, width: "100%", maxWidth: 1100, alignSelf: "center" }}>
         {showChrome && <AppHeader onMenu={() => setMenuOpen(true)} />}
         <View style={{ flex: 1 }}>
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />

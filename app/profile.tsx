@@ -10,7 +10,7 @@ import { pickAndUploadImage } from "@/lib/upload";
 import { useHostRaffles } from "@/lib/use-host-raffles";
 import { colors, radius } from "@/lib/theme";
 import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
-import { RaffleCard } from "@/components/RaffleCard";
+import { RaffleGrid } from "@/components/RaffleGrid";
 
 export default function Profile() {
   const { user, refreshProfile, signOut } = useAuth();
@@ -142,9 +142,7 @@ export default function Profile() {
           ) : raffles.length === 0 ? (
             <Text style={styles.empty}>No raffles yet — create your first one from Home.</Text>
           ) : (
-            raffles.map((r) => (
-              <RaffleCard key={r.id} raffle={r as any} onPress={() => router.push(`/raffle/${r.id}`)} />
-            ))
+            <RaffleGrid raffles={raffles as any} onPress={(id) => router.push(`/raffle/${id}`)} />
           )}
         </View>
       )}

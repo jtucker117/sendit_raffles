@@ -4,7 +4,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { colors, radius } from "@/lib/theme";
 import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
-import { RaffleCard } from "@/components/RaffleCard";
+import { RaffleGrid } from "@/components/RaffleGrid";
 
 interface RaffleRow {
   id: string;
@@ -59,9 +59,7 @@ export default function BrowseRafflesScreen() {
           </TouchableOpacity>
         </View>
       ) : (
-        raffles.map((r) => (
-          <RaffleCard key={r.id} raffle={r as any} onPress={() => router.push(`/raffle/${r.id}`)} />
-        ))
+        <RaffleGrid raffles={raffles as any} onPress={(id) => router.push(`/raffle/${id}`)} />
       )}
 
     </ScrollView>
