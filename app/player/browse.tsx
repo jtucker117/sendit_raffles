@@ -58,7 +58,7 @@ export default function BrowseRafflesScreen() {
         </View>
       ) : (
         raffles.map((r) => (
-          <TouchableOpacity key={r.id} style={styles.card} activeOpacity={0.85}>
+          <TouchableOpacity key={r.id} style={styles.card} activeOpacity={0.85} onPress={() => router.push(`/raffle/${r.id}`)}>
             {r.cover_url ? <Image source={{ uri: r.cover_url }} style={styles.cover} /> : <View style={[styles.cover, styles.coverPlaceholder]} />}
             <View style={styles.body}>
               <Text style={styles.title}>{r.title}</Text>
