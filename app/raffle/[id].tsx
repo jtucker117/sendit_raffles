@@ -259,8 +259,11 @@ export default function RaffleDetail() {
             {draw.randomorg_signed ? (
               <View style={styles.certBox}>
                 <Text style={styles.certTitle}>Random.org Signed Draw</Text>
-                <CertRow k="Entrants" v={String(draw.randomorg_signed?.random?.max ?? "—")} />
-                <CertRow k="Winning number" v={String(draw.randomorg_signed?.random?.data?.[0] ?? "—")} />
+                <CertRow k="Entrants" v={String(confirmedTickets.length)} />
+                {draw.rounds?.length
+                  ? <CertRow k="Rounds" v={String(draw.rounds.length)} />
+                  : <CertRow k="Winning number" v={String(draw.randomorg_signed?.random?.data?.[0] ?? "—")} />}
+                <CertRow k="Winning seat" v={`#${draw.winning_seat}`} />
                 <CertRow k="Drawn" v={new Date(draw.drawn_at).toLocaleString()} />
                 <Text style={styles.sigLabel}>SIGNATURE</Text>
                 <Text style={styles.sig} numberOfLines={1}>{draw.randomorg_signed?.signature ?? ""}</Text>
