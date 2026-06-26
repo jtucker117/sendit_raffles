@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Linking } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
@@ -13,6 +13,20 @@ interface Host {
   pay_venmo: string | null; pay_cashapp: string | null; pay_paypal: string | null; pay_zelle: string | null;
 }
 interface Method { key: string; handle: string | null }
+
+// Build a deep link that opens the host's payment app (new tab) to send funds.
+function payUrl(key: string, handle: string, amountCents: number): string | null {
+  const amt = (amountCents / 100).toFixed(2);
+  if (key === "Venmo") return `https://venmo.com/u/${encodeURIComponent(handle.replace(/^@/, ""))}`;
+  if (key === "Cash App") return `https://cash.app/$${encodeURIComponent(handle.replace(/^\$/, ""))}/${amt}`;
+  if (key === "PayPal") {
+    const h = handle.trim();
+    if (/paypal\.me\//i.test(h)) return `https://paypal.me/${h.replace(/^https?:\/\//i, "").replace(/^paypal\.me\//i, "")}/${amt}`;
+    if (/^https?:\/\//i.test(h)) return h;
+    return null; // plain email — not deep-linkable
+  }
+  return null; // Zelle / cash — no universal link
+}
 
 export default function Checkout() {
   const params = useLocalSearchParams<{ id: string; seats?: string; random?: string }>();
@@ -116,6 +130,11 @@ export default function Checkout() {
             <>
               <Text style={styles.payHelp}>Send <Text style={styles.payStrong}>{money(total)}</Text> via {active.key} to:</Text>
               <Text selectable style={styles.handle}>{active.handle}</Text>
+              {payUrl(active.key, active.handle, total) && (
+                <TouchableOpacity style={styles.payOpen} onPress={() => Linking.openURL(payUrl(active.key, active.handle!, total)!)}>
+                  <Text style={styles.payOpenText}>Open {active.key} to pay {money(total)} →</Text>
+                </TouchableOpacity>
+              )}
             </>
           ) : (
             <Text style={styles.payHelp}>Arrange {active.key.toLowerCase()} payment with {host?.display_name ?? "the host"} ({money(total)}).</Text>
@@ -158,6 +177,8 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   payHelp: { color: colors.muted, fontSize: 14, lineHeight: 20 },
   payStrong: { color: colors.text, fontWeight: "800" },
   handle: { color: colors.red, fontSize: 20, fontWeight: "900", marginTop: 6 },
+  payOpen: { marginTop: 12, borderWidth: 1, borderColor: colors.red, borderRadius: radius.md, paddingVertical: 11, alignItems: "center" },
+  payOpenText: { color: colors.red, fontSize: 14, fontWeight: "800" },
   payNote: { color: colors.faint, fontSize: 12, lineHeight: 16, marginTop: 10 },
   btn: { backgroundColor: colors.red, borderRadius: radius.md, paddingVertical: 15, alignItems: "center", marginTop: 18 },
   btnDim: { opacity: 0.5 },

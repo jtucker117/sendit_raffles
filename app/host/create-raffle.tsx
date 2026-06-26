@@ -22,10 +22,10 @@ export default function CreateRaffleScreen() {
   const [title, setTitle] = useState("");
   const [prize, setPrize] = useState("");
   const [description, setDescription] = useState("");
-  const [capacity, setCapacity] = useState("100");
-  const [freeLimit, setFreeLimit] = useState("0");
+  const [capacity, setCapacity] = useState("100"); // only field with a default
+  const [freeLimit, setFreeLimit] = useState("");
   const [term, setTerm] = useState<(typeof TERMS)[number]>("Donation");
-  const [amount, setAmount] = useState("10");
+  const [amount, setAmount] = useState("");
   const [goal, setGoal] = useState("");
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [drawStyle, setDrawStyle] = useState<"wheel" | "scratch" | "lotto">("wheel");
@@ -68,7 +68,12 @@ export default function CreateRaffleScreen() {
   async function create() {
     const cap = Math.max(2, Math.min(1000, parseInt(capacity, 10) || 0));
     const free = Math.max(0, Math.min(cap, parseInt(freeLimit, 10) || 0));
-    if (!title.trim()) { Alert.alert("Add a title"); return; }
+    if (!title.trim()) { Alert.alert("Title required", "Give your raffle a title."); return; }
+    const paidSeats = cap - free;
+    if (paidSeats > 0 && !(parseFloat(amount) > 0)) {
+      Alert.alert("Seat price required", "Set the amount per seat (or make every seat free).");
+      return;
+    }
     setSaving(true);
     try {
       const { error } = await supabase.from("raffles").insert({
