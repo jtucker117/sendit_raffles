@@ -14,9 +14,14 @@ Direct messages already exist (`direct_messages`). Run once in
 create table if not exists announcements (
   id uuid primary key default gen_random_uuid(),
   author_id uuid references profiles(id) on delete set null,
+  title text,
+  image_url text,
   content text not null,
   created_at timestamptz default now()
 );
+-- if the table already exists from an earlier run, add the new columns:
+alter table announcements add column if not exists title text;
+alter table announcements add column if not exists image_url text;
 alter table announcements enable row level security;
 drop policy if exists "ann read"  on announcements;
 create policy "ann read"  on announcements for select using (auth.uid() is not null);

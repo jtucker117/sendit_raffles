@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, TextInput, RefreshControl,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
@@ -10,11 +10,11 @@ import { supabase } from "@/lib/supabase";
 import { radius, AppColors } from "@/lib/theme";
 import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 
-type Tab = "direct" | "communities" | "announce";
+type Tab = "direct" | "communities";
 
 export default function Messages() {
   const router = useRouter();
-  const { user, isSuperadmin } = useAuth();
+  const { user } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { fetchDirectMessageConversations } = useMessaging();
@@ -22,10 +22,7 @@ export default function Messages() {
   const [tab, setTab] = useState<Tab>("direct");
   const [convos, setConvos] = useState<any[]>([]);
   const [communities, setCommunities] = useState<{ id: string; name: string; own?: boolean }[]>([]);
-  const [announcements, setAnnouncements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [annText, setAnnText] = useState("");
-  const [posting, setPosting] = useState(false);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
@@ -42,21 +39,10 @@ export default function Messages() {
       (hosts ?? []).forEach((h: any) => comm.push({ id: h.id, name: h.display_name }));
     }
     setCommunities(comm);
-    // Announcements
-    const { data: ann } = await supabase.from("announcements").select("id, content, created_at").order("created_at", { ascending: false });
-    setAnnouncements(ann ?? []);
     setLoading(false);
   }, [user?.id, user?.role]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
-
-  async function postAnnouncement() {
-    if (!annText.trim()) return;
-    setPosting(true);
-    const { error } = await supabase.from("announcements").insert({ author_id: user!.id, content: annText.trim() });
-    if (!error) { setAnnText(""); await load(); }
-    setPosting(false);
-  }
 
   return (
     <View style={styles.container}>
@@ -67,7 +53,7 @@ export default function Messages() {
         <Text style={styles.h1}>Messages</Text>
 
         <View style={styles.tabs}>
-          {([["direct", "Direct"], ["communities", "Communities"], ["announce", "Announcements"]] as [Tab, string][]).map(([k, label]) => (
+          {([["direct", "Direct"], ["communities", "Communities"]] as [Tab, string][]).map(([k, label]) => (
             <TouchableOpacity key={k} style={[styles.tab, tab === k && styles.tabActive]} onPress={() => setTab(k)}>
               <Text style={[styles.tabText, tab === k && styles.tabTextActive]}>{label}</Text>
             </TouchableOpacity>
@@ -111,27 +97,6 @@ export default function Messages() {
               ))
             )}
 
-            {/* ANNOUNCEMENTS */}
-            {tab === "announce" && (
-              <>
-                {isSuperadmin && (
-                  <View style={styles.composer}>
-                    <TextInput style={styles.composerInput} placeholder="Post a platform update…" placeholderTextColor={colors.faint} value={annText} onChangeText={setAnnText} multiline />
-                    <TouchableOpacity style={[styles.newBtn, { marginTop: 10 }, posting && { opacity: 0.5 }]} disabled={posting} onPress={postAnnouncement}>
-                      <Text style={styles.newBtnText}>{posting ? "Posting…" : "Post announcement"}</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-                {announcements.length === 0 ? (
-                  <Text style={styles.empty}>No announcements yet.</Text>
-                ) : announcements.map((a) => (
-                  <View key={a.id} style={styles.annCard}>
-                    <Text style={styles.annText}>{a.content}</Text>
-                    <Text style={styles.annTime}>{new Date(a.created_at).toLocaleString()}</Text>
-                  </View>
-                ))}
-              </>
-            )}
           </>
         )}
       </ScrollView>

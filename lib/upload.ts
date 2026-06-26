@@ -7,7 +7,7 @@ import { supabase } from "./supabase";
 export async function pickAndUploadImage(
   bucket: "avatars" | "covers",
   userId: string,
-  aspect: [number, number],
+  aspect?: [number, number], // omit to upload the full image uncropped (e.g. screenshots)
 ): Promise<string | null> {
   const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (perm.status !== "granted") {
@@ -16,7 +16,7 @@ export async function pickAndUploadImage(
 
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    allowsEditing: true,
+    allowsEditing: !!aspect,
     aspect,
     quality: 0.85,
   });
