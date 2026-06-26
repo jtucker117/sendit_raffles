@@ -51,7 +51,7 @@ export default function CreateRaffleScreen() {
   if (!isHostApproved) {
     return (
       <View style={styles.center}>
-        <Text style={styles.gate}>Only approved hosts can create raffles.</Text>
+        <Text style={styles.gate}>Only approved hosts can create games.</Text>
         <TouchableOpacity onPress={() => router.back()}><Text style={styles.back}>← Back</Text></TouchableOpacity>
       </View>
     );
@@ -72,7 +72,7 @@ export default function CreateRaffleScreen() {
   async function create() {
     const cap = Math.max(2, Math.min(1000, parseInt(capacity, 10) || 0));
     const free = Math.max(0, Math.min(cap, parseInt(freeLimit, 10) || 0));
-    if (!title.trim()) { Alert.alert("Title required", "Give your raffle a title."); return; }
+    if (!title.trim()) { Alert.alert("Title required", "Give your game a title."); return; }
     if (!(parseInt(capacity, 10) >= 2)) { Alert.alert("Seats required", "Enter the total number of seats (at least 2)."); return; }
     const paidSeats = cap - free;
     if (paidSeats > 0 && !(parseFloat(amount) > 0)) {
@@ -101,7 +101,7 @@ export default function CreateRaffleScreen() {
       // is why the button "did nothing" before and created duplicates).
       router.replace("/");
     } catch (e: any) {
-      Alert.alert("Couldn't create raffle", e?.message ?? "Try again.");
+      Alert.alert("Couldn't create game", e?.message ?? "Try again.");
       setSaving(false);
     }
   }
@@ -123,7 +123,7 @@ export default function CreateRaffleScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: BOTTOM_NAV_HEIGHT + 40 }}>
-      <Text style={styles.h1}>Host a raffle</Text>
+      <Text style={styles.h1}>Host a game</Text>
 
       {/* Step indicator */}
       <View style={styles.steps}>
@@ -148,7 +148,7 @@ export default function CreateRaffleScreen() {
             {coverUrl ? <Image source={{ uri: coverUrl }} style={styles.coverImg} /> : <Text style={styles.coverText}>{uploading ? "Uploading…" : "📷 Add cover photo (optional)"}</Text>}
           </TouchableOpacity>
           <Field label="Title" required>
-            <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="e.g. Spring Gun Raffle" placeholderTextColor={colors.faint} />
+            <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="e.g. Spring Gun Drop" placeholderTextColor={colors.faint} />
           </Field>
           <Field label="Prize">
             <TextInput style={styles.input} value={prize} onChangeText={setPrize} placeholder="e.g. Glock 19 / $500 Cash" placeholderTextColor={colors.faint} />
@@ -188,7 +188,7 @@ export default function CreateRaffleScreen() {
               ))}
             </View>
           </Field>
-          <Field label="Revenue goal for this raffle ($, optional)">
+          <Field label="Revenue goal for this game ($, optional)">
             <TextInput style={styles.input} value={goal} onChangeText={setGoal} keyboardType="decimal-pad" placeholder="e.g. 1000" placeholderTextColor={colors.faint} />
           </Field>
           <Field label={`Amount per ${term.toLowerCase()} ($)`} required>
@@ -237,7 +237,7 @@ export default function CreateRaffleScreen() {
       {/* STEP 3 · Publish (review) */}
       {step === 3 && (
         <View style={styles.review}>
-          <Text style={styles.reviewTitle}>{title || "Untitled raffle"}</Text>
+          <Text style={styles.reviewTitle}>{title || "Untitled game"}</Text>
           {prize ? <Text style={styles.reviewRow}>🏆 {prize}</Text> : null}
           <Text style={styles.reviewRow}>{cap} seats · {free} free · ${amount || 0}/seat</Text>
           <Text style={styles.reviewRow}>Raises up to ${raised.toFixed(0)}{goal.trim() ? ` (goal $${goal})` : ""}</Text>
@@ -263,7 +263,7 @@ export default function CreateRaffleScreen() {
           </TouchableOpacity>
         ) : (
           <TouchableOpacity style={[styles.navBtn, styles.navPrimary, saving && { opacity: 0.6 }]} disabled={saving} onPress={create}>
-            {saving ? <ActivityIndicator color={colors.onAccent} /> : <Text style={[styles.navText, { color: colors.onAccent }]}>🚀 Launch raffle</Text>}
+            {saving ? <ActivityIndicator color={colors.onAccent} /> : <Text style={[styles.navText, { color: colors.onAccent }]}>🚀 Launch game</Text>}
           </TouchableOpacity>
         )}
       </View>

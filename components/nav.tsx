@@ -41,7 +41,7 @@ export function SideMenu({ onClose }: { onClose: () => void }) {
   if (user?.role === "host" && isHostApproved) {
     items.splice(1, 0,
       { label: "Dashboard", icon: "speedometer-outline", href: "/host/dashboard" },
-      { label: "Create raffle", icon: "add-circle-outline", href: "/host/create-raffle" },
+      { label: "Create game", icon: "add-circle-outline", href: "/host/create-raffle" },
     );
     items.push({ label: "Groups", icon: "people-outline", href: "/host/groups" });
   }

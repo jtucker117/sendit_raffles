@@ -37,8 +37,8 @@ export default function Join() {
       <Text style={styles.h1}>{isHost ? "Join a group" : "Follow a host"}</Text>
       <Text style={styles.sub}>
         {isHost
-          ? "Enter a group's code to join it. You'll then see that group and its raffles."
-          : "Enter a host's code to follow them. You'll only see raffles from hosts you've joined."}
+          ? "Enter a group's code to join it. You'll then see that group and its games."
+          : "Enter a host's code to follow them. You'll only see games from hosts you've joined."}
       </Text>
 
       <TextInput

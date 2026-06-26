@@ -90,9 +90,9 @@ export default function UserProfileView() {
 
         {prof.role === "host" && (
           <View style={styles.feed}>
-            <Text style={styles.feedTitle}>Open raffles</Text>
+            <Text style={styles.feedTitle}>Open games</Text>
             {raffles.length === 0
-              ? <Text style={styles.muted}>No open raffles right now.</Text>
+              ? <Text style={styles.muted}>No open games right now.</Text>
               : <RaffleGrid raffles={raffles as any} onPress={(rid) => router.push(`/raffle/${rid}`)} />}
           </View>
         )}

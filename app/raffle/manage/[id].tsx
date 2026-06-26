@@ -52,7 +52,7 @@ export default function ManageEntries() {
   useEffect(() => { load(); }, [load]);
 
   if (loading) return <View style={styles.center}><ActivityIndicator color={colors.red} /></View>;
-  if (!raffle) return <View style={styles.center}><Text style={styles.muted}>Raffle not found.</Text></View>;
+  if (!raffle) return <View style={styles.center}><Text style={styles.muted}>Game not found.</Text></View>;
   if (raffle.host_id !== user?.id) {
     return (
       <View style={styles.center}>
@@ -195,7 +195,7 @@ export default function ManageEntries() {
         )
       )}
 
-      <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}><Text style={styles.back}>← Back to raffle</Text></TouchableOpacity>
+      <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}><Text style={styles.back}>← Back to game</Text></TouchableOpacity>
     </ScrollView>
   );
 }

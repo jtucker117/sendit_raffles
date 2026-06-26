@@ -61,7 +61,7 @@ export default function Profile() {
       (tix ?? []).forEach((t: any) => { rids.add(t.raffle_id); if (t.type === "paid" && t.status === "confirmed") spent += t.raffles?.amount_cents ?? 0; });
       const { data: wins } = await supabase.from("draws").select("raffle_id, raffles(id, title, prize, cover_url)").eq("winner_id", user.id);
       setStats({ entered: rids.size, won: (wins ?? []).length, spentCents: spent });
-      setWinnings((wins ?? []).map((w: any) => ({ raffleId: w.raffle_id, title: w.raffles?.title ?? "Raffle", prize: w.raffles?.prize ?? null, cover_url: w.raffles?.cover_url ?? null })));
+      setWinnings((wins ?? []).map((w: any) => ({ raffleId: w.raffle_id, title: w.raffles?.title ?? "Game", prize: w.raffles?.prize ?? null, cover_url: w.raffles?.cover_url ?? null })));
       const { data: p } = await supabase.from("profiles").select("created_at").eq("id", user.id).single();
       setMemberSince(p?.created_at ?? null);
     })();
@@ -236,11 +236,11 @@ export default function Profile() {
       {/* Host feed of raffles */}
       {isHost && (
         <View style={styles.feed}>
-          <Text style={styles.feedTitle}>Raffles</Text>
+          <Text style={styles.feedTitle}>Games</Text>
           {rafflesLoading ? (
             <ActivityIndicator color={colors.red} style={{ marginTop: 16 }} />
           ) : raffles.length === 0 ? (
-            <Text style={styles.empty}>No raffles yet — create your first one from Home.</Text>
+            <Text style={styles.empty}>No games yet — create your first one from Home.</Text>
           ) : (
             <RaffleGrid raffles={raffles as any} onPress={(id) => router.push(`/raffle/${id}`)} />
           )}

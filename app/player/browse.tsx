@@ -61,7 +61,7 @@ export default function BrowseRafflesScreen() {
         contentContainerStyle={{ padding: 20, paddingBottom: BOTTOM_NAV_HEIGHT + 24 }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.red} />}
       >
-        <Text style={styles.h1}>Raffles</Text>
+        <Text style={styles.h1}>Games</Text>
         <Text style={styles.sub}>From hosts you follow</Text>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
@@ -76,8 +76,8 @@ export default function BrowseRafflesScreen() {
           <ActivityIndicator color={colors.red} style={{ marginTop: 30 }} />
         ) : raffles.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>No raffles yet.</Text>
-            <Text style={styles.emptyHint}>Follow a host with their code to see their raffles.</Text>
+            <Text style={styles.emptyText}>No games yet.</Text>
+            <Text style={styles.emptyHint}>Follow a host with their code to see their games.</Text>
             <TouchableOpacity style={styles.followBtn} onPress={() => router.push("/join")}>
               <Text style={styles.followText}>Follow a host</Text>
             </TouchableOpacity>

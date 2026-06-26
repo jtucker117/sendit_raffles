@@ -63,7 +63,7 @@ export default function Checkout() {
   useEffect(() => { load(); }, [load]);
 
   if (loading) return <View style={styles.center}><ActivityIndicator color={colors.red} /></View>;
-  if (!raffle) return <View style={styles.center}><Text style={styles.muted}>Raffle not found.</Text></View>;
+  if (!raffle) return <View style={styles.center}><Text style={styles.muted}>Game not found.</Text></View>;
 
   const money = (c: number) => `$${(c / 100).toFixed(2)}`;
   const total = raffle.amount_cents * qty;

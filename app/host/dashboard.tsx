@@ -98,7 +98,7 @@ export default function HostDashboard() {
         contentContainerStyle={{ padding: 20, paddingBottom: BOTTOM_NAV_HEIGHT + 24 }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.red} />}
       >
-        <Text style={styles.h1}>Your raffles</Text>
+        <Text style={styles.h1}>Your games</Text>
 
         {/* Stat row */}
         <View style={styles.stats}>
@@ -122,13 +122,13 @@ export default function HostDashboard() {
         )}
 
         <TouchableOpacity style={styles.newBtn} onPress={() => router.push("/host/create-raffle")}>
-          <Text style={styles.newBtnText}>+ New raffle</Text>
+          <Text style={styles.newBtnText}>+ New game</Text>
         </TouchableOpacity>
 
         {loading ? (
           <ActivityIndicator color={colors.red} style={{ marginTop: 30 }} />
         ) : rows.length === 0 ? (
-          <Text style={styles.empty}>No raffles yet — create your first one.</Text>
+          <Text style={styles.empty}>No games yet — create your first one.</Text>
         ) : (
           <View style={styles.grid}>
             {rows.map((r) => (

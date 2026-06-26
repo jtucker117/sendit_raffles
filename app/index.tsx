@@ -85,7 +85,7 @@ export default function Home() {
         {/* Search + host action */}
         <View style={styles.searchRow}>
           <View style={styles.search}>
-            <Text style={styles.searchPlaceholder}>Search raffles, prizes, hosts…</Text>
+            <Text style={styles.searchPlaceholder}>Search games, prizes, hosts…</Text>
           </View>
           {isHost && isHostApproved && (
             <TouchableOpacity style={styles.hostBtn} onPress={() => router.push("/host/create-raffle")}>
@@ -97,7 +97,7 @@ export default function Home() {
         {/* Host approval banner */}
         {isHost && isHostPending && (
           <View style={styles.banner}>
-            <Text style={styles.bannerText}>⏳ Your host account is pending approval. You can browse, but can’t create raffles yet.</Text>
+            <Text style={styles.bannerText}>⏳ Your host account is pending approval. You can browse, but can’t create games yet.</Text>
           </View>
         )}
 
@@ -117,12 +117,12 @@ export default function Home() {
             {raffles.length === 0 ? (
               <View style={styles.emptyCard}>
                 <Image source={LOGO} style={styles.emptyLogo} resizeMode="contain" />
-                <Text style={styles.emptyText}>No raffles yet</Text>
+                <Text style={styles.emptyText}>No games yet</Text>
                 <Text style={styles.emptyHint}>
-                  {isHost ? "Create your first raffle — add a cover photo and it’ll be featured up top." : "Follow a host with their code to see their raffles."}
+                  {isHost ? "Create your first game — add a cover photo and it’ll be featured up top." : "Follow a host with their code to see their games."}
                 </Text>
                 <TouchableOpacity style={styles.followBtn} onPress={() => router.push(isHost ? "/host/create-raffle" : "/join")}>
-                  <Text style={styles.followText}>{isHost ? "+ Create raffle" : "Follow a host"}</Text>
+                  <Text style={styles.followText}>{isHost ? "+ Create game" : "Follow a host"}</Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -147,7 +147,7 @@ export default function Home() {
             )}
 
             {/* Grid */}
-            <Text style={styles.sectionTitle}>{isHost ? "Open raffles" : "Raffles from hosts you follow"}</Text>
+            <Text style={styles.sectionTitle}>{isHost ? "Open games" : "Games from hosts you follow"}</Text>
             <View style={styles.grid}>
               {filtered.map((r) => (
                 <TouchableOpacity key={r.id} activeOpacity={0.9} style={[styles.card, { width: cardW }]} onPress={() => router.push(`/raffle/${r.id}`)}>

@@ -102,7 +102,7 @@ export default function RaffleDetail() {
   }, [stage, countdown]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return <View style={styles.center}><ActivityIndicator color={colors.red} /></View>;
-  if (!raffle) return <View style={styles.center}><Text style={styles.muted}>Raffle not found.</Text></View>;
+  if (!raffle) return <View style={styles.center}><Text style={styles.muted}>Game not found.</Text></View>;
 
   const isHost = raffle.host_id === user?.id;
   const freeUsed = tickets.filter((t) => t.type === "free").length;
@@ -400,10 +400,10 @@ export default function RaffleDetail() {
             )}
             {raffle.status !== "canceled" && raffle.status !== "complete" && (
               <TouchableOpacity style={[styles.btn, styles.btnOutline, { borderColor: colors.danger }]} onPress={onCancel}>
-                <Text style={[styles.btnText, { color: colors.danger }]}>{confirmCancel ? "Tap again to cancel" : "Cancel raffle"}</Text>
+                <Text style={[styles.btnText, { color: colors.danger }]}>{confirmCancel ? "Tap again to cancel" : "Cancel game"}</Text>
               </TouchableOpacity>
             )}
-            {raffle.status === "canceled" && <Text style={styles.canceledNote}>This raffle is canceled</Text>}
+            {raffle.status === "canceled" && <Text style={styles.canceledNote}>This game is canceled</Text>}
           </View>
         )}
 
@@ -412,10 +412,10 @@ export default function RaffleDetail() {
           <View style={{ marginTop: isHost ? 10 : 20, gap: 6 }}>
             <TouchableOpacity style={[styles.btn, styles.btnDanger]} onPress={onDelete}>
               <Text style={[styles.btnText, { color: colors.onAccent }]}>
-                {confirmDelete ? "Tap again to permanently delete" : "Delete raffle (superadmin)"}
+                {confirmDelete ? "Tap again to permanently delete" : "Delete game (superadmin)"}
               </Text>
             </TouchableOpacity>
-            <Text style={styles.dangerNote}>Permanent — removes the raffle and all its seats and draw records.</Text>
+            <Text style={styles.dangerNote}>Permanent — removes the game and all its seats and draw records.</Text>
           </View>
         )}
 

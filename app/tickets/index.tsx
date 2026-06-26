@@ -108,9 +108,9 @@ export default function MyTickets() {
         ) : visible.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyText}>{tab === "won" ? "No wins yet." : tab === "active" ? "No active entries." : "Nothing here yet."}</Text>
-            <Text style={styles.emptyHint}>Browse raffles and grab a seat to see it here.</Text>
+            <Text style={styles.emptyHint}>Browse games and grab a seat to see it here.</Text>
             <TouchableOpacity style={styles.cta} onPress={() => router.replace("/")}>
-              <Text style={styles.ctaText}>Browse raffles</Text>
+              <Text style={styles.ctaText}>Browse games</Text>
             </TouchableOpacity>
           </View>
         ) : (

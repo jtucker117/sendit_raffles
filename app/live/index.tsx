@@ -88,7 +88,7 @@ export default function Live() {
         {loading ? (
           <ActivityIndicator color={colors.red} style={{ marginTop: 40 }} />
         ) : visible.length === 0 ? (
-          <Text style={styles.empty}>{filter === "live" ? "No live raffles right now." : filter === "drawn" ? "No results yet." : "Nothing here yet."}</Text>
+          <Text style={styles.empty}>{filter === "live" ? "No live games right now." : filter === "drawn" ? "No results yet." : "Nothing here yet."}</Text>
         ) : (
           <View style={styles.grid}>
             {visible.map((r) => {
