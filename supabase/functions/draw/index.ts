@@ -108,21 +108,13 @@ Deno.serve(async (req) => {
     if (N === 1) {
       winner = tickets![0]; // nothing to randomize
     } else if (mode === "elimination") {
-      // Multiple signed rounds: each removes ~half the remaining seats until one survives.
-      rounds = [];
-      let remaining = tickets!.map((_, i) => i); // indices into tickets
-      while (remaining.length > 1) {
-        // eliminate ~a third each round (min 1) so it takes more, more dramatic rounds
-        const elimCount = Math.max(1, Math.floor(remaining.length / 3));
-        const result = await signedIntegers(elimCount, remaining.length, false);
-        signed = result; // keep the last round's signed cert for verification
-        const positions: number[] = result.random.data;
-        const elimIdx = positions.map((p) => remaining[p - 1]);
-        rounds.push({ eliminated: elimIdx.map((i) => tickets![i].seat_number), signed: result });
-        const elimSet = new Set(elimIdx);
-        remaining = remaining.filter((i) => !elimSet.has(i));
-      }
-      winner = tickets![remaining[0]];
+      // One signed Random.org shuffle of all N seats backs the whole elimination.
+      // Replay it as N-1 rounds, one seat knocked out per round; last standing wins.
+      const result = await signedIntegers(N, N, false); // random permutation of 1..N
+      signed = result;
+      const order = (result.random.data as number[]).map((p) => tickets![p - 1]);
+      rounds = order.slice(0, N - 1).map((t) => ({ eliminated: [t.seat_number] }));
+      winner = order[N - 1];
     } else {
       const result = await signedIntegers(1, N, true);
       signed = result;
