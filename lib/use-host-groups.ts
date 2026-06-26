@@ -21,18 +21,19 @@ export function useHostGroups() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch groups where user is a member
-  async function fetchMyGroups(userId: string) {
+  // Fetch the groups this user can see. RLS already limits host_groups SELECT to
+  // groups you own or are a member of, so a plain select returns exactly those.
+  async function fetchMyGroups(_userId: string) {
     setLoading(true);
     setError(null);
     try {
       const { data, error: queryError } = await supabase
         .from("host_groups")
         .select("*")
-        .or(`owner_id.eq.${userId}, id.in.(SELECT group_id FROM group_members WHERE host_id = '${userId}')`);
+        .order("created_at", { ascending: false });
 
       if (queryError) throw queryError;
-      return data as HostGroup[];
+      return (data ?? []) as HostGroup[];
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to fetch groups";
       setError(message);
