@@ -12,6 +12,7 @@ import { radius, AppColors } from "@/lib/theme";
 import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 
 const TERMS = ["Donation", "Purchase", "Entry"] as const;
+const CATEGORIES = ["Firearms", "Cash", "Optics", "Gear", "Charity"] as const;
 
 export default function CreateRaffleScreen() {
   const { user, isHostApproved } = useAuth();
@@ -21,6 +22,7 @@ export default function CreateRaffleScreen() {
 
   const [title, setTitle] = useState("");
   const [prize, setPrize] = useState("");
+  const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
   const [capacity, setCapacity] = useState("");
   const [freeLimit, setFreeLimit] = useState("");
@@ -83,6 +85,7 @@ export default function CreateRaffleScreen() {
         host_id: user!.id,
         title: title.trim(),
         prize: prize.trim() || null,
+        category: category || null,
         description: description.trim() || null,
         cover_url: coverUrl,
         capacity: cap,
@@ -110,7 +113,7 @@ export default function CreateRaffleScreen() {
 
   const STEPS = ["Prize", "Tickets", "Rules", "Publish"];
   function stepValid(s: number): boolean {
-    if (s === 0) return !!title.trim();
+    if (s === 0) return !!title.trim() && !!category;
     if (s === 1) return cap >= 2 && (paid <= 0 || parseFloat(amount) > 0);
     return true; // Rules + Publish have safe defaults
   }
@@ -149,6 +152,15 @@ export default function CreateRaffleScreen() {
           </Field>
           <Field label="Prize">
             <TextInput style={styles.input} value={prize} onChangeText={setPrize} placeholder="e.g. Glock 19 / $500 Cash" placeholderTextColor={colors.faint} />
+          </Field>
+          <Field label="Category" required>
+            <View style={styles.catWrap}>
+              {CATEGORIES.map((c) => (
+                <TouchableOpacity key={c} style={[styles.catChip, category === c && styles.catChipActive]} onPress={() => setCategory(c)}>
+                  <Text style={[styles.catChipText, category === c && styles.catChipTextActive]}>{c}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </Field>
           <Field label="Description">
             <TextInput style={[styles.input, styles.multiline]} value={description} onChangeText={setDescription} placeholder="Details players should know…" placeholderTextColor={colors.faint} multiline />
@@ -256,7 +268,7 @@ export default function CreateRaffleScreen() {
         )}
       </View>
       {!canNext && step < 3 && (
-        <Text style={styles.reqHint}>{step === 0 ? "Add a title to continue." : "Enter total seats (2+) and a seat price to continue."}</Text>
+        <Text style={styles.reqHint}>{step === 0 ? "Add a title and pick a category to continue." : "Enter total seats (2+) and a seat price to continue."}</Text>
       )}
     </ScrollView>
   );
@@ -288,6 +300,11 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   multiline: { minHeight: 80, textAlignVertical: "top" },
   helper: { color: colors.faint, fontSize: 12, marginTop: 6 },
   row2: { flexDirection: "row", gap: 12 },
+  catWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  catChip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.inputBorder, backgroundColor: colors.surfaceAlt },
+  catChipActive: { backgroundColor: colors.red, borderColor: colors.red },
+  catChipText: { color: colors.text, fontWeight: "700", fontSize: 13 },
+  catChipTextActive: { color: colors.onAccent },
   segment: { flexDirection: "row", gap: 8 },
   segItem: { flex: 1, paddingVertical: 11, borderRadius: radius.md, borderWidth: 1, borderColor: colors.inputBorder, alignItems: "center", backgroundColor: colors.surfaceAlt },
   segItemActive: { backgroundColor: colors.red, borderColor: colors.red },

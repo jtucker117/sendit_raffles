@@ -12,11 +12,11 @@ import { radius, AppColors } from "@/lib/theme";
 import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 
 const LOGO = require("../assets/logo.png");
-const CATEGORIES = ["All", "Firearms", "Cash", "Optics", "Gear", "Charity", "Ending soon"];
+const CATEGORIES = ["All", "Firearms", "Cash", "Optics", "Gear", "Charity"];
 
 interface RaffleRow {
   id: string; title: string; prize: string | null; cover_url: string | null;
-  capacity: number; entry_word: string; amount_cents: number;
+  capacity: number; entry_word: string; amount_cents: number; category?: string | null;
 }
 
 export default function Home() {
@@ -68,7 +68,8 @@ export default function Home() {
   const soldPct = (r: RaffleRow) => Math.min(100, Math.round((claimedOf(r) / Math.max(r.capacity, 1)) * 100));
 
   // Featured = most-sold open raffle; rest go in the grid.
-  const sorted = [...raffles].sort((a, b) => soldPct(b) - soldPct(a));
+  const filtered = cat === "All" ? raffles : raffles.filter((r) => r.category === cat);
+  const sorted = [...filtered].sort((a, b) => soldPct(b) - soldPct(a));
   const featured = sorted[0];
   const cols = width >= 900 ? 3 : width >= 600 ? 2 : 1;
   const contentW = Math.min(width, 1100) - 32;
@@ -148,7 +149,7 @@ export default function Home() {
             {/* Grid */}
             <Text style={styles.sectionTitle}>{isHost ? "Open raffles" : "Raffles from hosts you follow"}</Text>
             <View style={styles.grid}>
-              {raffles.map((r) => (
+              {filtered.map((r) => (
                 <TouchableOpacity key={r.id} activeOpacity={0.9} style={[styles.card, { width: cardW }]} onPress={() => router.push(`/raffle/${r.id}`)}>
                   {r.cover_url
                     ? <Image source={{ uri: r.cover_url }} style={styles.cardImg} />

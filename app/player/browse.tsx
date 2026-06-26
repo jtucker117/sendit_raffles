@@ -10,11 +10,11 @@ import { useTheme } from "@/lib/theme-context";
 import { radius, AppColors } from "@/lib/theme";
 import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 
-const CATEGORIES = ["All", "Firearms", "Cash", "Optics", "Gear", "Charity", "Ending soon"];
+const CATEGORIES = ["All", "Firearms", "Cash", "Optics", "Gear", "Charity"];
 
 interface RaffleRow {
   id: string; title: string; prize: string | null; cover_url: string | null;
-  capacity: number; entry_word: string; amount_cents: number; status: string;
+  capacity: number; entry_word: string; amount_cents: number; status: string; category?: string | null;
 }
 
 export default function BrowseRafflesScreen() {
@@ -84,7 +84,7 @@ export default function BrowseRafflesScreen() {
           </View>
         ) : (
           <View style={styles.grid}>
-            {raffles.map((r) => (
+            {(cat === "All" ? raffles : raffles.filter((r) => r.category === cat)).map((r) => (
               <TouchableOpacity key={r.id} activeOpacity={0.9} style={[styles.card, { width: cardW }]} onPress={() => router.push(`/raffle/${r.id}`)}>
                 {r.cover_url
                   ? <Image source={{ uri: r.cover_url }} style={styles.cardImg} />
