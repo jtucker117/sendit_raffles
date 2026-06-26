@@ -30,7 +30,7 @@ function RootLayoutNav() {
   const showChrome = !!(session && user) && !inAuthGroup && !isPublic;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+    <View style={{ flex: 1, backgroundColor: inAuthGroup ? "#0a0a0c" : colors.bg }}>
       <StatusBar style={mode === "dark" ? "light" : "dark"} />
       {/* Center everything in a max-width column so content doesn't stretch
           edge-to-edge on wide/desktop windows. */}

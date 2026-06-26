@@ -195,20 +195,31 @@ export default function RaffleDetail() {
     router.replace("/");
   }
 
-  // Verify a completed draw's signature directly against Random.org's API.
+  // Verify the draw against Random.org's API — every round for elimination, or
+  // the single signed result for a single-pick draw.
   async function verifyDraw() {
-    const r = draw?.randomorg_signed;
-    if (!r?.random || !r?.signature) return;
+    const roundSigs = ((draw?.rounds ?? []) as any[]).map((x) => x?.signed).filter((s) => s?.random && s?.signature);
+    const items = roundSigs.length
+      ? roundSigs
+      : (draw?.randomorg_signed?.random && draw?.randomorg_signed?.signature ? [draw.randomorg_signed] : []);
+    if (!items.length) return;
     setVerifying(true); setVerifyMsg(null);
     try {
-      const { data, error } = await supabase.functions.invoke("draw", { body: { verify: true, random: r.random, signature: r.signature } });
-      if (error) {
-        let detail = error.message;
-        try { const b = await (error as any).context?.json?.(); if (b?.error) detail = b.error; } catch {}
-        throw new Error(detail);
+      let ok = 0;
+      for (const s of items) {
+        const { data, error } = await supabase.functions.invoke("draw", { body: { verify: true, random: s.random, signature: s.signature } });
+        if (error) {
+          let detail = error.message;
+          try { const b = await (error as any).context?.json?.(); if (b?.error) detail = b.error; } catch {}
+          throw new Error(detail);
+        }
+        if ((data as any)?.error) throw new Error((data as any).error);
+        if ((data as any)?.authentic) ok++;
       }
-      if ((data as any)?.error) throw new Error((data as any).error);
-      setVerifyMsg((data as any).authentic ? "✓ Verified authentic by Random.org" : "⚠️ Could not verify this signature");
+      const multi = items.length > 1;
+      setVerifyMsg(ok === items.length
+        ? (multi ? `✓ All ${items.length} rounds verified authentic by Random.org` : "✓ Verified authentic by Random.org")
+        : `⚠️ Only ${ok}/${items.length} verified`);
     } catch (e: any) {
       setVerifyMsg(`Verify failed: ${e?.message ?? "try again"}`);
     } finally {

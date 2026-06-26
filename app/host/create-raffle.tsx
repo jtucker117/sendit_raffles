@@ -22,7 +22,7 @@ export default function CreateRaffleScreen() {
   const [title, setTitle] = useState("");
   const [prize, setPrize] = useState("");
   const [description, setDescription] = useState("");
-  const [capacity, setCapacity] = useState("100"); // only field with a default
+  const [capacity, setCapacity] = useState("");
   const [freeLimit, setFreeLimit] = useState("");
   const [term, setTerm] = useState<(typeof TERMS)[number]>("Donation");
   const [amount, setAmount] = useState("");
@@ -70,6 +70,7 @@ export default function CreateRaffleScreen() {
     const cap = Math.max(2, Math.min(1000, parseInt(capacity, 10) || 0));
     const free = Math.max(0, Math.min(cap, parseInt(freeLimit, 10) || 0));
     if (!title.trim()) { Alert.alert("Title required", "Give your raffle a title."); return; }
+    if (!(parseInt(capacity, 10) >= 2)) { Alert.alert("Seats required", "Enter the total number of seats (at least 2)."); return; }
     const paidSeats = cap - free;
     if (paidSeats > 0 && !(parseFloat(amount) > 0)) {
       Alert.alert("Seat price required", "Set the amount per seat (or make every seat free).");
@@ -114,7 +115,7 @@ export default function CreateRaffleScreen() {
         )}
       </TouchableOpacity>
 
-      <Field label="Title">
+      <Field label="Title" required>
         <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="e.g. Spring Gun Raffle" placeholderTextColor={colors.faint} />
       </Field>
       <Field label="Prize">
@@ -125,8 +126,8 @@ export default function CreateRaffleScreen() {
       </Field>
 
       <View style={styles.row2}>
-        <Field label="Total seats (max 1000)" style={{ flex: 1 }}>
-          <TextInput style={styles.input} value={capacity} onChangeText={setCapacity} keyboardType="number-pad" />
+        <Field label="Total seats (max 1000)" style={{ flex: 1 }} required>
+          <TextInput style={styles.input} value={capacity} onChangeText={setCapacity} keyboardType="number-pad" placeholder="e.g. 100" placeholderTextColor={colors.faint} />
         </Field>
         <Field label="Free seats (max)" style={{ flex: 1 }}>
           <TextInput style={styles.input} value={freeLimit} onChangeText={setFreeLimit} keyboardType="number-pad" />
@@ -147,7 +148,7 @@ export default function CreateRaffleScreen() {
         <TextInput style={styles.input} value={goal} onChangeText={setGoal} keyboardType="decimal-pad" placeholder="e.g. 1000" placeholderTextColor={colors.faint} />
       </Field>
 
-      <Field label={`Amount per ${term.toLowerCase()} ($)`}>
+      <Field label={`Amount per ${term.toLowerCase()} ($)`} required>
         <TextInput style={styles.input} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="10" placeholderTextColor={colors.faint} />
         <Text style={styles.helper}>
           {(() => {
@@ -202,11 +203,13 @@ export default function CreateRaffleScreen() {
 }
 
 // Stable top-level component so text inputs don't lose focus on every keystroke.
-function Field({ label, children, style }: { label: string; children: React.ReactNode; style?: any }) {
+function Field({ label, children, style, required }: { label: string; children: React.ReactNode; style?: any; required?: boolean }) {
   const { colors } = useTheme();
   return (
     <View style={[{ marginBottom: 16 }, style]}>
-      <Text style={{ color: colors.muted, fontSize: 12.5, fontWeight: "600", marginBottom: 8 }}>{label}</Text>
+      <Text style={{ color: colors.muted, fontSize: 12.5, fontWeight: "600", marginBottom: 8 }}>
+        {label}{required ? <Text style={{ color: colors.danger }}> *</Text> : null}
+      </Text>
       {children}
     </View>
   );

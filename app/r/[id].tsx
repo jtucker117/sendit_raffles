@@ -10,7 +10,7 @@ const LOGO = require("../../assets/logo.png");
 
 interface Record {
   title: string; prize: string | null; cover_url: string | null; capacity: number;
-  winning_seat: number; winner_name: string; randomorg_signed: any; drawn_at: string; entrants: number;
+  winning_seat: number; winner_name: string; randomorg_signed: any; rounds: any[] | null; drawn_at: string; entrants: number;
 }
 
 export default function PublicRecord() {
@@ -40,13 +40,22 @@ export default function PublicRecord() {
 
   useEffect(() => { load(); }, [load]);
 
-  const verify = useCallback(async (signed: any) => {
-    if (!signed?.random || !signed?.signature) return;
-    const { data } = await supabase.functions.invoke("draw", { body: { verify: true, random: signed.random, signature: signed.signature } });
-    setVerifyMsg((data as any)?.authentic ? "✓ Verified authentic by Random.org" : "Could not verify");
+  const runVerify = useCallback(async (r: Record) => {
+    const roundSigs = ((r.rounds ?? []) as any[]).map((x) => x?.signed).filter((s) => s?.random && s?.signature);
+    const items = roundSigs.length ? roundSigs : (r.randomorg_signed?.random && r.randomorg_signed?.signature ? [r.randomorg_signed] : []);
+    if (!items.length) return;
+    let ok = 0;
+    for (const s of items) {
+      const { data } = await supabase.functions.invoke("draw", { body: { verify: true, random: s.random, signature: s.signature } });
+      if ((data as any)?.authentic) ok++;
+    }
+    const multi = items.length > 1;
+    setVerifyMsg(ok === items.length
+      ? (multi ? `✓ All ${items.length} rounds verified by Random.org` : "✓ Verified authentic by Random.org")
+      : `${ok}/${items.length} verified`);
   }, []);
 
-  useEffect(() => { if (rec?.randomorg_signed) verify(rec.randomorg_signed); }, [rec, verify]);
+  useEffect(() => { if (rec) runVerify(rec); }, [rec, runVerify]);
 
   function share() {
     const url = typeof window !== "undefined" ? window.location.href : "";

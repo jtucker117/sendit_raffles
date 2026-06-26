@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
 
     const mode = raffle.draw_mode === "elimination" ? "elimination" : "single";
     let signed: any = null;
-    let rounds: { eliminated: number[] }[] | null = null;
+    let rounds: { eliminated: number[]; signed?: any }[] | null = null;
     let winner: any;
 
     if (N === 1) {
@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
         signed = result; // keep the last round's signed cert for verification
         const positions: number[] = result.random.data;
         const elimIdx = positions.map((p) => remaining[p - 1]);
-        rounds.push({ eliminated: elimIdx.map((i) => tickets![i].seat_number) });
+        rounds.push({ eliminated: elimIdx.map((i) => tickets![i].seat_number), signed: result });
         const elimSet = new Set(elimIdx);
         remaining = remaining.filter((i) => !elimSet.has(i));
       }
