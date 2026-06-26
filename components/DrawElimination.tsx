@@ -1,12 +1,16 @@
-// Multi-round elimination reveal. The winner + each round's eliminated seats are
+// Last-man-standing reveal. The winner + each round's eliminated seats are
 // already decided server-side by Random.org (one signed draw per round). This
-// just replays them: seats drop out round by round until the winner remains.
+// replays them slowly: each round, the eliminated seats grow + shake (a tease)
+// then fade away, until one seat is left standing.
 import { useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Animated } from "react-native";
 import { useTheme } from "@/lib/theme-context";
 import { radius, AppColors } from "@/lib/theme";
 
 export interface ElimRound { eliminated: number[] }
+
+const ROUND_MS = 2400;   // pause between rounds (slow enough to follow the tease)
+const START_MS = 1000;
 
 export function DrawElimination({
   entrants, rounds, winnerSeat, onDone,
@@ -15,25 +19,72 @@ export function DrawElimination({
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [eliminated, setEliminated] = useState<Set<number>>(new Set());
+  const [teasing, setTeasing] = useState<Set<number>>(new Set()); // seats mid grow/shake
   const [roundNo, setRoundNo] = useState(0);
   const [done, setDone] = useState(false);
   const doneRef = useRef(false);
 
+  // per-seat animated values: opacity, scale, shake (translateX)
+  const anim = useRef<Record<number, { op: Animated.Value; sc: Animated.Value; tx: Animated.Value }>>({});
+  const getA = (seat: number) => {
+    if (!anim.current[seat]) anim.current[seat] = { op: new Animated.Value(1), sc: new Animated.Value(1), tx: new Animated.Value(0) };
+    return anim.current[seat];
+  };
+  const winPulse = useRef(new Animated.Value(1)).current;
+
+  function teaseOut(seat: number) {
+    const a = getA(seat);
+    Animated.sequence([
+      // grow + shake (the tease)
+      Animated.parallel([
+        Animated.timing(a.sc, { toValue: 1.45, duration: 320, useNativeDriver: false }),
+        Animated.sequence([
+          Animated.timing(a.tx, { toValue: -5, duration: 55, useNativeDriver: false }),
+          Animated.timing(a.tx, { toValue: 5, duration: 55, useNativeDriver: false }),
+          Animated.timing(a.tx, { toValue: -4, duration: 55, useNativeDriver: false }),
+          Animated.timing(a.tx, { toValue: 4, duration: 55, useNativeDriver: false }),
+          Animated.timing(a.tx, { toValue: 0, duration: 55, useNativeDriver: false }),
+        ]),
+      ]),
+      // then fade + shrink away
+      Animated.parallel([
+        Animated.timing(a.op, { toValue: 0.08, duration: 500, useNativeDriver: false }),
+        Animated.timing(a.sc, { toValue: 0.78, duration: 500, useNativeDriver: false }),
+      ]),
+    ]).start();
+  }
+
   useEffect(() => {
     const elim = new Set<number>();
     let i = 0;
+    let timer: any;
     const tick = () => {
       if (i >= rounds.length) {
-        if (!doneRef.current) { doneRef.current = true; setDone(true); setTimeout(() => onDone?.(), 1000); }
+        if (!doneRef.current) {
+          doneRef.current = true;
+          setDone(true);
+          Animated.sequence([
+            Animated.timing(winPulse, { toValue: 1.28, duration: 280, useNativeDriver: false }),
+            Animated.spring(winPulse, { toValue: 1, useNativeDriver: false }),
+          ]).start();
+          setTimeout(() => onDone?.(), 1600);
+        }
         return;
       }
-      rounds[i].eliminated.forEach((s) => elim.add(s));
-      setEliminated(new Set(elim));
+      const seats = rounds[i].eliminated;
       setRoundNo(i + 1);
+      setTeasing(new Set(seats));
+      seats.forEach((s) => teaseOut(s));
+      // mark them eliminated (for strike-through) once the tease completes
+      setTimeout(() => {
+        seats.forEach((s) => elim.add(s));
+        setEliminated(new Set(elim));
+        setTeasing(new Set());
+      }, 600);
       i++;
-      timer = setTimeout(tick, 1300);
+      timer = setTimeout(tick, ROUND_MS);
     };
-    let timer = setTimeout(tick, 700);
+    timer = setTimeout(tick, START_MS);
     return () => clearTimeout(timer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -47,11 +98,21 @@ export function DrawElimination({
       <View style={styles.grid}>
         {entrants.map((e) => {
           const out = eliminated.has(e.seat);
+          const tease = teasing.has(e.seat);
           const win = done && e.seat === winnerSeat;
+          const a = getA(e.seat);
           return (
-            <View key={e.seat} style={[styles.seat, out && styles.seatOut, win && styles.seatWin]}>
-              <Text style={[styles.seatNum, out && styles.seatNumOut, win && styles.seatNumWin]}>{e.seat}</Text>
-            </View>
+            <Animated.View
+              key={e.seat}
+              style={[
+                styles.seat,
+                win && styles.seatWin,
+                tease && styles.seatTease,
+                { opacity: win ? 1 : a.op, transform: [{ scale: win ? winPulse : a.sc }, { translateX: a.tx }] },
+              ]}
+            >
+              <Text style={[styles.seatNum, out && styles.seatNumOut, win && styles.seatNumWin, tease && styles.seatNumTease]}>{e.seat}</Text>
+            </Animated.View>
           );
         })}
       </View>
@@ -65,10 +126,11 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   status: { color: colors.red, fontSize: 13, fontWeight: "900", letterSpacing: 1.5, marginBottom: 14 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 7, justifyContent: "center" },
   seat: { width: 40, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border },
-  seatOut: { opacity: 0.25 },
-  seatWin: { backgroundColor: colors.red, borderColor: colors.red, transform: [{ scale: 1.12 }] },
+  seatWin: { backgroundColor: colors.red, borderColor: colors.red },
+  seatTease: { backgroundColor: colors.danger, borderColor: colors.danger },
   seatNum: { color: colors.text, fontSize: 13, fontWeight: "800" },
   seatNumOut: { textDecorationLine: "line-through", color: colors.faint },
   seatNumWin: { color: colors.onAccent },
+  seatNumTease: { color: colors.onAccent },
   note: { color: colors.muted, fontSize: 12, marginTop: 14, textAlign: "center" },
 });

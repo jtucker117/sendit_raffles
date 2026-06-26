@@ -112,7 +112,8 @@ Deno.serve(async (req) => {
       rounds = [];
       let remaining = tickets!.map((_, i) => i); // indices into tickets
       while (remaining.length > 1) {
-        const elimCount = Math.floor(remaining.length / 2);
+        // eliminate ~a third each round (min 1) so it takes more, more dramatic rounds
+        const elimCount = Math.max(1, Math.floor(remaining.length / 3));
         const result = await signedIntegers(elimCount, remaining.length, false);
         signed = result; // keep the last round's signed cert for verification
         const positions: number[] = result.random.data;
