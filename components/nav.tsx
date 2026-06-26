@@ -39,7 +39,10 @@ export function SideMenu({ onClose }: { onClose: () => void }) {
     { label: "Profile", icon: "person-outline", href: "/profile" },
   ];
   if (user?.role === "host" && isHostApproved) {
-    items.splice(1, 0, { label: "Create raffle", icon: "add-circle-outline", href: "/host/create-raffle" });
+    items.splice(1, 0,
+      { label: "Dashboard", icon: "speedometer-outline", href: "/host/dashboard" },
+      { label: "Create raffle", icon: "add-circle-outline", href: "/host/create-raffle" },
+    );
     items.push({ label: "Groups", icon: "people-outline", href: "/host/groups" });
   }
   if (isSuperadmin) items.push({ label: "All accounts", icon: "shield-checkmark-outline", href: "/admin/users" });

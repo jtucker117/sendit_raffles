@@ -1,0 +1,156 @@
+import { useCallback, useMemo, useState } from "react";
+import {
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, RefreshControl,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useRouter, useFocusEffect } from "expo-router";
+import { useAuth } from "@/lib/auth-context";
+import { useTheme } from "@/lib/theme-context";
+import { supabase } from "@/lib/supabase";
+import { radius, AppColors } from "@/lib/theme";
+import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
+
+interface Row {
+  id: string; title: string; cover_url: string | null; capacity: number; amount_cents: number; status: string;
+  claimed: number; confirmed: number; paidConfirmed: number;
+}
+
+export default function HostDashboard() {
+  const { user, isHostApproved } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const router = useRouter();
+
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    const { data: raffles } = await supabase.from("raffles").select("id, title, cover_url, capacity, amount_cents, status").eq("host_id", user.id).order("created_at", { ascending: false });
+    const rs = (raffles ?? []) as any[];
+    const ids = rs.map((r) => r.id);
+    const tally: Record<string, { claimed: number; confirmed: number; paidConfirmed: number }> = {};
+    if (ids.length) {
+      const { data: tix } = await supabase.from("tickets").select("raffle_id, type, status").in("raffle_id", ids);
+      (tix ?? []).forEach((t: any) => {
+        const e = tally[t.raffle_id] ?? (tally[t.raffle_id] = { claimed: 0, confirmed: 0, paidConfirmed: 0 });
+        e.claimed++;
+        if (t.status === "confirmed") { e.confirmed++; if (t.type === "paid") e.paidConfirmed++; }
+      });
+    }
+    setRows(rs.map((r) => ({
+      id: r.id, title: r.title, cover_url: r.cover_url, capacity: r.capacity, amount_cents: r.amount_cents, status: r.status,
+      claimed: tally[r.id]?.claimed ?? 0, confirmed: tally[r.id]?.confirmed ?? 0, paidConfirmed: tally[r.id]?.paidConfirmed ?? 0,
+    })));
+    setLoading(false);
+  }, [user?.id]);
+
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const money = (c: number) => `$${(c / 100).toFixed(0)}`;
+  const liveCount = rows.filter((r) => r.status === "open").length;
+  const revenueCents = rows.reduce((sum, r) => sum + r.paidConfirmed * r.amount_cents, 0);
+  const entrants = rows.reduce((sum, r) => sum + r.confirmed, 0);
+  const pct = (r: Row) => Math.min(100, Math.round((r.claimed / Math.max(r.capacity, 1)) * 100));
+  const statusChip = (s: string) => (s === "open" ? "● LIVE" : s === "complete" ? "DRAWN" : "CANCELED");
+
+  if (!isHostApproved) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.muted}>Only approved hosts have a dashboard.</Text>
+        <TouchableOpacity onPress={() => router.back()}><Text style={styles.back}>← Back</Text></TouchableOpacity>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={{ padding: 20, paddingBottom: BOTTOM_NAV_HEIGHT + 24 }}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.red} />}
+      >
+        <Text style={styles.h1}>Your raffles</Text>
+
+        {/* Stat row */}
+        <View style={styles.stats}>
+          <View style={styles.statBox}><Text style={[styles.statVal, { color: colors.red }]}>{liveCount}</Text><Text style={styles.statLabel}>Live</Text></View>
+          <View style={styles.statBox}><Text style={styles.statVal}>{money(revenueCents)}</Text><Text style={styles.statLabel}>Revenue</Text></View>
+          <View style={styles.statBox}><Text style={styles.statVal}>{entrants}</Text><Text style={styles.statLabel}>Entrants</Text></View>
+        </View>
+
+        <TouchableOpacity style={styles.newBtn} onPress={() => router.push("/host/create-raffle")}>
+          <Text style={styles.newBtnText}>+ New raffle</Text>
+        </TouchableOpacity>
+
+        {loading ? (
+          <ActivityIndicator color={colors.red} style={{ marginTop: 30 }} />
+        ) : rows.length === 0 ? (
+          <Text style={styles.empty}>No raffles yet — create your first one.</Text>
+        ) : (
+          rows.map((r) => (
+            <View key={r.id} style={styles.card}>
+              <TouchableOpacity style={styles.cardTop} activeOpacity={0.9} onPress={() => router.push(`/raffle/${r.id}`)}>
+                {r.cover_url ? <Image source={{ uri: r.cover_url }} style={styles.thumb} /> : <LinearGradient colors={[colors.surfaceAlt, colors.border]} style={styles.thumb} />}
+                <View style={{ flex: 1 }}>
+                  <View style={styles.titleLine}>
+                    <Text style={styles.cardTitle} numberOfLines={1}>{r.title}</Text>
+                    <View style={[styles.chip, r.status === "open" ? styles.chipLive : r.status === "complete" ? styles.chipDrawn : styles.chipCanceled]}>
+                      <Text style={styles.chipText}>{statusChip(r.status)}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.cardMeta}>{r.claimed} / {r.capacity} claimed · {money(r.paidConfirmed * r.amount_cents)} confirmed</Text>
+                  <View style={styles.bar}><View style={[styles.barFill, { width: `${pct(r)}%` }]} /></View>
+                </View>
+              </TouchableOpacity>
+              <View style={styles.actions}>
+                <TouchableOpacity style={[styles.actionBtn, styles.actionGhost]} onPress={() => router.push(`/raffle/manage/${r.id}`)}>
+                  <Text style={[styles.actionText, { color: colors.text }]}>Manage</Text>
+                </TouchableOpacity>
+                {r.status === "open" && (
+                  <TouchableOpacity style={[styles.actionBtn, styles.actionPrimary, r.confirmed < 1 && styles.dim]} disabled={r.confirmed < 1} onPress={() => router.push(`/raffle/${r.id}`)}>
+                    <Text style={[styles.actionText, { color: colors.onAccent }]}>{r.confirmed < 1 ? "Draw (need 1+)" : "Draw now"}</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          ))
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+const makeStyles = (colors: AppColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bg },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg, gap: 12, padding: 24 },
+  muted: { color: colors.muted, textAlign: "center" },
+  h1: { color: colors.text, fontSize: 26, fontWeight: "900", letterSpacing: -0.4, marginBottom: 16 },
+  stats: { flexDirection: "row", gap: 10, marginBottom: 16 },
+  statBox: { flex: 1, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, paddingVertical: 16, alignItems: "center" },
+  statVal: { color: colors.text, fontSize: 22, fontWeight: "900" },
+  statLabel: { color: colors.muted, fontSize: 11, fontWeight: "700", marginTop: 2, textTransform: "uppercase", letterSpacing: 0.5 },
+  newBtn: { backgroundColor: colors.red, borderRadius: radius.md, paddingVertical: 13, alignItems: "center", marginBottom: 18 },
+  newBtnText: { color: colors.onAccent, fontWeight: "800", fontSize: 15 },
+  empty: { color: colors.muted, fontSize: 14, marginTop: 24, textAlign: "center" },
+  card: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, padding: 12, marginBottom: 12 },
+  cardTop: { flexDirection: "row", gap: 12, alignItems: "center" },
+  thumb: { width: 64, height: 64, borderRadius: 12 },
+  titleLine: { flexDirection: "row", alignItems: "center", gap: 8 },
+  cardTitle: { color: colors.text, fontSize: 15, fontWeight: "800", flex: 1 },
+  chip: { borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 4 },
+  chipLive: { backgroundColor: colors.red },
+  chipDrawn: { backgroundColor: "rgba(0,0,0,0.5)" },
+  chipCanceled: { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border },
+  chipText: { color: "#fff", fontSize: 10, fontWeight: "900", letterSpacing: 0.5 },
+  cardMeta: { color: colors.muted, fontSize: 12, marginTop: 4 },
+  bar: { height: 6, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, marginTop: 8, overflow: "hidden" },
+  barFill: { height: "100%", backgroundColor: colors.red },
+  actions: { flexDirection: "row", gap: 10, marginTop: 12 },
+  actionBtn: { flex: 1, paddingVertical: 11, borderRadius: radius.md, alignItems: "center" },
+  actionGhost: { borderWidth: 1, borderColor: colors.border },
+  actionPrimary: { backgroundColor: colors.red },
+  actionText: { fontWeight: "800", fontSize: 14 },
+  dim: { opacity: 0.45 },
+  back: { color: colors.red, fontSize: 15, fontWeight: "600" },
+});
