@@ -211,7 +211,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   sectionTitle: { color: colors.text, fontSize: 16, fontWeight: "800", marginBottom: 12 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 14 },
   card: { backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: "hidden" },
-  cardImg: { width: "100%", height: 130 },
+  cardImg: { width: "100%", aspectRatio: 4 / 5 },
   cardBody: { padding: 12 },
   cardTitle: { color: colors.text, fontSize: 15, fontWeight: "800" },
   cardSub: { color: colors.muted, fontSize: 12, marginTop: 2 },

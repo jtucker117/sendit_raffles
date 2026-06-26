@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, RefreshControl,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, RefreshControl, useWindowDimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -20,6 +20,11 @@ export default function HostDashboard() {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const cols = width >= 900 ? 3 : 2;
+  const contentW = Math.min(width, 1100) - 40;
+  const gap = 14;
+  const cardW = (contentW - gap * (cols - 1)) / cols;
 
   const [rows, setRows] = useState<Row[]>([]);
   const [topPlayers, setTopPlayers] = useState<{ id: string; name: string; seats: number; spent: number }[]>([]);
@@ -125,33 +130,36 @@ export default function HostDashboard() {
         ) : rows.length === 0 ? (
           <Text style={styles.empty}>No raffles yet — create your first one.</Text>
         ) : (
-          rows.map((r) => (
-            <View key={r.id} style={styles.card}>
-              <TouchableOpacity style={styles.cardTop} activeOpacity={0.9} onPress={() => router.push(`/raffle/${r.id}`)}>
-                {r.cover_url ? <Image source={{ uri: r.cover_url }} style={styles.thumb} /> : <LinearGradient colors={[colors.surfaceAlt, colors.border]} style={styles.thumb} />}
-                <View style={{ flex: 1 }}>
-                  <View style={styles.titleLine}>
-                    <Text style={styles.cardTitle} numberOfLines={1}>{r.title}</Text>
+          <View style={styles.grid}>
+            {rows.map((r) => (
+              <View key={r.id} style={[styles.card, { width: cardW }]}>
+                <TouchableOpacity activeOpacity={0.9} onPress={() => router.push(`/raffle/${r.id}`)}>
+                  <View style={styles.coverWrap}>
+                    {r.cover_url ? <Image source={{ uri: r.cover_url }} style={styles.cover} /> : <LinearGradient colors={[colors.navy, colors.bg]} style={styles.cover} />}
+                    <LinearGradient colors={["transparent", "rgba(0,0,0,0.88)"]} style={StyleSheet.absoluteFill} />
                     <View style={[styles.chip, r.status === "open" ? styles.chipLive : r.status === "complete" ? styles.chipDrawn : styles.chipCanceled]}>
                       <Text style={styles.chipText}>{statusChip(r.status)}</Text>
                     </View>
+                    <View style={styles.overlay}>
+                      <Text style={styles.cardTitle} numberOfLines={1}>{r.title}</Text>
+                      <Text style={styles.cardMeta}>{r.claimed}/{r.capacity} · {money(r.paidConfirmed * r.amount_cents)}</Text>
+                      <View style={styles.bar}><View style={[styles.barFill, { width: `${pct(r)}%` }]} /></View>
+                    </View>
                   </View>
-                  <Text style={styles.cardMeta}>{r.claimed} / {r.capacity} claimed · {money(r.paidConfirmed * r.amount_cents)} confirmed</Text>
-                  <View style={styles.bar}><View style={[styles.barFill, { width: `${pct(r)}%` }]} /></View>
-                </View>
-              </TouchableOpacity>
-              <View style={styles.actions}>
-                <TouchableOpacity style={[styles.actionBtn, styles.actionGhost]} onPress={() => router.push(`/raffle/manage/${r.id}`)}>
-                  <Text style={[styles.actionText, { color: colors.text }]}>Manage</Text>
                 </TouchableOpacity>
-                {r.status === "open" && (
-                  <TouchableOpacity style={[styles.actionBtn, styles.actionPrimary, r.confirmed < 1 && styles.dim]} disabled={r.confirmed < 1} onPress={() => router.push(`/raffle/${r.id}`)}>
-                    <Text style={[styles.actionText, { color: colors.onAccent }]}>{r.confirmed < 1 ? "Draw (need 1+)" : "Draw now"}</Text>
+                <View style={styles.actions}>
+                  <TouchableOpacity style={[styles.actionBtn, styles.actionGhost]} onPress={() => router.push(`/raffle/manage/${r.id}`)}>
+                    <Text style={[styles.actionText, { color: colors.text }]} numberOfLines={1}>Manage</Text>
                   </TouchableOpacity>
-                )}
+                  {r.status === "open" && (
+                    <TouchableOpacity style={[styles.actionBtn, styles.actionPrimary, r.confirmed < 1 && styles.dim]} disabled={r.confirmed < 1} onPress={() => router.push(`/raffle/${r.id}`)}>
+                      <Text style={[styles.actionText, { color: colors.onAccent }]} numberOfLines={1}>{r.confirmed < 1 ? "Draw" : "Draw"}</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
-            </View>
-          ))
+            ))}
+          </View>
         )}
       </ScrollView>
     </View>
@@ -176,24 +184,25 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   newBtn: { backgroundColor: colors.red, borderRadius: radius.md, paddingVertical: 13, alignItems: "center", marginBottom: 18 },
   newBtnText: { color: colors.onAccent, fontWeight: "800", fontSize: 15 },
   empty: { color: colors.muted, fontSize: 14, marginTop: 24, textAlign: "center" },
-  card: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, padding: 12, marginBottom: 12 },
-  cardTop: { flexDirection: "row", gap: 12, alignItems: "center" },
-  thumb: { width: 64, height: 64, borderRadius: 12 },
-  titleLine: { flexDirection: "row", alignItems: "center", gap: 8 },
-  cardTitle: { color: colors.text, fontSize: 15, fontWeight: "800", flex: 1 },
-  chip: { borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 4 },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 14 },
+  card: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, overflow: "hidden" },
+  coverWrap: { width: "100%", aspectRatio: 4 / 5, position: "relative", backgroundColor: colors.surfaceAlt },
+  cover: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%" },
+  chip: { position: "absolute", top: 8, right: 8, borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 4 },
   chipLive: { backgroundColor: colors.red },
-  chipDrawn: { backgroundColor: "rgba(0,0,0,0.5)" },
-  chipCanceled: { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border },
-  chipText: { color: "#fff", fontSize: 10, fontWeight: "900", letterSpacing: 0.5 },
-  cardMeta: { color: colors.muted, fontSize: 12, marginTop: 4 },
-  bar: { height: 6, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, marginTop: 8, overflow: "hidden" },
+  chipDrawn: { backgroundColor: "rgba(0,0,0,0.6)" },
+  chipCanceled: { backgroundColor: "rgba(0,0,0,0.6)" },
+  chipText: { color: "#fff", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
+  overlay: { position: "absolute", left: 0, right: 0, bottom: 0, padding: 10 },
+  cardTitle: { color: "#fff", fontSize: 15, fontWeight: "900" },
+  cardMeta: { color: "rgba(255,255,255,0.85)", fontSize: 11, marginTop: 3 },
+  bar: { height: 5, borderRadius: radius.pill, backgroundColor: "rgba(255,255,255,0.25)", marginTop: 8, overflow: "hidden" },
   barFill: { height: "100%", backgroundColor: colors.red },
-  actions: { flexDirection: "row", gap: 10, marginTop: 12 },
-  actionBtn: { flex: 1, paddingVertical: 11, borderRadius: radius.md, alignItems: "center" },
+  actions: { flexDirection: "row", gap: 8, padding: 10 },
+  actionBtn: { flex: 1, paddingVertical: 9, borderRadius: radius.md, alignItems: "center" },
   actionGhost: { borderWidth: 1, borderColor: colors.border },
   actionPrimary: { backgroundColor: colors.red },
-  actionText: { fontWeight: "800", fontSize: 14 },
+  actionText: { fontWeight: "800", fontSize: 13 },
   dim: { opacity: 0.45 },
   back: { color: colors.red, fontSize: 15, fontWeight: "600" },
 });

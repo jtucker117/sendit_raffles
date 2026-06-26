@@ -141,7 +141,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 14 },
   card: { backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: "hidden" },
   coverWrap: { position: "relative" },
-  cover: { width: "100%", height: 120 },
+  cover: { width: "100%", aspectRatio: 4 / 5 },
   badge: { position: "absolute", top: 8, left: 8, borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 4 },
   badgeLive: { backgroundColor: colors.red },
   badgeDrawn: { backgroundColor: "rgba(0,0,0,0.65)" },
