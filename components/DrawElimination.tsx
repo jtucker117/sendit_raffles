@@ -42,7 +42,7 @@ export function DrawElimination({
   return (
     <View style={styles.wrap}>
       <Text style={styles.status}>
-        {done ? "WINNER" : roundNo === 0 ? "Shuffling…" : `Round ${roundNo} of ${rounds.length} · ${remaining} left`}
+        {done ? "🏆 LAST ONE STANDING" : roundNo === 0 ? "Last man standing…" : `Round ${roundNo} of ${rounds.length} · ${remaining} left`}
       </Text>
       <View style={styles.grid}>
         {entrants.map((e) => {
@@ -55,7 +55,7 @@ export function DrawElimination({
           );
         })}
       </View>
-      {done && <Text style={styles.note}>Decided over {rounds.length} signed Random.org round{rounds.length === 1 ? "" : "s"}.</Text>}
+      {done && <Text style={styles.note}>Last seat standing — decided over {rounds.length} signed Random.org round{rounds.length === 1 ? "" : "s"}.</Text>}
     </View>
   );
 }

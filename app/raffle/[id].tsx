@@ -230,7 +230,7 @@ export default function RaffleDetail() {
   const wheelSize = Math.min(width - 64, 340);
   const drawStyle = raffle.draw_style ?? "wheel";
   const drawMode = raffle.draw_mode ?? "single";
-  const revealLabel = drawMode === "elimination" ? "ELIMINATION" : drawStyle === "scratch" ? "SCRATCH TO REVEAL" : drawStyle === "lotto" ? "DRAWING" : "SPINNING";
+  const revealLabel = drawMode === "elimination" ? "LAST MAN STANDING" : drawStyle === "scratch" ? "SCRATCH TO REVEAL" : drawStyle === "lotto" ? "DRAWING" : "SPINNING";
 
   const CertRow = ({ k, v }: { k: string; v: string }) => (
     <View style={styles.certRow}>
@@ -442,7 +442,7 @@ export default function RaffleDetail() {
                 <Text style={styles.sheetTitle}>Run the draw</Text>
                 <Text style={styles.sheetBody}>
                   This notifies entrants and starts a {COUNTDOWN_SECONDS}-second countdown, then the winner is revealed
-                  {drawMode === "elimination" ? " through multiple signed Random.org elimination rounds" : wheelEntrants.length >= 2 ? " using a signed Random.org draw" : ""}.
+                  {drawMode === "elimination" ? " — last man standing: it keeps drawing until one seat is left (multiple signed Random.org rounds)" : wheelEntrants.length >= 2 ? " using a signed Random.org draw" : ""}.
                 </Text>
                 <Text style={styles.sheetBody}>{wheelEntrants.length} confirmed {wheelEntrants.length === 1 ? "entry" : "entries"}.</Text>
                 {open > 0 && (

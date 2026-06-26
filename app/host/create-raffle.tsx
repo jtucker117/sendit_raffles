@@ -30,6 +30,7 @@ export default function CreateRaffleScreen() {
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [drawStyle, setDrawStyle] = useState<"wheel" | "scratch" | "lotto">("wheel");
   const [drawMode, setDrawMode] = useState<"single" | "elimination">("single");
+  const [step, setStep] = useState(0); // 0 Prize · 1 Tickets · 2 Rules · 3 Publish
 
   // Revenue goal → per-seat price: goal ÷ PAID seats (free seats raise $0, so the
   // paid seats have to cover the whole goal), rounded UP to the next whole dollar
@@ -102,102 +103,161 @@ export default function CreateRaffleScreen() {
     }
   }
 
+  const cap = parseInt(capacity, 10) || 0;
+  const free = parseInt(freeLimit, 10) || 0;
+  const paid = Math.max(cap - free, 0);
+  const raised = (parseFloat(amount) || 0) * paid;
+
+  const STEPS = ["Prize", "Tickets", "Rules", "Publish"];
+  function stepValid(s: number): boolean {
+    if (s === 0) return !!title.trim();
+    if (s === 1) return cap >= 2 && (paid <= 0 || parseFloat(amount) > 0);
+    return true; // Rules + Publish have safe defaults
+  }
+  const canNext = stepValid(step);
+  const next = () => { if (canNext) setStep((s) => Math.min(s + 1, 3)); };
+  const back = () => setStep((s) => Math.max(s - 1, 0));
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: BOTTOM_NAV_HEIGHT + 40 }}>
-      <Text style={styles.h1}>🎡 Create Raffle</Text>
+      <Text style={styles.h1}>Host a raffle</Text>
 
-      {/* Cover */}
-      <TouchableOpacity style={styles.coverPick} onPress={addCover} disabled={uploading}>
-        {coverUrl ? (
-          <Image source={{ uri: coverUrl }} style={styles.coverImg} />
-        ) : (
-          <Text style={styles.coverText}>{uploading ? "Uploading…" : "📷 Add cover photo (optional)"}</Text>
-        )}
-      </TouchableOpacity>
-
-      <Field label="Title" required>
-        <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="e.g. Spring Gun Raffle" placeholderTextColor={colors.faint} />
-      </Field>
-      <Field label="Prize">
-        <TextInput style={styles.input} value={prize} onChangeText={setPrize} placeholder="e.g. Glock 19 / $500 Cash" placeholderTextColor={colors.faint} />
-      </Field>
-      <Field label="Description">
-        <TextInput style={[styles.input, styles.multiline]} value={description} onChangeText={setDescription} placeholder="Details players should know…" placeholderTextColor={colors.faint} multiline />
-      </Field>
-
-      <View style={styles.row2}>
-        <Field label="Total seats (max 1000)" style={{ flex: 1 }} required>
-          <TextInput style={styles.input} value={capacity} onChangeText={setCapacity} keyboardType="number-pad" placeholder="e.g. 100" placeholderTextColor={colors.faint} />
-        </Field>
-        <Field label="Free seats (max)" style={{ flex: 1 }}>
-          <TextInput style={styles.input} value={freeLimit} onChangeText={setFreeLimit} keyboardType="number-pad" />
-        </Field>
+      {/* Step indicator */}
+      <View style={styles.steps}>
+        {STEPS.map((label, i) => {
+          const active = i === step;
+          const done = i < step;
+          return (
+            <View key={label} style={styles.stepItem}>
+              <View style={[styles.stepDot, active && styles.stepDotActive, done && styles.stepDotDone]}>
+                <Text style={[styles.stepDotText, (active || done) && { color: colors.onAccent }]}>{done ? "✓" : i + 1}</Text>
+              </View>
+              <Text style={[styles.stepLabel, active && { color: colors.text, fontWeight: "800" }]}>{label}</Text>
+            </View>
+          );
+        })}
       </View>
 
-      <Field label="Entry word">
-        <View style={styles.segment}>
-          {TERMS.map((t) => (
-            <TouchableOpacity key={t} style={[styles.segItem, term === t && styles.segItemActive]} onPress={() => setTerm(t)}>
-              <Text style={[styles.segText, term === t && styles.segTextActive]}>{t}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </Field>
-
-      <Field label="Revenue goal for this raffle ($, optional)">
-        <TextInput style={styles.input} value={goal} onChangeText={setGoal} keyboardType="decimal-pad" placeholder="e.g. 1000" placeholderTextColor={colors.faint} />
-      </Field>
-
-      <Field label={`Amount per ${term.toLowerCase()} ($)`} required>
-        <TextInput style={styles.input} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="10" placeholderTextColor={colors.faint} />
-        <Text style={styles.helper}>
-          {(() => {
-            const cap = parseInt(capacity, 10) || 0;
-            const free = parseInt(freeLimit, 10) || 0;
-            const paid = Math.max(cap - free, 0);
-            const raised = (parseFloat(amount) || 0) * paid;
-            return goal.trim()
-              ? `Goal $${goal} ÷ ${paid} paid seat${paid === 1 ? "" : "s"} = $${amount}/seat → raises $${raised.toFixed(0)} (${free} free)`
-              : `Full board ≈ $${raised.toFixed(0)} from ${paid} paid seat${paid === 1 ? "" : "s"} (${free} free)`;
-          })()}
-        </Text>
-      </Field>
-
-      <Field label="Draw mode">
-        <View style={styles.segment}>
-          {([["single", "Single pick"], ["elimination", "Multi-round"]] as const).map(([k, label]) => (
-            <TouchableOpacity key={k} style={[styles.segItem, drawMode === k && styles.segItemActive]} onPress={() => setDrawMode(k)}>
-              <Text style={[styles.segText, drawMode === k && styles.segTextActive]}>{label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <Text style={styles.helper}>
-          {drawMode === "elimination"
-            ? "Multi-round elimination — several signed Random.org rounds narrow the seats down until one wins."
-            : "One signed Random.org pick decides the winner."}
-        </Text>
-      </Field>
-
-      {drawMode === "single" && (
-        <Field label="Winner reveal style">
-          <View style={styles.segment}>
-            {([["wheel", "Wheel"], ["scratch", "Scratch"], ["lotto", "Lotto"]] as const).map(([k, label]) => (
-              <TouchableOpacity key={k} style={[styles.segItem, drawStyle === k && styles.segItemActive]} onPress={() => setDrawStyle(k)}>
-                <Text style={[styles.segText, drawStyle === k && styles.segTextActive]}>{label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <Text style={styles.helper}>How the winner is revealed. The winner is always drawn fairly via Random.org — the graphic just lands on it.</Text>
-        </Field>
+      {/* STEP 0 · Prize */}
+      {step === 0 && (
+        <>
+          <TouchableOpacity style={styles.coverPick} onPress={addCover} disabled={uploading}>
+            {coverUrl ? <Image source={{ uri: coverUrl }} style={styles.coverImg} /> : <Text style={styles.coverText}>{uploading ? "Uploading…" : "📷 Add cover photo (optional)"}</Text>}
+          </TouchableOpacity>
+          <Field label="Title" required>
+            <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="e.g. Spring Gun Raffle" placeholderTextColor={colors.faint} />
+          </Field>
+          <Field label="Prize">
+            <TextInput style={styles.input} value={prize} onChangeText={setPrize} placeholder="e.g. Glock 19 / $500 Cash" placeholderTextColor={colors.faint} />
+          </Field>
+          <Field label="Description">
+            <TextInput style={[styles.input, styles.multiline]} value={description} onChangeText={setDescription} placeholder="Details players should know…" placeholderTextColor={colors.faint} multiline />
+          </Field>
+        </>
       )}
 
-      <TouchableOpacity style={[styles.button, saving && { opacity: 0.6 }]} onPress={create} disabled={saving}>
-        {saving ? <ActivityIndicator color={colors.onAccent} /> : <Text style={styles.buttonText}>Create raffle</Text>}
-      </TouchableOpacity>
+      {/* STEP 1 · Tickets */}
+      {step === 1 && (
+        <>
+          <View style={styles.row2}>
+            <Field label="Total seats (max 1000)" style={{ flex: 1 }} required>
+              <TextInput style={styles.input} value={capacity} onChangeText={setCapacity} keyboardType="number-pad" placeholder="e.g. 100" placeholderTextColor={colors.faint} />
+            </Field>
+            <Field label="Free seats (max)" style={{ flex: 1 }}>
+              <TextInput style={styles.input} value={freeLimit} onChangeText={setFreeLimit} keyboardType="number-pad" placeholder="0" placeholderTextColor={colors.faint} />
+            </Field>
+          </View>
+          <Field label="Entry word">
+            <View style={styles.segment}>
+              {TERMS.map((t) => (
+                <TouchableOpacity key={t} style={[styles.segItem, term === t && styles.segItemActive]} onPress={() => setTerm(t)}>
+                  <Text style={[styles.segText, term === t && styles.segTextActive]}>{t}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Field>
+          <Field label="Revenue goal for this raffle ($, optional)">
+            <TextInput style={styles.input} value={goal} onChangeText={setGoal} keyboardType="decimal-pad" placeholder="e.g. 1000" placeholderTextColor={colors.faint} />
+          </Field>
+          <Field label={`Amount per ${term.toLowerCase()} ($)`} required>
+            <TextInput style={styles.input} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="e.g. 10" placeholderTextColor={colors.faint} />
+            <Text style={styles.helper}>
+              {goal.trim()
+                ? `Goal $${goal} ÷ ${paid} paid seat${paid === 1 ? "" : "s"} = $${amount || 0}/seat → raises $${raised.toFixed(0)} (${free} free)`
+                : `Full board ≈ $${raised.toFixed(0)} from ${paid} paid seat${paid === 1 ? "" : "s"} (${free} free)`}
+            </Text>
+          </Field>
+        </>
+      )}
 
-      <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-        <Text style={styles.back}>← Back</Text>
-      </TouchableOpacity>
+      {/* STEP 2 · Rules */}
+      {step === 2 && (
+        <>
+          <Field label="Draw mode">
+            <View style={styles.segment}>
+              {([["single", "Single pick"], ["elimination", "Last man standing"]] as const).map(([k, label]) => (
+                <TouchableOpacity key={k} style={[styles.segItem, drawMode === k && styles.segItemActive]} onPress={() => setDrawMode(k)}>
+                  <Text style={[styles.segText, drawMode === k && styles.segTextActive]}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.helper}>
+              {drawMode === "elimination"
+                ? "Last man standing — it keeps drawing and eliminating seats round after round (each a signed Random.org draw) until one seat is left. That last seat standing wins."
+                : "One signed Random.org pick decides the winner."}
+            </Text>
+          </Field>
+          {drawMode === "single" && (
+            <Field label="Winner reveal style">
+              <View style={styles.segment}>
+                {([["wheel", "Wheel"], ["scratch", "Scratch"], ["lotto", "Lotto"]] as const).map(([k, label]) => (
+                  <TouchableOpacity key={k} style={[styles.segItem, drawStyle === k && styles.segItemActive]} onPress={() => setDrawStyle(k)}>
+                    <Text style={[styles.segText, drawStyle === k && styles.segTextActive]}>{label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={styles.helper}>How the winner is revealed. The winner is always drawn fairly via Random.org — the graphic just lands on it.</Text>
+            </Field>
+          )}
+        </>
+      )}
+
+      {/* STEP 3 · Publish (review) */}
+      {step === 3 && (
+        <View style={styles.review}>
+          <Text style={styles.reviewTitle}>{title || "Untitled raffle"}</Text>
+          {prize ? <Text style={styles.reviewRow}>🏆 {prize}</Text> : null}
+          <Text style={styles.reviewRow}>{cap} seats · {free} free · ${amount || 0}/seat</Text>
+          <Text style={styles.reviewRow}>Raises up to ${raised.toFixed(0)}{goal.trim() ? ` (goal $${goal})` : ""}</Text>
+          <Text style={styles.reviewRow}>{drawMode === "elimination" ? "Last man standing draw" : `${drawStyle} reveal · single pick`}</Text>
+          <Text style={styles.reviewNote}>Review the details, then launch. Players will be able to claim seats immediately.</Text>
+        </View>
+      )}
+
+      {/* Footer nav */}
+      <View style={styles.navRow}>
+        {step > 0 ? (
+          <TouchableOpacity style={[styles.navBtn, styles.navGhost]} onPress={back}>
+            <Text style={[styles.navText, { color: colors.text }]}>Back</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={[styles.navBtn, styles.navGhost]} onPress={() => router.back()}>
+            <Text style={[styles.navText, { color: colors.text }]}>Cancel</Text>
+          </TouchableOpacity>
+        )}
+        {step < 3 ? (
+          <TouchableOpacity style={[styles.navBtn, styles.navPrimary, !canNext && { opacity: 0.45 }]} disabled={!canNext} onPress={next}>
+            <Text style={[styles.navText, { color: colors.onAccent }]}>Next</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={[styles.navBtn, styles.navPrimary, saving && { opacity: 0.6 }]} disabled={saving} onPress={create}>
+            {saving ? <ActivityIndicator color={colors.onAccent} /> : <Text style={[styles.navText, { color: colors.onAccent }]}>🚀 Launch raffle</Text>}
+          </TouchableOpacity>
+        )}
+      </View>
+      {!canNext && step < 3 && (
+        <Text style={styles.reqHint}>{step === 0 ? "Add a title to continue." : "Enter total seats (2+) and a seat price to continue."}</Text>
+      )}
     </ScrollView>
   );
 }
@@ -233,8 +293,25 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   segItemActive: { backgroundColor: colors.red, borderColor: colors.red },
   segText: { color: colors.text, fontWeight: "600", fontSize: 14 },
   segTextActive: { color: colors.onAccent },
-  button: { backgroundColor: colors.red, paddingVertical: 15, borderRadius: radius.md, alignItems: "center", marginTop: 8 },
-  buttonText: { color: colors.onAccent, fontSize: 16, fontWeight: "700" },
-  backBtn: { alignSelf: "center", marginTop: 22, padding: 10 },
-  back: { color: colors.red, fontSize: 15, fontWeight: "600" },
+  // stepper
+  steps: { flexDirection: "row", justifyContent: "space-between", marginBottom: 22 },
+  stepItem: { flex: 1, alignItems: "center", gap: 6 },
+  stepDot: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border },
+  stepDotActive: { backgroundColor: colors.red, borderColor: colors.red },
+  stepDotDone: { backgroundColor: colors.green, borderColor: colors.green },
+  stepDotText: { color: colors.muted, fontWeight: "800", fontSize: 13 },
+  stepLabel: { color: colors.muted, fontSize: 11, fontWeight: "600" },
+  // review
+  review: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, padding: 18 },
+  reviewTitle: { color: colors.text, fontSize: 20, fontWeight: "900", marginBottom: 8 },
+  reviewRow: { color: colors.muted, fontSize: 14, marginTop: 4, textTransform: "capitalize" },
+  reviewNote: { color: colors.faint, fontSize: 12, marginTop: 12, lineHeight: 16 },
+  // footer nav
+  navRow: { flexDirection: "row", gap: 12, marginTop: 22 },
+  navBtn: { flex: 1, paddingVertical: 15, borderRadius: radius.md, alignItems: "center" },
+  navGhost: { borderWidth: 1, borderColor: colors.border },
+  navPrimary: { backgroundColor: colors.red },
+  navText: { fontSize: 16, fontWeight: "800" },
+  reqHint: { color: colors.danger, fontSize: 12, textAlign: "center", marginTop: 10 },
+  back: { color: colors.red, fontSize: 15, fontWeight: "600", textAlign: "center", marginTop: 16 },
 });
