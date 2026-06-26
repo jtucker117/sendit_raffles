@@ -85,7 +85,7 @@ export default function AdminUsers() {
         <Text style={styles.empty}>No accounts.</Text>
       ) : (
         visible.map((r) => (
-          <View key={r.id} style={styles.card}>
+          <TouchableOpacity key={r.id} style={styles.card} activeOpacity={0.85} onPress={() => router.push(`/u/${r.id}`)}>
             <View style={styles.cardTop}>
               <Text style={styles.name}>{r.display_name}</Text>
               <View style={[styles.pill, r.role === "host" ? styles.pillHost : styles.pillPlayer]}>
@@ -99,7 +99,7 @@ export default function AdminUsers() {
                 ? r.host_approved === true ? "✅ Approved" : r.host_approved === null ? "⏳ Pending" : "❌ Rejected"
                 : "Player"}
             </Text>
-          </View>
+          </TouchableOpacity>
         ))
       )}
 
