@@ -108,7 +108,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg, gap: 12, padding: 24 },
   muted: { color: colors.muted, textAlign: "center" },
-  coverWrap: { height: 150, backgroundColor: colors.surfaceAlt },
+  coverWrap: { height: 150, backgroundColor: colors.surfaceAlt, borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl, overflow: "hidden" },
   cover: { width: "100%", height: 150 },
   identity: { alignItems: "center", paddingHorizontal: 20, marginTop: -AVATAR / 2 },
   avatar: { width: AVATAR, height: AVATAR, borderRadius: AVATAR / 2, borderWidth: 4, borderColor: colors.bg, backgroundColor: colors.surface },

@@ -262,7 +262,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg },
 
-  coverWrap: { height: COVER_H, backgroundColor: colors.surfaceAlt },
+  coverWrap: { height: COVER_H, backgroundColor: colors.surfaceAlt, borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl, overflow: "hidden" },
   cover: { width: "100%", height: COVER_H },
   coverPlaceholder: { backgroundColor: colors.navy },
   coverBtn: { position: "absolute", right: 12, bottom: 12, backgroundColor: "rgba(0,0,0,0.55)", paddingHorizontal: 12, paddingVertical: 7, borderRadius: radius.pill },

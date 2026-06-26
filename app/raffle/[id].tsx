@@ -554,7 +554,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   buySeats: { color: colors.muted, fontSize: 12, marginTop: 1 },
   buyBtn: { backgroundColor: colors.red, borderRadius: radius.md, paddingVertical: 14, paddingHorizontal: 20, minWidth: 150, alignItems: "center" },
   buyBtnText: { color: colors.onAccent, fontSize: 15, fontWeight: "800" },
-  cover: { width: "100%", height: 180 },
+  cover: { width: "100%", height: 180, borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl },
   coverPh: { backgroundColor: colors.navy },
   pad: { padding: 20 },
   title: { color: colors.text, fontSize: 24, fontWeight: "800", letterSpacing: -0.3 },
