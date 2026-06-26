@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
-  Image, TextInput, Alert, Modal, useWindowDimensions,
+  Image, TextInput, Alert, Linking, Modal, useWindowDimensions,
 } from "react-native";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
@@ -46,6 +46,7 @@ export default function RaffleDetail() {
   const [winnerName, setWinnerName] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [verifyMsg, setVerifyMsg] = useState<string | null>(null);
+  const [showData, setShowData] = useState(false);
 
   // Draw event state
   const [stage, setStage] = useState<DrawStage>("idle");
@@ -263,6 +264,24 @@ export default function RaffleDetail() {
                   <Text style={styles.verify}>{verifying ? "Verifying…" : "Verify with Random.org"}</Text>
                 </TouchableOpacity>
                 {verifyMsg && <Text style={styles.verifyMsg}>{verifyMsg}</Text>}
+
+                <TouchableOpacity onPress={() => setShowData((s) => !s)}>
+                  <Text style={styles.verifySub}>{showData ? "Hide" : "See it on Random.org"}</Text>
+                </TouchableOpacity>
+                {showData && (
+                  <View style={styles.dataBox}>
+                    <Text style={styles.dataHelp}>
+                      Open Random.org's verifier, then copy each value below into its matching field to see this draw confirmed on their site.
+                    </Text>
+                    <TouchableOpacity style={[styles.btn, styles.btnOutline]} onPress={() => Linking.openURL("https://api.random.org/signatures/form")}>
+                      <Text style={[styles.btnText, { color: colors.text }]}>Open Random.org verifier →</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.dataLabel}>RANDOM</Text>
+                    <Text selectable style={styles.dataVal}>{JSON.stringify(draw.randomorg_signed?.random)}</Text>
+                    <Text style={styles.dataLabel}>SIGNATURE</Text>
+                    <Text selectable style={styles.dataVal}>{draw.randomorg_signed?.signature}</Text>
+                  </View>
+                )}
               </View>
             ) : (
               <Text style={styles.singleNote}>Single entrant — awarded directly (no draw needed).</Text>
@@ -539,6 +558,11 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   sig: { color: colors.faint, fontSize: 10, fontFamily: "monospace" as any, marginTop: 3 },
   verify: { color: colors.red, fontSize: 13, fontWeight: "700", marginTop: 10 },
   verifyMsg: { color: colors.text, fontSize: 13, fontWeight: "700", marginTop: 8 },
+  verifySub: { color: colors.muted, fontSize: 12, fontWeight: "700", marginTop: 10, textDecorationLine: "underline" },
+  dataBox: { marginTop: 10, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10 },
+  dataHelp: { color: colors.muted, fontSize: 12, lineHeight: 16, marginBottom: 8 },
+  dataLabel: { color: colors.faint, fontSize: 9, fontWeight: "800", letterSpacing: 1, marginTop: 10 },
+  dataVal: { color: colors.text, fontSize: 10, fontFamily: "monospace" as any, marginTop: 3, lineHeight: 14 },
   counts: { flexDirection: "row", gap: 12, marginTop: 18, marginBottom: 6 },
   countItem: { flex: 1, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, padding: 12, alignItems: "center" },
   countVal: { color: colors.text, fontSize: 22, fontWeight: "800" },
