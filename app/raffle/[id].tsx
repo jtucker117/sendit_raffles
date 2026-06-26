@@ -19,6 +19,7 @@ interface Raffle {
   cover_url: string | null; capacity: number; free_seat_limit: number; entry_word: string;
   amount_cents: number; status: string; draw_style?: "wheel" | "scratch" | "lotto";
   draw_mode?: "single" | "elimination";
+  parent_raffle_id?: string | null; seats_awarded?: number;
 }
 interface Ticket { id: string; seat_number: number; owner_id: string; type: "free" | "paid"; status: string; }
 
@@ -45,6 +46,8 @@ export default function RaffleDetail() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [draw, setDraw] = useState<any | null>(null);
   const [winnerName, setWinnerName] = useState("");
+  const [minis, setMinis] = useState<any[]>([]);
+  const [parentName, setParentName] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [verifyMsg, setVerifyMsg] = useState<string | null>(null);
   const [showData, setShowData] = useState(false);
@@ -81,6 +84,13 @@ export default function RaffleDetail() {
       const { data: w } = await supabase.from("profiles").select("display_name").eq("id", d.winner_id).single();
       setWinnerName(w?.display_name ?? "Winner");
     } else { setDraw(null); }
+    // Mini games hanging off this game (+ the parent, if this one is a mini)
+    const { data: kids } = await supabase.from("raffles").select("id, title, cover_url, status, capacity, seats_awarded").eq("parent_raffle_id", id).order("created_at");
+    setMinis(kids ?? []);
+    if ((r as any)?.parent_raffle_id) {
+      const { data: par } = await supabase.from("raffles").select("title").eq("id", (r as any).parent_raffle_id).maybeSingle();
+      setParentName(par?.title ?? "the main game");
+    } else setParentName("");
     if (!silent) setLoading(false);
   }, [id]);
 
@@ -230,6 +240,7 @@ export default function RaffleDetail() {
   const wheelSize = Math.min(width - 64, 340);
   const drawStyle = raffle.draw_style ?? "wheel";
   const drawMode = raffle.draw_mode ?? "single";
+  const isMini = !!raffle.parent_raffle_id;
   const revealLabel = drawMode === "elimination" ? "LAST MAN STANDING" : drawStyle === "scratch" ? "SCRATCH TO REVEAL" : drawStyle === "lotto" ? "DRAWING" : "SPINNING";
 
   const CertRow = ({ k, v }: { k: string; v: string }) => (
@@ -247,6 +258,14 @@ export default function RaffleDetail() {
         <Text style={styles.title}>{raffle.title}</Text>
         {raffle.prize ? <Text style={styles.prize}>🏆 {raffle.prize}</Text> : null}
         {raffle.description ? <Text style={styles.desc}>{raffle.description}</Text> : null}
+
+        {isMini && (
+          <TouchableOpacity style={styles.miniBanner} onPress={() => raffle.parent_raffle_id && router.push(`/raffle/${raffle.parent_raffle_id}`)}>
+            <Text style={styles.miniBannerText}>
+              🎟️ Mini game — the winner gets {raffle.seats_awarded ?? 1} seat{(raffle.seats_awarded ?? 1) === 1 ? "" : "s"} in {parentName || "the main game"}. Tap to view it →
+            </Text>
+          </TouchableOpacity>
+        )}
 
         {draw && (
           <View style={styles.winnerCard}>
@@ -312,6 +331,34 @@ export default function RaffleDetail() {
           <View style={styles.bar}><View style={[styles.barFill, { width: `${soldPct}%` }]} /></View>
           <Text style={styles.selloutMeta}>{open} open · {freeUsed}/{raffle.free_seat_limit} free claimed · {money(raffle.amount_cents)}/seat</Text>
         </View>
+
+        {/* Minis hanging off this game */}
+        {!isMini && (minis.length > 0 || isHost) && (
+          <View style={styles.miniSection}>
+            <View style={styles.miniHead}>
+              <Text style={styles.boardTitle}>Mini games</Text>
+              {isHost && raffle.status === "open" && (
+                <TouchableOpacity onPress={() => router.push(`/host/mini/${raffle.id}`)}>
+                  <Text style={styles.miniAdd}>+ Create mini</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            {minis.length === 0 ? (
+              <Text style={styles.bigNote}>No minis yet. A mini is a smaller game whose winner gets seats in this one.</Text>
+            ) : (
+              minis.map((m) => (
+                <TouchableOpacity key={m.id} style={styles.miniRow} onPress={() => router.push(`/raffle/${m.id}`)}>
+                  {m.cover_url ? <Image source={{ uri: m.cover_url }} style={styles.miniThumb} /> : <View style={[styles.miniThumb, { backgroundColor: colors.navy }]} />}
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.miniRowTitle} numberOfLines={1}>{m.title}</Text>
+                    <Text style={styles.miniRowMeta}>Winner gets {m.seats_awarded ?? 1} seat{(m.seats_awarded ?? 1) === 1 ? "" : "s"} · {m.status}</Text>
+                  </View>
+                  <Text style={styles.manageChevron}>›</Text>
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+        )}
 
         {/* Host: manage entries lives on its own page */}
         {isHost && (
@@ -547,6 +594,15 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   bar: { height: 8, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, overflow: "hidden" },
   barFill: { height: "100%", backgroundColor: colors.red },
   selloutMeta: { color: colors.muted, fontSize: 12, marginTop: 8 },
+  miniBanner: { backgroundColor: colors.redSoft, borderColor: colors.red, borderWidth: 1, borderRadius: radius.md, padding: 12, marginTop: 14 },
+  miniBannerText: { color: colors.text, fontSize: 13, lineHeight: 18, fontWeight: "600" },
+  miniSection: { marginTop: 18 },
+  miniHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  miniAdd: { color: colors.red, fontSize: 14, fontWeight: "800" },
+  miniRow: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, padding: 10, marginTop: 10 },
+  miniThumb: { width: 48, height: 48, borderRadius: 10 },
+  miniRowTitle: { color: colors.text, fontSize: 14, fontWeight: "800" },
+  miniRowMeta: { color: colors.muted, fontSize: 12, marginTop: 2, textTransform: "capitalize" },
   legend: { color: colors.faint, fontSize: 12, marginTop: 10 },
   // selectable seats
   seatTaken: { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border },
