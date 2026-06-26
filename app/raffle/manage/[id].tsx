@@ -25,7 +25,8 @@ export default function ManageEntries() {
   const [loading, setLoading] = useState(true);
   const [busyTicket, setBusyTicket] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
-  const [methodFor, setMethodFor] = useState<string | null>(null); // ticket currently choosing a method
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [tab, setTab] = useState<"pending" | "confirmed">("pending");
 
   const load = useCallback(async () => {
@@ -66,17 +67,22 @@ export default function ManageEntries() {
   const pending = tickets.filter((t) => t.type === "paid" && t.status === "held").sort((a, b) => a.seat_number - b.seat_number);
   const confirmed = tickets.filter((t) => t.status === "confirmed").sort((a, b) => a.seat_number - b.seat_number);
 
-  async function confirmPaid(ticketId: string, method: string) {
-    setBusyTicket(ticketId);
+  // Bulk-confirm every selected pending seat with one payment method.
+  async function confirmBulk(method: string) {
+    const ids = [...selected];
+    if (!ids.length) return;
+    setBulkBusy(true);
     const { error } = await supabase
       .from("tickets")
       .update({ status: "confirmed", paid_method: method, paid_at: new Date().toISOString() })
-      .eq("id", ticketId);
+      .in("id", ids);
     if (error) Alert.alert("Couldn't confirm", error.message);
-    setMethodFor(null);
+    setSelected(new Set());
     await load();
-    setBusyTicket(null);
+    setBulkBusy(false);
   }
+  const toggleSel = (id: string) => setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const togglePlayer = (ids: string[]) => setSelected((s) => { const n = new Set(s); const all = ids.every((i) => n.has(i)); ids.forEach((i) => (all ? n.delete(i) : n.add(i))); return n; });
 
   async function removeTicket(ticketId: string) {
     if (confirmRemove !== ticketId) {
@@ -92,7 +98,11 @@ export default function ManageEntries() {
     setBusyTicket(null);
   }
 
-  const list = tab === "pending" ? pending : confirmed;
+  // group pending seats by player so a whole player can be selected at once
+  const groupMap = new Map<string, Ticket[]>();
+  pending.forEach((t) => { if (!groupMap.has(t.owner_id)) groupMap.set(t.owner_id, []); groupMap.get(t.owner_id)!.push(t); });
+  const groups = [...groupMap.entries()].map(([ownerId, tks]) => ({ ownerId, tks }));
+  const allSelected = pending.length > 0 && pending.every((t) => selected.has(t.id));
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: BOTTOM_NAV_HEIGHT + 40 }}>
@@ -109,57 +119,80 @@ export default function ManageEntries() {
         </TouchableOpacity>
       </View>
 
-      {tab === "pending" && (
-        <Text style={styles.hint}>Confirm once you’ve received payment — only confirmed seats are entered in the draw.</Text>
-      )}
+      {tab === "pending" ? (
+        pending.length === 0 ? (
+          <Text style={styles.empty}>No payments waiting.</Text>
+        ) : (
+          <>
+            <View style={styles.selBar}>
+              <TouchableOpacity style={styles.checkRow} onPress={() => setSelected(allSelected ? new Set() : new Set(pending.map((t) => t.id)))}>
+                <View style={[styles.check, allSelected && styles.checkOn]}>{allSelected ? <Text style={styles.checkMark}>✓</Text> : null}</View>
+                <Text style={styles.selAll}>Select all ({pending.length})</Text>
+              </TouchableOpacity>
+              {selected.size > 0 && <Text style={styles.selCount}>{selected.size} selected</Text>}
+            </View>
 
-      {list.length === 0 ? (
-        <Text style={styles.empty}>{tab === "pending" ? "No payments waiting." : "No confirmed entries yet."}</Text>
+            {selected.size > 0 && (
+              <View style={styles.bulkBar}>
+                <Text style={styles.bulkLabel}>Mark {selected.size} seat{selected.size === 1 ? "" : "s"} paid via:</Text>
+                <View style={styles.methodRow}>
+                  {PAYMENT_METHODS.map((m) => (
+                    <TouchableOpacity key={m} style={[styles.methodChip, bulkBusy && styles.dim]} disabled={bulkBusy} onPress={() => confirmBulk(m)}>
+                      <Text style={styles.methodChipText}>{m}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            <Text style={styles.hint}>Tip: tap a player to select all their seats, then mark them paid by one platform.</Text>
+
+            {groups.map((g) => {
+              const ids = g.tks.map((t) => t.id);
+              const allG = ids.every((i) => selected.has(i));
+              return (
+                <View key={g.ownerId} style={styles.card}>
+                  <TouchableOpacity style={styles.groupHead} onPress={() => togglePlayer(ids)}>
+                    <View style={[styles.check, allG && styles.checkOn]}>{allG ? <Text style={styles.checkMark}>✓</Text> : null}</View>
+                    <Text style={styles.groupName}>{nameFor(g.ownerId)}</Text>
+                    <Text style={styles.groupCount}>{g.tks.length} seat{g.tks.length === 1 ? "" : "s"}</Text>
+                  </TouchableOpacity>
+                  {g.tks.map((t) => (
+                    <View key={t.id} style={styles.row}>
+                      <TouchableOpacity style={styles.rowSelect} onPress={() => toggleSel(t.id)}>
+                        <View style={[styles.check, selected.has(t.id) && styles.checkOn]}>{selected.has(t.id) ? <Text style={styles.checkMark}>✓</Text> : null}</View>
+                        <Text style={styles.rowMeta}>Seat #{t.seat_number} · paid</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.pill, styles.pillRed, busyTicket === t.id && styles.dim]} disabled={busyTicket === t.id} onPress={() => removeTicket(t.id)}>
+                        <Text style={styles.pillRedText}>{confirmRemove === t.id ? "Sure?" : "Reject"}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              );
+            })}
+          </>
+        )
       ) : (
-        <View style={styles.card}>
-          {list.map((t) => (
-            <View key={t.id} style={styles.rowWrap}>
-              <View style={styles.row}>
+        confirmed.length === 0 ? (
+          <Text style={styles.empty}>No confirmed entries yet.</Text>
+        ) : (
+          <View style={styles.card}>
+            {confirmed.map((t) => (
+              <View key={t.id} style={styles.row}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.rowName}>{nameFor(t.owner_id)}</Text>
-                  <Text style={styles.rowMeta}>
-                    Seat #{t.seat_number} · {t.type}{t.paid_method ? ` · ${t.paid_method}` : ""}
-                  </Text>
+                  <Text style={styles.rowMeta}>Seat #{t.seat_number} · {t.type}{t.paid_method ? ` · ${t.paid_method}` : ""}</Text>
                 </View>
-                {tab === "pending" && (
-                  methodFor === t.id ? (
-                    <TouchableOpacity style={[styles.pill, styles.pillGhost]} onPress={() => setMethodFor(null)}>
-                      <Text style={styles.pillGhostText}>Cancel</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity style={[styles.pill, styles.pillGreen, busyTicket === t.id && styles.dim]} disabled={busyTicket === t.id} onPress={() => setMethodFor(t.id)}>
-                      <Text style={styles.pillGreenText}>Confirm</Text>
-                    </TouchableOpacity>
-                  )
-                )}
-                {raffle.status === "open" && methodFor !== t.id && (
+                {raffle.status === "open" && (
                   <TouchableOpacity style={[styles.pill, styles.pillRed, busyTicket === t.id && styles.dim]} disabled={busyTicket === t.id} onPress={() => removeTicket(t.id)}>
-                    <Text style={styles.pillRedText}>{confirmRemove === t.id ? "Sure?" : tab === "pending" ? "Reject" : "Remove"}</Text>
+                    <Text style={styles.pillRedText}>{confirmRemove === t.id ? "Sure?" : "Remove"}</Text>
                   </TouchableOpacity>
                 )}
               </View>
-
-              {/* Payment-method picker (appears when confirming a pending seat) */}
-              {tab === "pending" && methodFor === t.id && (
-                <View style={styles.methodBox}>
-                  <Text style={styles.methodLabel}>How were they paid?</Text>
-                  <View style={styles.methodRow}>
-                    {PAYMENT_METHODS.map((m) => (
-                      <TouchableOpacity key={m} style={[styles.methodChip, busyTicket === t.id && styles.dim]} disabled={busyTicket === t.id} onPress={() => confirmPaid(t.id, m)}>
-                        <Text style={styles.methodChipText}>{m}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              )}
-            </View>
-          ))}
-        </View>
+            ))}
+          </View>
+        )
       )}
 
       <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}><Text style={styles.back}>← Back to raffle</Text></TouchableOpacity>
@@ -199,6 +232,20 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   methodChip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: radius.pill, backgroundColor: colors.greenSoft, borderWidth: 1, borderColor: colors.green },
   methodChipText: { color: colors.green, fontWeight: "700", fontSize: 13 },
   dim: { opacity: 0.45 },
+  // multi-select
+  selBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 14 },
+  checkRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  selAll: { color: colors.text, fontSize: 13, fontWeight: "700" },
+  selCount: { color: colors.red, fontSize: 13, fontWeight: "800" },
+  check: { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceAlt },
+  checkOn: { backgroundColor: colors.red, borderColor: colors.red },
+  checkMark: { color: colors.onAccent, fontSize: 13, fontWeight: "900" },
+  bulkBar: { backgroundColor: colors.surface, borderColor: colors.red, borderWidth: 1, borderRadius: radius.lg, padding: 14, marginTop: 12 },
+  bulkLabel: { color: colors.text, fontSize: 13, fontWeight: "800", marginBottom: 10 },
+  groupHead: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
+  groupName: { color: colors.text, fontSize: 15, fontWeight: "800", flex: 1 },
+  groupCount: { color: colors.muted, fontSize: 12, fontWeight: "600" },
+  rowSelect: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
   backBtn: { alignSelf: "center", marginTop: 26, padding: 10 },
   back: { color: colors.red, fontSize: 15, fontWeight: "600" },
 });

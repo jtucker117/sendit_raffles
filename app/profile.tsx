@@ -154,33 +154,6 @@ export default function Profile() {
           </View>
         ) : null}
 
-        {isHost && (
-          <View style={styles.payCard}>
-            <Text style={styles.payTitle}>Payment handles</Text>
-            <Text style={styles.payHint}>Shown to players at checkout so they know where to send payment. Leave blank to hide a method.</Text>
-            {([["venmo", "Venmo", "@your-venmo"], ["cashapp", "Cash App", "$yourcashtag"], ["paypal", "PayPal", "you@email.com / paypal.me link"], ["zelle", "Zelle", "email or phone"]] as const).map(([key, label, ph]) => (
-              <View key={key} style={styles.payRow}>
-                <Text style={styles.payLabel}>{label}</Text>
-                <TextInput
-                  style={styles.payInput}
-                  value={(pay as any)[key]}
-                  onChangeText={(t) => { setPay((p) => ({ ...p, [key]: t })); setPayMsg(null); }}
-                  placeholder={ph}
-                  placeholderTextColor={colors.faint}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-            ))}
-            <View style={styles.payActions}>
-              <TouchableOpacity style={[styles.smallBtn, { backgroundColor: colors.red }]} onPress={savePay} disabled={savingPay}>
-                <Text style={styles.smallBtnText}>{savingPay ? "Saving…" : "Save handles"}</Text>
-              </TouchableOpacity>
-              {payMsg && <Text style={styles.payMsg}>{payMsg}</Text>}
-            </View>
-          </View>
-        )}
-
         {/* Bio */}
         {editingBio ? (
           <View style={styles.bioEdit}>
@@ -209,6 +182,36 @@ export default function Profile() {
           </TouchableOpacity>
         )}
       </View>
+
+      {/* Payment handles (host) */}
+      {isHost && (
+        <View style={styles.feed}>
+          <Text style={styles.feedTitle}>Payment handles</Text>
+          <Text style={styles.payHint}>Shown to players at checkout so they know where to send payment. Leave blank to hide a method.</Text>
+          <View style={styles.payGrid}>
+            {([["venmo", "Venmo", "@your-venmo"], ["cashapp", "Cash App", "$yourcashtag"], ["paypal", "PayPal", "you@email.com / paypal.me link"], ["zelle", "Zelle", "email or phone"]] as const).map(([key, label, ph]) => (
+              <View key={key} style={styles.payField}>
+                <Text style={styles.payLabel}>{label}</Text>
+                <TextInput
+                  style={styles.payInput}
+                  value={(pay as any)[key]}
+                  onChangeText={(t) => { setPay((p) => ({ ...p, [key]: t })); setPayMsg(null); }}
+                  placeholder={ph}
+                  placeholderTextColor={colors.faint}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+            ))}
+          </View>
+          <View style={styles.payActions}>
+            <TouchableOpacity style={[styles.smallBtn, { backgroundColor: colors.red }]} onPress={savePay} disabled={savingPay}>
+              <Text style={styles.smallBtnText}>{savingPay ? "Saving…" : "Save handles"}</Text>
+            </TouchableOpacity>
+            {payMsg && <Text style={styles.payMsg}>{payMsg}</Text>}
+          </View>
+        </View>
+      )}
 
       {/* My winnings */}
       {winnings.length > 0 && (
@@ -294,6 +297,8 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   payTitle: { color: colors.text, fontSize: 14, fontWeight: "800" },
   payHint: { color: colors.faint, fontSize: 11, lineHeight: 15, marginTop: 4, marginBottom: 8 },
   payRow: { marginTop: 8 },
+  payGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 8 },
+  payField: { flexGrow: 1, flexBasis: "44%", minWidth: 200 },
   payLabel: { color: colors.muted, fontSize: 12, fontWeight: "700", marginBottom: 5 },
   payInput: { backgroundColor: colors.surfaceAlt, borderColor: colors.inputBorder, borderWidth: 1, borderRadius: radius.md, padding: 10, color: colors.text, fontSize: 14 },
   payActions: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 12 },

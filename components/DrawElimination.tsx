@@ -34,22 +34,23 @@ export function DrawElimination({
 
   function teaseOut(seat: number) {
     const a = getA(seat);
+    a.tx.setValue(0); a.sc.setValue(1); a.op.setValue(1);
     Animated.sequence([
-      // grow + shake (the tease)
-      Animated.parallel([
-        Animated.timing(a.sc, { toValue: 1.45, duration: 320, useNativeDriver: false }),
-        Animated.sequence([
-          Animated.timing(a.tx, { toValue: -5, duration: 55, useNativeDriver: false }),
-          Animated.timing(a.tx, { toValue: 5, duration: 55, useNativeDriver: false }),
-          Animated.timing(a.tx, { toValue: -4, duration: 55, useNativeDriver: false }),
-          Animated.timing(a.tx, { toValue: 4, duration: 55, useNativeDriver: false }),
-          Animated.timing(a.tx, { toValue: 0, duration: 55, useNativeDriver: false }),
-        ]),
+      // grow
+      Animated.timing(a.sc, { toValue: 1.7, duration: 360, useNativeDriver: false }),
+      // shake hard while big (the tease)
+      Animated.sequence([
+        Animated.timing(a.tx, { toValue: -9, duration: 55, useNativeDriver: false }),
+        Animated.timing(a.tx, { toValue: 9, duration: 55, useNativeDriver: false }),
+        Animated.timing(a.tx, { toValue: -8, duration: 55, useNativeDriver: false }),
+        Animated.timing(a.tx, { toValue: 8, duration: 55, useNativeDriver: false }),
+        Animated.timing(a.tx, { toValue: -5, duration: 55, useNativeDriver: false }),
+        Animated.timing(a.tx, { toValue: 0, duration: 55, useNativeDriver: false }),
       ]),
       // then fade + shrink away
       Animated.parallel([
-        Animated.timing(a.op, { toValue: 0.08, duration: 500, useNativeDriver: false }),
-        Animated.timing(a.sc, { toValue: 0.78, duration: 500, useNativeDriver: false }),
+        Animated.timing(a.op, { toValue: 0.06, duration: 650, useNativeDriver: false }),
+        Animated.timing(a.sc, { toValue: 0.7, duration: 650, useNativeDriver: false }),
       ]),
     ]).start();
   }
@@ -80,7 +81,7 @@ export function DrawElimination({
         seats.forEach((s) => elim.add(s));
         setEliminated(new Set(elim));
         setTeasing(new Set());
-      }, 600);
+      }, 760);
       i++;
       timer = setTimeout(tick, ROUND_MS);
     };
