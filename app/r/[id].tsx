@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, Image, ActivityIndicator, TouchableOpacity, Linking } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/lib/supabase";
 import { radius, AppColors } from "@/lib/theme";
@@ -15,8 +15,10 @@ interface Record {
 
 export default function PublicRecord() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const goBack = () => { if (router.canGoBack?.()) router.back(); else router.replace("/"); };
 
   const [rec, setRec] = useState<Record | null>(null);
   const [loading, setLoading] = useState(true);
@@ -74,12 +76,18 @@ export default function PublicRecord() {
       <View style={styles.center}>
         <Image source={LOGO} style={styles.smallLogo} resizeMode="contain" />
         <Text style={styles.muted}>{err ?? "Record not found."}</Text>
+        <TouchableOpacity onPress={goBack}><Text style={styles.backLink}>← Back</Text></TouchableOpacity>
       </View>
     );
   }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <View style={styles.topbar}>
+        <TouchableOpacity onPress={goBack} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Text style={styles.backLink}>← Back</Text>
+        </TouchableOpacity>
+      </View>
       <View style={styles.inner}>
         <Image source={LOGO} style={styles.logo} resizeMode="contain" />
         <Text style={styles.brand}>LOOT VAULT</Text>
@@ -141,6 +149,8 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   muted: { color: colors.muted, textAlign: "center" },
   smallLogo: { width: 80, height: 80 },
   content: { padding: 20, alignItems: "center" },
+  topbar: { width: "100%", maxWidth: 460, alignSelf: "center", marginBottom: 8 },
+  backLink: { color: colors.red, fontSize: 15, fontWeight: "700" },
   inner: { width: "100%", maxWidth: 460, alignItems: "center" },
   logo: { width: 84, height: 84 },
   brand: { color: colors.text, fontSize: 20, fontWeight: "900", letterSpacing: 1, marginTop: 8 },
