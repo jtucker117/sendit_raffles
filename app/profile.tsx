@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import {
   View, Text, Image, StyleSheet, ScrollView, TouchableOpacity,
   ActivityIndicator, TextInput, Alert,
@@ -26,6 +26,28 @@ export default function Profile() {
   const [editingBio, setEditingBio] = useState(false);
   const [bio, setBio] = useState(user?.bio ?? "");
   const [savingBio, setSavingBio] = useState(false);
+
+  // Host payment handles (where players send money at checkout)
+  const [pay, setPay] = useState({ venmo: "", cashapp: "", paypal: "", zelle: "" });
+  const [savingPay, setSavingPay] = useState(false);
+  const [payMsg, setPayMsg] = useState<string | null>(null);
+  useEffect(() => {
+    if (user?.role !== "host" || !user?.id) return;
+    supabase.from("profiles").select("pay_venmo, pay_cashapp, pay_paypal, pay_zelle").eq("id", user.id).single()
+      .then(({ data }) => {
+        if (data) setPay({ venmo: data.pay_venmo ?? "", cashapp: data.pay_cashapp ?? "", paypal: data.pay_paypal ?? "", zelle: data.pay_zelle ?? "" });
+      });
+  }, [user?.id, user?.role]);
+
+  async function savePay() {
+    setSavingPay(true); setPayMsg(null);
+    const { error } = await supabase.from("profiles").update({
+      pay_venmo: pay.venmo.trim() || null, pay_cashapp: pay.cashapp.trim() || null,
+      pay_paypal: pay.paypal.trim() || null, pay_zelle: pay.zelle.trim() || null,
+    }).eq("id", user!.id);
+    setPayMsg(error ? "Couldn't save" : "Saved ✓");
+    setSavingPay(false);
+  }
 
   if (!user) {
     return <View style={styles.center}><ActivityIndicator color={colors.red} /></View>;
@@ -107,6 +129,33 @@ export default function Profile() {
           </View>
         ) : null}
 
+        {isHost && (
+          <View style={styles.payCard}>
+            <Text style={styles.payTitle}>Payment handles</Text>
+            <Text style={styles.payHint}>Shown to players at checkout so they know where to send payment. Leave blank to hide a method.</Text>
+            {([["venmo", "Venmo", "@your-venmo"], ["cashapp", "Cash App", "$yourcashtag"], ["paypal", "PayPal", "you@email.com / paypal.me link"], ["zelle", "Zelle", "email or phone"]] as const).map(([key, label, ph]) => (
+              <View key={key} style={styles.payRow}>
+                <Text style={styles.payLabel}>{label}</Text>
+                <TextInput
+                  style={styles.payInput}
+                  value={(pay as any)[key]}
+                  onChangeText={(t) => { setPay((p) => ({ ...p, [key]: t })); setPayMsg(null); }}
+                  placeholder={ph}
+                  placeholderTextColor={colors.faint}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+            ))}
+            <View style={styles.payActions}>
+              <TouchableOpacity style={[styles.smallBtn, { backgroundColor: colors.red }]} onPress={savePay} disabled={savingPay}>
+                <Text style={styles.smallBtnText}>{savingPay ? "Saving…" : "Save handles"}</Text>
+              </TouchableOpacity>
+              {payMsg && <Text style={styles.payMsg}>{payMsg}</Text>}
+            </View>
+          </View>
+        )}
+
         {/* Bio */}
         {editingBio ? (
           <View style={styles.bioEdit}>
@@ -185,6 +234,14 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   codeLabel: { color: colors.muted, fontSize: 10, fontWeight: "700", letterSpacing: 1 },
   codeValue: { color: colors.red, fontSize: 22, fontWeight: "800", letterSpacing: 3, marginTop: 2 },
   codeHint: { color: colors.faint, fontSize: 11, marginTop: 4 },
+  payCard: { width: "100%", maxWidth: 460, marginTop: 16, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, padding: 16 },
+  payTitle: { color: colors.text, fontSize: 14, fontWeight: "800" },
+  payHint: { color: colors.faint, fontSize: 11, lineHeight: 15, marginTop: 4, marginBottom: 8 },
+  payRow: { marginTop: 8 },
+  payLabel: { color: colors.muted, fontSize: 12, fontWeight: "700", marginBottom: 5 },
+  payInput: { backgroundColor: colors.surfaceAlt, borderColor: colors.inputBorder, borderWidth: 1, borderRadius: radius.md, padding: 10, color: colors.text, fontSize: 14 },
+  payActions: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 12 },
+  payMsg: { color: colors.green, fontSize: 13, fontWeight: "700" },
 
   bio: { color: colors.text, fontSize: 14, textAlign: "center", marginTop: 12, lineHeight: 20, maxWidth: 460 },
   bioMuted: { color: colors.red, fontWeight: "600" },

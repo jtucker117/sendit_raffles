@@ -39,7 +39,6 @@ export default function RaffleDetail() {
   const [claiming, setClaiming] = useState(false);
   const [pickNum, setPickNum] = useState("");
   const [selected, setSelected] = useState<number[]>([]);
-  const [buying, setBuying] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [draw, setDraw] = useState<any | null>(null);
@@ -135,30 +134,11 @@ export default function RaffleDetail() {
   function paidPick() {
     const n = parseInt(pickNum, 10);
     if (!(n >= 1 && n <= raffle!.capacity)) { Alert.alert("Enter a seat number", `1–${raffle!.capacity}`); return; }
-    claim("paid", n);
+    router.push(`/checkout/${raffle!.id}?seats=${n}`);
   }
 
   function toggleSeat(n: number) {
     setSelected((prev) => (prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n]));
-  }
-
-  // Reserve all selected seats (each becomes a held paid ticket pending host confirm).
-  async function buySelected() {
-    if (!selected.length) return;
-    setBuying(true);
-    try {
-      for (const n of selected) {
-        const { error } = await supabase.rpc("claim_seat", { p_raffle: raffle!.id, p_seat: n, p_type: "paid" });
-        if (error) throw error;
-      }
-      setSelected([]);
-      await load();
-    } catch (e: any) {
-      Alert.alert("Couldn't reserve", e?.message ?? "Try again.");
-      await load();
-    } finally {
-      setBuying(false);
-    }
   }
 
   // ---- Draw event flow ----
@@ -364,7 +344,7 @@ export default function RaffleDetail() {
         {/* Player extras: lucky dip + free seat */}
         {canPick && (
           <View style={{ gap: 10, marginTop: 14 }}>
-            <TouchableOpacity style={[styles.btn, styles.btnOutline, (claiming || open <= 0) && styles.btnDim]} disabled={claiming || open <= 0} onPress={() => claim("paid", 0)}>
+            <TouchableOpacity style={[styles.btn, styles.btnOutline, open <= 0 && styles.btnDim]} disabled={open <= 0} onPress={() => router.push(`/checkout/${raffle.id}?random=1`)}>
               <Text style={[styles.btnText, { color: colors.text }]}>🎲 Lucky dip — random paid seat · {money(raffle.amount_cents)}</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -425,8 +405,8 @@ export default function RaffleDetail() {
             <Text style={styles.buyCount}>{selected.length} seat{selected.length === 1 ? "" : "s"} selected</Text>
             <Text style={styles.buySeats} numberOfLines={1}>{[...selected].sort((a, b) => a - b).map((n) => `#${n}`).join(", ")}</Text>
           </View>
-          <TouchableOpacity style={[styles.buyBtn, buying && styles.btnDim]} disabled={buying} onPress={buySelected}>
-            {buying ? <ActivityIndicator color={colors.onAccent} /> : <Text style={styles.buyBtnText}>Reserve — {money(raffle.amount_cents * selected.length)}</Text>}
+          <TouchableOpacity style={styles.buyBtn} onPress={() => router.push(`/checkout/${raffle.id}?seats=${[...selected].sort((a, b) => a - b).join(",")}`)}>
+            <Text style={styles.buyBtnText}>Checkout — {money(raffle.amount_cents * selected.length)}</Text>
           </TouchableOpacity>
         </View>
       )}
