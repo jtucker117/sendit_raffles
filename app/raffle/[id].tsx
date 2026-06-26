@@ -86,6 +86,11 @@ export default function RaffleDetail() {
   // so confirmed/pending counts and the draw button stay in sync.
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
+  // Auto-verify the signature with Random.org as soon as a completed draw loads.
+  useEffect(() => {
+    if (draw && verifyMsg === null && !verifying) verifyDraw();
+  }, [draw]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Countdown ticker -> when it hits 0, run the draw.
   useEffect(() => {
     if (stage !== "countdown") return;
@@ -261,17 +266,21 @@ export default function RaffleDetail() {
                 <Text style={styles.sigLabel}>SIGNATURE</Text>
                 <Text style={styles.sig} numberOfLines={1}>{draw.randomorg_signed?.signature ?? ""}</Text>
                 <TouchableOpacity onPress={verifyDraw} disabled={verifying}>
-                  <Text style={styles.verify}>{verifying ? "Verifying…" : "Verify with Random.org"}</Text>
+                  <Text style={[styles.verifyBadge, verifyMsg?.startsWith("✓") && styles.verifyBadgeOk]}>
+                    {verifying ? "Verifying with Random.org…" : verifyMsg ?? "Tap to verify with Random.org"}
+                  </Text>
                 </TouchableOpacity>
-                {verifyMsg && <Text style={styles.verifyMsg}>{verifyMsg}</Text>}
+                <Text style={styles.verifyNote}>
+                  Checked against Random.org's official verification API — proof the result is genuine and unaltered.
+                </Text>
 
                 <TouchableOpacity onPress={() => setShowData((s) => !s)}>
-                  <Text style={styles.verifySub}>{showData ? "Hide" : "See it on Random.org"}</Text>
+                  <Text style={styles.verifySub}>{showData ? "Hide signature data" : "Advanced: verify it yourself"}</Text>
                 </TouchableOpacity>
                 {showData && (
                   <View style={styles.dataBox}>
                     <Text style={styles.dataHelp}>
-                      Open Random.org's verifier, then copy each value below into its matching field to see this draw confirmed on their site.
+                      Paste each value into its matching field at Random.org's verifier to confirm independently.
                     </Text>
                     <TouchableOpacity style={[styles.btn, styles.btnOutline]} onPress={() => Linking.openURL("https://api.random.org/signatures/form")}>
                       <Text style={[styles.btnText, { color: colors.text }]}>Open Random.org verifier →</Text>
@@ -557,7 +566,9 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   sigLabel: { color: colors.faint, fontSize: 9, fontWeight: "800", letterSpacing: 1, marginTop: 10 },
   sig: { color: colors.faint, fontSize: 10, fontFamily: "monospace" as any, marginTop: 3 },
   verify: { color: colors.red, fontSize: 13, fontWeight: "700", marginTop: 10 },
-  verifyMsg: { color: colors.text, fontSize: 13, fontWeight: "700", marginTop: 8 },
+  verifyBadge: { color: colors.muted, fontSize: 14, fontWeight: "800", marginTop: 10 },
+  verifyBadgeOk: { color: colors.green },
+  verifyNote: { color: colors.faint, fontSize: 11, lineHeight: 15, marginTop: 4 },
   verifySub: { color: colors.muted, fontSize: 12, fontWeight: "700", marginTop: 10, textDecorationLine: "underline" },
   dataBox: { marginTop: 10, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10 },
   dataHelp: { color: colors.muted, fontSize: 12, lineHeight: 16, marginBottom: 8 },
