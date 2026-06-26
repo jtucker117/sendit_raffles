@@ -11,12 +11,14 @@ import { radius, AppColors } from "@/lib/theme";
 import { DrawWheel, WheelEntrant } from "@/components/DrawWheel";
 import { DrawScratch } from "@/components/DrawScratch";
 import { DrawLotto } from "@/components/DrawLotto";
+import { DrawElimination, ElimRound } from "@/components/DrawElimination";
 import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 
 interface Raffle {
   id: string; host_id: string; title: string; prize: string | null; description: string | null;
   cover_url: string | null; capacity: number; free_seat_limit: number; entry_word: string;
   amount_cents: number; status: string; draw_style?: "wheel" | "scratch" | "lotto";
+  draw_mode?: "single" | "elimination";
 }
 interface Ticket { id: string; seat_number: number; owner_id: string; type: "free" | "paid"; status: string; }
 
@@ -51,6 +53,7 @@ export default function RaffleDetail() {
   const [stage, setStage] = useState<DrawStage>("idle");
   const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
   const [spinTo, setSpinTo] = useState<number | null>(null);
+  const [elimRounds, setElimRounds] = useState<ElimRound[]>([]);
   const [liveWinner, setLiveWinner] = useState<{ name: string; seat: number } | null>(null);
   const [drawErr, setDrawErr] = useState("");
 
@@ -163,6 +166,7 @@ export default function RaffleDetail() {
       if ((data as any)?.error) throw new Error((data as any).error);
       const seat = (data as any).winning_seat as number;
       const idx = wheelEntrants.findIndex((e) => e.seat === seat);
+      setElimRounds(((data as any).rounds as ElimRound[]) ?? []);
       setLiveWinner({ name: (data as any).winner_name, seat });
       setSpinTo(idx >= 0 ? idx : 0);
       setStage("spinning");
@@ -214,7 +218,8 @@ export default function RaffleDetail() {
 
   const wheelSize = Math.min(width - 64, 340);
   const drawStyle = raffle.draw_style ?? "wheel";
-  const revealLabel = drawStyle === "scratch" ? "SCRATCH TO REVEAL" : drawStyle === "lotto" ? "DRAWING" : "SPINNING";
+  const drawMode = raffle.draw_mode ?? "single";
+  const revealLabel = drawMode === "elimination" ? "ELIMINATION" : drawStyle === "scratch" ? "SCRATCH TO REVEAL" : drawStyle === "lotto" ? "DRAWING" : "SPINNING";
 
   const CertRow = ({ k, v }: { k: string; v: string }) => (
     <View style={styles.certRow}>
@@ -237,6 +242,9 @@ export default function RaffleDetail() {
             <Text style={styles.winnerEyebrow}>WINNER</Text>
             <Text style={styles.winnerName}>{winnerName}</Text>
             <Text style={styles.winnerSeat}>Seat #{draw.winning_seat}</Text>
+            {draw.rounds?.length ? (
+              <Text style={styles.winnerSeat}>Decided over {draw.rounds.length} signed Random.org round{draw.rounds.length === 1 ? "" : "s"}</Text>
+            ) : null}
             {draw.randomorg_signed ? (
               <View style={styles.certBox}>
                 <Text style={styles.certTitle}>Random.org Signed Draw</Text>
@@ -423,7 +431,7 @@ export default function RaffleDetail() {
                 <Text style={styles.sheetTitle}>Run the draw</Text>
                 <Text style={styles.sheetBody}>
                   This notifies entrants and starts a {COUNTDOWN_SECONDS}-second countdown, then the winner is revealed
-                  {wheelEntrants.length >= 2 ? " using a signed Random.org draw" : ""}.
+                  {drawMode === "elimination" ? " through multiple signed Random.org elimination rounds" : wheelEntrants.length >= 2 ? " using a signed Random.org draw" : ""}.
                 </Text>
                 <Text style={styles.sheetBody}>{wheelEntrants.length} confirmed {wheelEntrants.length === 1 ? "entry" : "entries"}.</Text>
                 {open > 0 && (
@@ -465,6 +473,8 @@ export default function RaffleDetail() {
                 <View style={{ alignItems: "center", marginVertical: 12, width: "100%" }}>
                   {stage === "drawing" ? (
                     <ActivityIndicator color={colors.red} size="large" style={{ marginVertical: 30 }} />
+                  ) : drawMode === "elimination" && liveWinner ? (
+                    <DrawElimination entrants={wheelEntrants} rounds={elimRounds} winnerSeat={liveWinner.seat} onDone={onSpinEnd} />
                   ) : drawStyle === "wheel" ? (
                     <DrawWheel entrants={wheelEntrants} spinTo={spinTo} onSpinEnd={onSpinEnd} size={wheelSize} />
                   ) : drawStyle === "scratch" && liveWinner ? (

@@ -49,14 +49,14 @@ Deno.serve(async (req) => {
       const admin0 = createClient(SUPABASE_URL, SERVICE);
       const { data: raffle } = await admin0.from("raffles").select("id, title, prize, cover_url, capacity, status").eq("id", rid).single();
       if (!raffle || raffle.status !== "complete") return json({ error: "No public record for this raffle yet" }, 404);
-      const { data: d } = await admin0.from("draws").select("winning_seat, winner_id, randomorg_signed, drawn_at").eq("raffle_id", rid).maybeSingle();
+      const { data: d } = await admin0.from("draws").select("winning_seat, winner_id, randomorg_signed, rounds, drawn_at").eq("raffle_id", rid).maybeSingle();
       if (!d) return json({ error: "No draw record" }, 404);
       const { data: w } = await admin0.from("profiles").select("display_name").eq("id", d.winner_id).single();
       const { count } = await admin0.from("tickets").select("*", { count: "exact", head: true }).eq("raffle_id", rid).eq("status", "confirmed");
       return json({
         title: raffle.title, prize: raffle.prize, cover_url: raffle.cover_url, capacity: raffle.capacity,
         winning_seat: d.winning_seat, winner_name: w?.display_name ?? "Winner",
-        randomorg_signed: d.randomorg_signed, drawn_at: d.drawn_at, entrants: count ?? 0,
+        randomorg_signed: d.randomorg_signed, rounds: d.rounds, drawn_at: d.drawn_at, entrants: count ?? 0,
       });
     }
 
@@ -85,28 +85,48 @@ Deno.serve(async (req) => {
     const N = tickets?.length ?? 0;
     if (N < 1) return json({ error: "No confirmed entrants to draw from" }, 400);
 
-    // Pick the winner. Random.org's signed integers require min < max, so with a
-    // single eligible entrant there's nothing to randomize — they win outright.
-    let pick: number;        // 1..N
-    let signed: unknown = null;
-    if (N === 1) {
-      pick = 1;
-    } else {
-      // Random.org Signed API — one integer in [1, N].
-      const rngRes = await fetch("https://api.random.org/json-rpc/4/invoke", {
+    // One signed integers request to Random.org.
+    async function signedIntegers(n: number, max: number, replacement: boolean) {
+      const res = await fetch("https://api.random.org/json-rpc/4/invoke", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           jsonrpc: "2.0", id: 1, method: "generateSignedIntegers",
-          params: { apiKey: RANDOM_ORG_KEY, n: 1, min: 1, max: N, replacement: true },
+          params: { apiKey: RANDOM_ORG_KEY, n, min: 1, max, replacement },
         }),
       });
-      const rng = await rngRes.json();
-      if (rng.error) return json({ error: `Random.org: ${rng.error.message}` }, 502);
-      pick = rng.result.random.data[0] as number;
-      signed = rng.result;
+      const j = await res.json();
+      if (j.error) throw new Error(`Random.org: ${j.error.message}`);
+      return j.result;
     }
-    const winner = tickets![pick - 1];
+
+    const mode = raffle.draw_mode === "elimination" ? "elimination" : "single";
+    let signed: any = null;
+    let rounds: { eliminated: number[] }[] | null = null;
+    let winner: any;
+
+    if (N === 1) {
+      winner = tickets![0]; // nothing to randomize
+    } else if (mode === "elimination") {
+      // Multiple signed rounds: each removes ~half the remaining seats until one survives.
+      rounds = [];
+      let remaining = tickets!.map((_, i) => i); // indices into tickets
+      while (remaining.length > 1) {
+        const elimCount = Math.floor(remaining.length / 2);
+        const result = await signedIntegers(elimCount, remaining.length, false);
+        signed = result; // keep the last round's signed cert for verification
+        const positions: number[] = result.random.data;
+        const elimIdx = positions.map((p) => remaining[p - 1]);
+        rounds.push({ eliminated: elimIdx.map((i) => tickets![i].seat_number) });
+        const elimSet = new Set(elimIdx);
+        remaining = remaining.filter((i) => !elimSet.has(i));
+      }
+      winner = tickets![remaining[0]];
+    } else {
+      const result = await signedIntegers(1, N, true);
+      signed = result;
+      winner = tickets![(result.random.data[0] as number) - 1];
+    }
 
     const { data: winnerProfile } = await admin.from("profiles").select("display_name").eq("id", winner.owner_id).single();
 
@@ -117,6 +137,7 @@ Deno.serve(async (req) => {
       winning_seat: winner.seat_number,
       winner_id: winner.owner_id,
       randomorg_signed: signed,
+      rounds,
       verify_url: "https://api.random.org/",
     }).select().single();
     if (drawErr) return json({ error: drawErr.message }, 500);
@@ -149,7 +170,8 @@ Deno.serve(async (req) => {
       winner_id: winner.owner_id,
       winner_name: winnerProfile?.display_name ?? "Winner",
       entrants: N,
-      result_number: pick,
+      mode,
+      rounds,
       awarded_parent_seats: awardedSeats,
       draw_id: draw.id,
     });
