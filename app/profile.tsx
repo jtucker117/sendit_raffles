@@ -49,6 +49,24 @@ export default function Profile() {
     setSavingPay(false);
   }
 
+  // Player stats + winnings
+  const [stats, setStats] = useState({ entered: 0, won: 0, spentCents: 0 });
+  const [winnings, setWinnings] = useState<{ raffleId: string; title: string; prize: string | null; cover_url: string | null }[]>([]);
+  const [memberSince, setMemberSince] = useState<string | null>(null);
+  useFocusEffect(useCallback(() => {
+    if (!user) return;
+    (async () => {
+      const { data: tix } = await supabase.from("tickets").select("raffle_id, type, status, raffles(amount_cents)").eq("owner_id", user.id);
+      const rids = new Set<string>(); let spent = 0;
+      (tix ?? []).forEach((t: any) => { rids.add(t.raffle_id); if (t.type === "paid" && t.status === "confirmed") spent += t.raffles?.amount_cents ?? 0; });
+      const { data: wins } = await supabase.from("draws").select("raffle_id, raffles(id, title, prize, cover_url)").eq("winner_id", user.id);
+      setStats({ entered: rids.size, won: (wins ?? []).length, spentCents: spent });
+      setWinnings((wins ?? []).map((w: any) => ({ raffleId: w.raffle_id, title: w.raffles?.title ?? "Raffle", prize: w.raffles?.prize ?? null, cover_url: w.raffles?.cover_url ?? null })));
+      const { data: p } = await supabase.from("profiles").select("created_at").eq("id", user.id).single();
+      setMemberSince(p?.created_at ?? null);
+    })();
+  }, [user?.id]));
+
   if (!user) {
     return <View style={styles.center}><ActivityIndicator color={colors.red} /></View>;
   }
@@ -119,7 +137,14 @@ export default function Profile() {
         </TouchableOpacity>
 
         <Text style={styles.name}>{user.display_name}</Text>
-        <Text style={styles.role}>{isHost ? "🎡 Host" : "🎫 Player"}{hostStatus}</Text>
+        <Text style={styles.role}>{isHost ? "🎡 Host" : "🎫 Player"}{hostStatus}{memberSince ? ` · member since ${new Date(memberSince).getFullYear()}` : ""}</Text>
+
+        {/* Player stats */}
+        <View style={styles.statsRow}>
+          <View style={styles.statBox}><Text style={styles.statVal}>{stats.entered}</Text><Text style={styles.statLabel}>Entered</Text></View>
+          <View style={styles.statBox}><Text style={[styles.statVal, { color: colors.red }]}>{stats.won}</Text><Text style={styles.statLabel}>Won</Text></View>
+          <View style={styles.statBox}><Text style={styles.statVal}>${(stats.spentCents / 100).toFixed(0)}</Text><Text style={styles.statLabel}>Spent</Text></View>
+        </View>
 
         {isHost && user.host_code ? (
           <View style={styles.codeChip}>
@@ -185,6 +210,26 @@ export default function Profile() {
         )}
       </View>
 
+      {/* My winnings */}
+      {winnings.length > 0 && (
+        <View style={styles.feed}>
+          <Text style={styles.feedTitle}>My winnings</Text>
+          {winnings.map((w) => (
+            <TouchableOpacity key={w.raffleId} style={styles.winRow} activeOpacity={0.9} onPress={() => router.push(`/raffle/${w.raffleId}`)}>
+              {w.cover_url
+                ? <Image source={{ uri: w.cover_url }} style={styles.winThumb} />
+                : <View style={[styles.winThumb, { backgroundColor: colors.navy }]} />}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.winTitle} numberOfLines={1}>{w.title}</Text>
+                {w.prize ? <Text style={styles.winPrize} numberOfLines={1}>🏆 {w.prize}</Text> : null}
+              </View>
+              <View style={styles.winBadge}><Text style={styles.winBadgeText}>WON</Text></View>
+            </TouchableOpacity>
+          ))}
+          <Text style={styles.claimNote}>Contact the host to arrange your prize.</Text>
+        </View>
+      )}
+
       {/* Host feed of raffles */}
       {isHost && (
         <View style={styles.feed}>
@@ -234,6 +279,17 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   codeLabel: { color: colors.muted, fontSize: 10, fontWeight: "700", letterSpacing: 1 },
   codeValue: { color: colors.red, fontSize: 22, fontWeight: "800", letterSpacing: 3, marginTop: 2 },
   codeHint: { color: colors.faint, fontSize: 11, marginTop: 4 },
+  statsRow: { flexDirection: "row", gap: 10, marginTop: 16, width: "100%", maxWidth: 460 },
+  statBox: { flex: 1, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, paddingVertical: 14, alignItems: "center" },
+  statVal: { color: colors.text, fontSize: 22, fontWeight: "900" },
+  statLabel: { color: colors.muted, fontSize: 11, fontWeight: "700", marginTop: 2, textTransform: "uppercase", letterSpacing: 0.5 },
+  winRow: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.surface, borderColor: colors.red, borderWidth: 1, borderRadius: radius.md, padding: 10, marginBottom: 10 },
+  winThumb: { width: 52, height: 52, borderRadius: 10 },
+  winTitle: { color: colors.text, fontSize: 15, fontWeight: "800" },
+  winPrize: { color: colors.muted, fontSize: 12, marginTop: 2 },
+  winBadge: { backgroundColor: colors.red, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
+  winBadgeText: { color: colors.onAccent, fontSize: 10, fontWeight: "900", letterSpacing: 0.5 },
+  claimNote: { color: colors.faint, fontSize: 12, marginTop: 2 },
   payCard: { width: "100%", maxWidth: 460, marginTop: 16, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, padding: 16 },
   payTitle: { color: colors.text, fontSize: 14, fontWeight: "800" },
   payHint: { color: colors.faint, fontSize: 11, lineHeight: 15, marginTop: 4, marginBottom: 8 },
