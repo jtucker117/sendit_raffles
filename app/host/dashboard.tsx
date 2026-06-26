@@ -22,6 +22,7 @@ export default function HostDashboard() {
   const router = useRouter();
 
   const [rows, setRows] = useState<Row[]>([]);
+  const [topPlayers, setTopPlayers] = useState<{ id: string; name: string; seats: number; spent: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -30,19 +31,41 @@ export default function HostDashboard() {
     const { data: raffles } = await supabase.from("raffles").select("id, title, cover_url, capacity, amount_cents, status").eq("host_id", user.id).order("created_at", { ascending: false });
     const rs = (raffles ?? []) as any[];
     const ids = rs.map((r) => r.id);
+    const amountByRaffle: Record<string, number> = {};
+    rs.forEach((r) => { amountByRaffle[r.id] = r.amount_cents; });
+
     const tally: Record<string, { claimed: number; confirmed: number; paidConfirmed: number }> = {};
+    const ownerAgg: Record<string, { seats: number; spent: number }> = {};
     if (ids.length) {
-      const { data: tix } = await supabase.from("tickets").select("raffle_id, type, status").in("raffle_id", ids);
+      const { data: tix } = await supabase.from("tickets").select("raffle_id, owner_id, type, status").in("raffle_id", ids);
       (tix ?? []).forEach((t: any) => {
         const e = tally[t.raffle_id] ?? (tally[t.raffle_id] = { claimed: 0, confirmed: 0, paidConfirmed: 0 });
         e.claimed++;
-        if (t.status === "confirmed") { e.confirmed++; if (t.type === "paid") e.paidConfirmed++; }
+        if (t.status === "confirmed") {
+          e.confirmed++;
+          if (t.type === "paid") e.paidConfirmed++;
+          const o = ownerAgg[t.owner_id] ?? (ownerAgg[t.owner_id] = { seats: 0, spent: 0 });
+          o.seats++;
+          if (t.type === "paid") o.spent += amountByRaffle[t.raffle_id] ?? 0;
+        }
       });
     }
     setRows(rs.map((r) => ({
       id: r.id, title: r.title, cover_url: r.cover_url, capacity: r.capacity, amount_cents: r.amount_cents, status: r.status,
       claimed: tally[r.id]?.claimed ?? 0, confirmed: tally[r.id]?.confirmed ?? 0, paidConfirmed: tally[r.id]?.paidConfirmed ?? 0,
     })));
+
+    // Top 3 players in this host's community by spend (then seats)
+    const top = Object.entries(ownerAgg)
+      .sort((a, b) => (b[1].spent - a[1].spent) || (b[1].seats - a[1].seats))
+      .slice(0, 3);
+    const topIds = top.map(([oid]) => oid);
+    const names: Record<string, string> = {};
+    if (topIds.length) {
+      const { data: profs } = await supabase.from("profiles").select("id, display_name").in("id", topIds);
+      (profs ?? []).forEach((p: any) => { names[p.id] = p.display_name; });
+    }
+    setTopPlayers(top.map(([oid, v]) => ({ id: oid, name: names[oid] ?? "Player", seats: v.seats, spent: v.spent })));
     setLoading(false);
   }, [user?.id]);
 
@@ -78,6 +101,20 @@ export default function HostDashboard() {
           <View style={styles.statBox}><Text style={styles.statVal}>{money(revenueCents)}</Text><Text style={styles.statLabel}>Revenue</Text></View>
           <View style={styles.statBox}><Text style={styles.statVal}>{entrants}</Text><Text style={styles.statLabel}>Entrants</Text></View>
         </View>
+
+        {/* Top players in your community */}
+        {topPlayers.length > 0 && (
+          <View style={styles.topCard}>
+            <Text style={styles.topTitle}>Top players</Text>
+            {topPlayers.map((p, i) => (
+              <TouchableOpacity key={p.id} style={styles.topRow} activeOpacity={0.8} onPress={() => router.push(`/u/${p.id}`)}>
+                <Text style={styles.rank}>{["🥇", "🥈", "🥉"][i] ?? `${i + 1}`}</Text>
+                <Text style={styles.topName} numberOfLines={1}>{p.name}</Text>
+                <Text style={styles.topMeta}>{p.seats} seat{p.seats === 1 ? "" : "s"} · {money(p.spent)}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         <TouchableOpacity style={styles.newBtn} onPress={() => router.push("/host/create-raffle")}>
           <Text style={styles.newBtnText}>+ New raffle</Text>
@@ -130,6 +167,12 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   statBox: { flex: 1, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, paddingVertical: 16, alignItems: "center" },
   statVal: { color: colors.text, fontSize: 22, fontWeight: "900" },
   statLabel: { color: colors.muted, fontSize: 11, fontWeight: "700", marginTop: 2, textTransform: "uppercase", letterSpacing: 0.5 },
+  topCard: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, padding: 14, marginBottom: 16 },
+  topTitle: { color: colors.text, fontSize: 13, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 6 },
+  topRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 9, borderTopWidth: 1, borderTopColor: colors.border },
+  rank: { fontSize: 16, width: 24, textAlign: "center" },
+  topName: { color: colors.text, fontSize: 15, fontWeight: "700", flex: 1 },
+  topMeta: { color: colors.muted, fontSize: 12, fontWeight: "600" },
   newBtn: { backgroundColor: colors.red, borderRadius: radius.md, paddingVertical: 13, alignItems: "center", marginBottom: 18 },
   newBtnText: { color: colors.onAccent, fontWeight: "800", fontSize: 15 },
   empty: { color: colors.muted, fontSize: 14, marginTop: 24, textAlign: "center" },
