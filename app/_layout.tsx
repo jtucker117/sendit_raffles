@@ -14,18 +14,20 @@ function RootLayoutNav() {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
 
+  const isPublic = segments[0] === "r"; // public shareable draw-record pages
+
   useEffect(() => {
     if (loading) return;
     const inAuthGroup = segments[0] === "auth";
     if (session && user) {
       if (inAuthGroup) router.replace("/");
     } else {
-      if (!inAuthGroup) router.replace("/auth");
+      if (!inAuthGroup && !isPublic) router.replace("/auth");
     }
   }, [session, user, loading, segments]);
 
   const inAuthGroup = segments[0] === "auth";
-  const showChrome = !!(session && user) && !inAuthGroup;
+  const showChrome = !!(session && user) && !inAuthGroup && !isPublic;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>

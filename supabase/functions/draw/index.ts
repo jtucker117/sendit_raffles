@@ -42,6 +42,24 @@ Deno.serve(async (req) => {
       return json({ authentic: !!vj.result?.authenticity });
     }
 
+    // ----- Public draw record (no auth; powers the shareable result page) -----
+    if (body?.record) {
+      const rid = body.raffle_id;
+      if (!rid) return json({ error: "raffle_id required" }, 400);
+      const admin0 = createClient(SUPABASE_URL, SERVICE);
+      const { data: raffle } = await admin0.from("raffles").select("id, title, prize, cover_url, capacity, status").eq("id", rid).single();
+      if (!raffle || raffle.status !== "complete") return json({ error: "No public record for this raffle yet" }, 404);
+      const { data: d } = await admin0.from("draws").select("winning_seat, winner_id, randomorg_signed, drawn_at").eq("raffle_id", rid).maybeSingle();
+      if (!d) return json({ error: "No draw record" }, 404);
+      const { data: w } = await admin0.from("profiles").select("display_name").eq("id", d.winner_id).single();
+      const { count } = await admin0.from("tickets").select("*", { count: "exact", head: true }).eq("raffle_id", rid).eq("status", "confirmed");
+      return json({
+        title: raffle.title, prize: raffle.prize, cover_url: raffle.cover_url, capacity: raffle.capacity,
+        winning_seat: d.winning_seat, winner_name: w?.display_name ?? "Winner",
+        randomorg_signed: d.randomorg_signed, drawn_at: d.drawn_at, entrants: count ?? 0,
+      });
+    }
+
     const raffle_id = body?.raffle_id;
     if (!raffle_id) return json({ error: "raffle_id required" }, 400);
 

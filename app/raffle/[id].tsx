@@ -275,6 +275,9 @@ export default function RaffleDetail() {
             ) : (
               <Text style={styles.singleNote}>Single entrant — awarded directly (no draw needed).</Text>
             )}
+            <TouchableOpacity style={styles.shareResult} onPress={() => router.push(`/r/${raffle.id}`)}>
+              <Text style={styles.shareResultText}>Share public result →</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -538,6 +541,8 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   winnerName: { color: colors.text, fontSize: 28, fontWeight: "800", marginTop: 6 },
   winnerSeat: { color: colors.muted, fontSize: 14, marginTop: 2 },
   singleNote: { color: colors.muted, fontSize: 12, marginTop: 12, textAlign: "center" },
+  shareResult: { marginTop: 14, backgroundColor: colors.red, borderRadius: radius.md, paddingVertical: 12, paddingHorizontal: 22 },
+  shareResultText: { color: colors.onAccent, fontSize: 14, fontWeight: "800" },
   certBox: { width: "100%", backgroundColor: colors.surfaceAlt, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, padding: 12, marginTop: 14 },
   certTitle: { color: colors.text, fontSize: 13, fontWeight: "700", marginBottom: 8 },
   certRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 },
