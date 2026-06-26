@@ -81,6 +81,17 @@ export default function ManageEntries() {
     await load();
     setBulkBusy(false);
   }
+  // Bulk-remove selected entries (e.g. players who never paid).
+  async function removeBulk() {
+    const ids = [...selected];
+    if (!ids.length) return;
+    setBulkBusy(true);
+    const { error } = await supabase.from("tickets").delete().in("id", ids);
+    if (error) Alert.alert("Couldn't remove", error.message);
+    setSelected(new Set());
+    await load();
+    setBulkBusy(false);
+  }
   const toggleSel = (id: string) => setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const togglePlayer = (ids: string[]) => setSelected((s) => { const n = new Set(s); const all = ids.every((i) => n.has(i)); ids.forEach((i) => (all ? n.delete(i) : n.add(i))); return n; });
 
@@ -142,6 +153,9 @@ export default function ManageEntries() {
                     </TouchableOpacity>
                   ))}
                 </View>
+                <TouchableOpacity style={[styles.removeBulk, bulkBusy && styles.dim]} disabled={bulkBusy} onPress={removeBulk}>
+                  <Text style={styles.removeBulkText}>Remove {selected.size} (didn’t pay)</Text>
+                </TouchableOpacity>
               </View>
             )}
 
@@ -242,6 +256,8 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   checkMark: { color: colors.onAccent, fontSize: 13, fontWeight: "900" },
   bulkBar: { backgroundColor: colors.surface, borderColor: colors.red, borderWidth: 1, borderRadius: radius.lg, padding: 14, marginTop: 12 },
   bulkLabel: { color: colors.text, fontSize: 13, fontWeight: "800", marginBottom: 10 },
+  removeBulk: { marginTop: 12, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12, alignItems: "center" },
+  removeBulkText: { color: colors.danger, fontSize: 13, fontWeight: "800" },
   groupHead: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   groupName: { color: colors.text, fontSize: 15, fontWeight: "800", flex: 1 },
   groupCount: { color: colors.muted, fontSize: 12, fontWeight: "600" },
