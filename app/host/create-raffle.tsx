@@ -12,7 +12,7 @@ import { radius, AppColors } from "@/lib/theme";
 import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 
 const TERMS = ["Donation", "Purchase", "Entry"] as const;
-const CATEGORIES = ["Firearms", "Cash", "Optics", "Gear", "Charity"] as const;
+const CATEGORIES = ["PEWS", "Cash", "Optics", "Gear", "Charity"] as const;
 
 export default function CreateRaffleScreen() {
   const { user, isHostApproved } = useAuth();
@@ -148,10 +148,10 @@ export default function CreateRaffleScreen() {
             {coverUrl ? <Image source={{ uri: coverUrl }} style={styles.coverImg} /> : <Text style={styles.coverText}>{uploading ? "Uploading…" : "📷 Add cover photo (optional)"}</Text>}
           </TouchableOpacity>
           <Field label="Title" required>
-            <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="e.g. Spring Gun Drop" placeholderTextColor={colors.faint} />
+            <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="e.g. Spring PEW Drop" placeholderTextColor={colors.faint} />
           </Field>
           <Field label="Prize">
-            <TextInput style={styles.input} value={prize} onChangeText={setPrize} placeholder="e.g. Glock 19 / $500 Cash" placeholderTextColor={colors.faint} />
+            <TextInput style={styles.input} value={prize} onChangeText={setPrize} placeholder="e.g. PEW / $500 Cash" placeholderTextColor={colors.faint} />
           </Field>
           <Field label="Category" required>
             <View style={styles.catWrap}>

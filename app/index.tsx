@@ -12,7 +12,7 @@ import { radius, AppColors } from "@/lib/theme";
 import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 
 const LOGO = require("../assets/logo.png");
-const CATEGORIES = ["All", "Firearms", "Cash", "Optics", "Gear", "Charity"];
+const CATEGORIES = ["All", "PEWS", "Cash", "Optics", "Gear", "Charity"];
 
 interface RaffleRow {
   id: string; title: string; prize: string | null; cover_url: string | null;
