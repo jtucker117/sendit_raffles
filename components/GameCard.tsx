@@ -40,6 +40,9 @@ export function GameCard({
         : <LinearGradient colors={[colors.surfaceAlt, colors.border]} style={styles.img} />}
       <LinearGradient colors={["transparent", "rgba(0,0,0,0.82)"]} style={styles.shade} />
       {badge ? <View style={styles.badge}><Text style={styles.badgeText}>{badge}</Text></View> : null}
+      {cap > 0 && claimed >= cap ? (
+        <View style={styles.fullStamp} pointerEvents="none"><Text style={styles.fullStampText}>FULL</Text></View>
+      ) : null}
       <View style={styles.footer}>
         <Text style={styles.title} numberOfLines={1}>{data.title}</Text>
         <View style={styles.bar}><View style={[styles.barFill, { width: `${pct}%` }]} /></View>
@@ -65,4 +68,6 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 6 },
   price: { color: "#fff", fontSize: 12, fontWeight: "800" },
   left: { color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: "600" },
+  fullStamp: { position: "absolute", top: "38%", left: -8, right: -8, alignItems: "center", justifyContent: "center", transform: [{ rotate: "-13deg" }], zIndex: 4 },
+  fullStampText: { color: "#FF2A2A", fontSize: 38, fontWeight: "900", letterSpacing: 5, borderWidth: 4, borderColor: "#FF2A2A", borderRadius: 8, paddingHorizontal: 16, paddingVertical: 2, backgroundColor: "rgba(255,42,42,0.12)", textShadowColor: "rgba(0,0,0,0.55)", textShadowRadius: 5, overflow: "hidden" },
 });

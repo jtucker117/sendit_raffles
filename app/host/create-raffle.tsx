@@ -258,6 +258,14 @@ export default function CreateRaffleScreen() {
                 : `${cap} paid seats · no free seats.`;
             })()}
           </Text>
+          {bogo && (
+            <View style={styles.bogoNote}>
+              <Text style={styles.bogoNoteText}>
+                ⚠️ BOGO only applies to purchased main seats. If you create minis from this game,
+                neither the minis nor the mini winners get free BOGO seats — winning a mini awards the prize seats only.
+              </Text>
+            </View>
+          )}
 
           <Field label="Entry word">
             <View style={styles.segment}>
@@ -417,6 +425,8 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   freeHeading: { color: colors.muted, fontSize: 11, fontWeight: "800", letterSpacing: 1, marginTop: 14, marginBottom: 4 },
   row2: { flexDirection: "row", gap: 12 },
   seatsNote: { color: colors.muted, fontSize: 12.5, lineHeight: 18, marginTop: -6, marginBottom: 14 },
+  bogoNote: { backgroundColor: colors.redSoft, borderRadius: radius.md, borderWidth: 1, borderColor: colors.red, padding: 12, marginTop: -4, marginBottom: 14 },
+  bogoNoteText: { color: colors.text, fontSize: 12.5, lineHeight: 18, fontWeight: "600" },
   catWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   catChip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.inputBorder, backgroundColor: colors.surfaceAlt },
   catChipActive: { backgroundColor: colors.red, borderColor: colors.red },

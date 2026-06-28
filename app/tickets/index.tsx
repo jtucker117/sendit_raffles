@@ -59,8 +59,8 @@ export default function MyTickets() {
     const raffleIds = [...new Set((mine ?? []).map((t: any) => t.raffle_id))];
     const soldMap: Record<string, number> = {};
     if (raffleIds.length) {
-      const { data: tix } = await supabase.from("tickets").select("raffle_id").in("raffle_id", raffleIds);
-      (tix ?? []).forEach((t: any) => { soldMap[t.raffle_id] = (soldMap[t.raffle_id] ?? 0) + 1; });
+      const { data: tix } = await supabase.from("tickets").select("raffle_id, type").in("raffle_id", raffleIds);
+      (tix ?? []).forEach((t: any) => { if (t.type === "paid") soldMap[t.raffle_id] = (soldMap[t.raffle_id] ?? 0) + 1; });
     }
 
     // Group my seats by raffle.

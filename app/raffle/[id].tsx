@@ -52,6 +52,7 @@ export default function RaffleDetail() {
   const [winnerName, setWinnerName] = useState("");
   const [minis, setMinis] = useState<any[]>([]);
   const [parentName, setParentName] = useState("");
+  const [parentBogo, setParentBogo] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [verifyMsg, setVerifyMsg] = useState<string | null>(null);
   const [showData, setShowData] = useState(false);
@@ -106,9 +107,10 @@ export default function RaffleDetail() {
     const { data: kids } = await supabase.from("raffles").select("id, title, cover_url, status, capacity, seats_awarded").eq("parent_raffle_id", id).order("created_at");
     setMinis(kids ?? []);
     if ((r as any)?.parent_raffle_id) {
-      const { data: par } = await supabase.from("raffles").select("title").eq("id", (r as any).parent_raffle_id).maybeSingle();
+      const { data: par } = await supabase.from("raffles").select("title, bogo").eq("id", (r as any).parent_raffle_id).maybeSingle();
       setParentName(par?.title ?? "the main game");
-    } else setParentName("");
+      setParentBogo(!!(par as any)?.bogo);
+    } else { setParentName(""); setParentBogo(false); }
     if (!silent) setLoading(false);
   }, [id]);
 
@@ -382,6 +384,14 @@ export default function RaffleDetail() {
               🎟️ Mini game — the winner gets {raffle.seats_awarded ?? 1} seat{(raffle.seats_awarded ?? 1) === 1 ? "" : "s"} in {parentName || "the main game"}. Tap to view it →
             </Text>
           </TouchableOpacity>
+        )}
+
+        {isMini && parentBogo && (
+          <View style={styles.miniBogoNote}>
+            <Text style={styles.miniBogoText}>
+              ⚠️ No BOGO on this mini. {parentName || "The main game"} is a BOGO game, but BOGO only applies to purchased main seats — the prize seats you win here do not earn extra free seats.
+            </Text>
+          </View>
         )}
 
         {draw && (
@@ -770,6 +780,8 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   oddsSub: { color: colors.muted, fontSize: 12, marginTop: 3 },
   miniBanner: { backgroundColor: colors.redSoft, borderColor: colors.red, borderWidth: 1, borderRadius: radius.md, padding: 12, marginTop: 14 },
   miniBannerText: { color: colors.text, fontSize: 13, lineHeight: 18, fontWeight: "600" },
+  miniBogoNote: { backgroundColor: colors.surfaceAlt, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, padding: 12, marginTop: 8 },
+  miniBogoText: { color: colors.muted, fontSize: 12.5, lineHeight: 18, fontWeight: "600" },
   miniSection: { marginTop: 18 },
   miniHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   miniAdd: { color: colors.red, fontSize: 14, fontWeight: "800" },
