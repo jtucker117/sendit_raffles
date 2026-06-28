@@ -9,6 +9,17 @@ import { supabase } from "@/lib/supabase";
 
 const LOGO = require("../assets/logo.png");
 
+// Human-readable account role, accounting for pending/rejected host requests.
+function roleLabel(user: any, isSuperadmin: boolean): string {
+  if (isSuperadmin) return "Superadmin";
+  if (user?.role === "host") {
+    if (user?.host_approved === true) return "Host";
+    if (user?.host_approved === null) return "Player · host request pending";
+    return "Player"; // host_approved === false (denied) — treated as player
+  }
+  return "Player";
+}
+
 // Persistent top bar: hamburger (side menu) left, logo center, profile menu right.
 export function AppHeader({ onMenu }: { onMenu: () => void }) {
   const { colors } = useTheme();
@@ -62,7 +73,7 @@ export function AppHeader({ onMenu }: { onMenu: () => void }) {
           <Pressable style={styles.dropdown} onPress={() => {}}>
             <View style={styles.ddHead}>
               <Text style={styles.ddName} numberOfLines={1}>{user?.display_name ?? "My profile"}</Text>
-              <Text style={styles.ddRole}>{user?.role === "host" ? "Host" : "Player"}{isSuperadmin ? " · Superadmin" : ""}</Text>
+              <Text style={styles.ddRole}>{roleLabel(user, isSuperadmin)}</Text>
             </View>
             <DDItem icon="person-outline" label="Edit my profile" onPress={() => go("/profile")} colors={colors} />
             <DDItem icon="lock-closed-outline" label="Change password" onPress={() => go("/settings/password")} colors={colors} />
@@ -147,7 +158,7 @@ export function SideMenu({ onClose }: { onClose: () => void }) {
           <Image source={LOGO} style={styles.panelLogo} resizeMode="contain" />
           <View style={{ flex: 1 }}>
             <Text style={styles.name} numberOfLines={1}>{user?.display_name}</Text>
-            <Text style={styles.role}>{user?.role === "host" ? "Host" : "Player"}{isSuperadmin ? " · Superadmin" : ""}</Text>
+            <Text style={styles.role}>{roleLabel(user, isSuperadmin)}</Text>
           </View>
           <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Ionicons name="close" size={24} color={colors.muted} />
