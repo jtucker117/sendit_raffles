@@ -15,7 +15,7 @@ interface Tab {
 
 // Primary mobile chrome from the design handoff: Browse · Tickets · Live · Profile.
 const TABS: Tab[] = [
-  { href: "/", label: "Browse", icon: "compass-outline", active: "compass", match: (p) => p === "/" || p.startsWith("/player") || p.startsWith("/raffle") },
+  { href: "/", label: "Games", icon: "compass-outline", active: "compass", match: (p) => p === "/" || p.startsWith("/player") || p.startsWith("/raffle") },
   { href: "/tickets", label: "Tickets", icon: "pricetags-outline", active: "pricetags", match: (p) => p.startsWith("/tickets") },
   { href: "/live", label: "Live", icon: "flame-outline", active: "flame", match: (p) => p.startsWith("/live") },
   { href: "/announcements", label: "Updates", icon: "megaphone-outline", active: "megaphone", match: (p) => p.startsWith("/announcements") || p.startsWith("/messages/announcement") },

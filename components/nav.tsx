@@ -135,8 +135,7 @@ export function SideMenu({ onClose }: { onClose: () => void }) {
   }, [user?.id]);
 
   const items: Item[] = [
-    { label: "Home", icon: "home-outline", href: "/" },
-    { label: "Raffles", icon: "pricetags-outline", href: "/player/browse" },
+    { label: "Games", icon: "home-outline", href: "/" },
     { label: "Messages", icon: "chatbubble-ellipses-outline", href: "/messages" },
     { label: "Profile", icon: "person-outline", href: "/profile" },
   ];

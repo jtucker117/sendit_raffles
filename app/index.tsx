@@ -77,16 +77,43 @@ export default function Home() {
   const claimedOf = (r: RaffleRow) => counts[r.id] ?? 0;
   const soldPct = (r: RaffleRow) => Math.min(100, Math.round((claimedOf(r) / Math.max(r.capacity, 1)) * 100));
 
-  // Featured banner = paid featured games only (never a scheduled/draft game,
-  // since nobody can play those yet). Rotates if there are several.
+  // Featured = paid featured open games (never scheduled/draft). They also still
+  // appear in the Open games grid below.
   const filtered = cat === "All" ? raffles : raffles.filter((r) => r.category === cat);
   const featuredPool = filtered.filter((r) => (r as any).featured && r.status === "open");
-  const featured = featuredPool.length ? featuredPool[Math.floor(nowMs / 8000) % featuredPool.length] : undefined;
-  const gridItems = filtered.filter((r) => r.id !== featured?.id);
   const cols = width >= 1100 ? 4 : width >= 760 ? 3 : 2;
   const contentW = Math.min(width, 1100) - 32;
   const gap = 14;
   const cardW = cols === 1 ? contentW : (contentW - gap * (cols - 1)) / cols;
+
+  // Shared 4:5 game tile (used by both Featured and Open games).
+  const renderTile = (r: RaffleRow, isFeatured: boolean) => {
+    const upcoming = r.status === "scheduled" && !!r.scheduled_at && new Date(r.scheduled_at).getTime() > nowMs;
+    return (
+      <TouchableOpacity key={(isFeatured ? "f" : "g") + r.id} activeOpacity={0.9} style={[styles.card, { width: cardW }]} onPress={() => router.push(`/raffle/${r.id}`)}>
+        {r.cover_url
+          ? <Image source={{ uri: r.cover_url }} style={styles.cardImg} blurRadius={upcoming ? 12 : 0} />
+          : <LinearGradient colors={[colors.surfaceAlt, colors.border]} style={styles.cardImg} />}
+        <LinearGradient colors={["transparent", "rgba(0,0,0,0.82)"]} style={styles.cardShade} />
+        {isFeatured && <View style={styles.tileFeatured}><Text style={styles.tileFeaturedText}>⭐ FEATURED</Text></View>}
+        {upcoming && (
+          <View style={styles.soonFull}>
+            <Text style={styles.soonFullEyebrow}>🔒 COMING SOON</Text>
+            <Text style={styles.soonFullCount}>{fmtCountdown(new Date(r.scheduled_at!).getTime() - nowMs)}</Text>
+            <Text style={styles.soonFullWhen}>{new Date(r.scheduled_at!).toLocaleDateString()}</Text>
+          </View>
+        )}
+        <View style={styles.cardFooter}>
+          <Text style={styles.cardTitle} numberOfLines={1}>{r.title}</Text>
+          <View style={styles.bar}><View style={[styles.barFill, { width: `${soldPct(r)}%` }]} /></View>
+          <View style={styles.cardRow}>
+            <Text style={styles.cardPrice}>{money(r.amount_cents)}</Text>
+            <Text style={styles.cardLeft}>{upcoming ? "Coming soon" : `${Math.max(r.capacity - claimedOf(r), 0)} left`}</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -139,61 +166,17 @@ export default function Home() {
               </View>
             ) : (
               <>
-                {/* Featured hero */}
-            {featured && (
-              <TouchableOpacity activeOpacity={0.9} style={styles.hero} onPress={() => router.push(`/raffle/${featured.id}`)}>
-                {featured.cover_url ? (
+                {/* Featured — 4:5 cards (also still shown in Open games below) */}
+                {featuredPool.length > 0 && (
                   <>
-                    <Image source={{ uri: featured.cover_url }} style={styles.heroBlur} blurRadius={22} />
-                    <Image source={{ uri: featured.cover_url }} style={styles.heroImg} resizeMode="contain" />
+                    <Text style={styles.sectionTitle}>⭐ Featured</Text>
+                    <View style={styles.grid}>{featuredPool.map((r) => renderTile(r, true))}</View>
                   </>
-                ) : (
-                  <LinearGradient colors={[colors.navy, colors.bg]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroImg} />
                 )}
-                <LinearGradient colors={["transparent", "rgba(0,0,0,0.75)"]} style={styles.heroShade} />
-                <View style={styles.featuredTag}><Text style={styles.featuredTagText}>⭐ FEATURED</Text></View>
-                <View style={styles.heroInfo}>
-                  <View style={styles.pillLive}><Text style={styles.pillLiveText}>● OPEN</Text></View>
-                  <Text style={styles.heroTitle} numberOfLines={2}>{featured.title}</Text>
-                  <View style={styles.heroMeta}>
-                    <View style={styles.heroChip}><Text style={styles.heroChipText}>Enter · {money(featured.amount_cents)}</Text></View>
-                    <View style={styles.heroChipSoft}><Text style={styles.heroChipSoftText}>{claimedOf(featured)} entrants</Text></View>
-                    <View style={styles.heroChipSoft}><Text style={styles.heroChipSoftText}>{soldPct(featured)}% sold</Text></View>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            )}
 
-            {/* Grid */}
-            <Text style={styles.sectionTitle}>{isHost ? "Open games" : "Games from hosts you follow"}</Text>
-            <View style={styles.grid}>
-              {gridItems.map((r) => {
-                const upcoming = r.status === "scheduled" && !!r.scheduled_at && new Date(r.scheduled_at).getTime() > nowMs;
-                return (
-                <TouchableOpacity key={r.id} activeOpacity={0.9} style={[styles.card, { width: cardW }]} onPress={() => router.push(`/raffle/${r.id}`)}>
-                  {r.cover_url
-                    ? <Image source={{ uri: r.cover_url }} style={styles.cardImg} blurRadius={upcoming ? 12 : 0} />
-                    : <LinearGradient colors={[colors.surfaceAlt, colors.border]} style={styles.cardImg} />}
-                  <LinearGradient colors={["transparent", "rgba(0,0,0,0.82)"]} style={styles.cardShade} />
-                  {upcoming && (
-                    <View style={styles.soonFull}>
-                      <Text style={styles.soonFullEyebrow}>🔒 COMING SOON</Text>
-                      <Text style={styles.soonFullCount}>{fmtCountdown(new Date(r.scheduled_at!).getTime() - nowMs)}</Text>
-                      <Text style={styles.soonFullWhen}>{new Date(r.scheduled_at!).toLocaleDateString()}</Text>
-                    </View>
-                  )}
-                  <View style={styles.cardFooter}>
-                    <Text style={styles.cardTitle} numberOfLines={1}>{r.title}</Text>
-                    <View style={styles.bar}><View style={[styles.barFill, { width: `${soldPct(r)}%` }]} /></View>
-                    <View style={styles.cardRow}>
-                      <Text style={styles.cardPrice}>{money(r.amount_cents)}</Text>
-                      <Text style={styles.cardLeft}>{upcoming ? "Coming soon" : `${Math.max(r.capacity - claimedOf(r), 0)} left`}</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-                );
-              })}
-            </View>
+                {/* Open games — all games, newest first */}
+                <Text style={styles.sectionTitle}>{isHost ? "Open games" : "Games from hosts you follow"}</Text>
+                <View style={styles.grid}>{filtered.map((r) => renderTile(r, false))}</View>
               </>
             )}
           </>
@@ -245,6 +228,8 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   card: { backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: "hidden", aspectRatio: 4 / 5 },
   cardImg: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%" },
   cardShade: { position: "absolute", left: 0, right: 0, bottom: 0, height: "55%" },
+  tileFeatured: { position: "absolute", top: 8, left: 8, backgroundColor: colors.red, borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 4, zIndex: 2 },
+  tileFeaturedText: { color: colors.onAccent, fontSize: 10, fontWeight: "900", letterSpacing: 0.5 },
   soonFull: { position: "absolute", left: 0, right: 0, top: 0, bottom: 36, alignItems: "center", justifyContent: "center", paddingHorizontal: 10 },
   soonFullEyebrow: { color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 1.5 },
   soonFullCount: { color: "#fff", fontSize: 26, fontWeight: "900", marginTop: 4, letterSpacing: -0.5, textShadowColor: "rgba(0,0,0,0.6)", textShadowRadius: 6 },
