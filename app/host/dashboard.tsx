@@ -28,11 +28,15 @@ export default function HostDashboard() {
 
   const [rows, setRows] = useState<Row[]>([]);
   const [topPlayers, setTopPlayers] = useState<{ id: string; name: string; seats: number; spent: number }[]>([]);
+  const [followers, setFollowers] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
+    const { count: followerCount } = await supabase
+      .from("host_followers").select("follower_id", { count: "exact", head: true }).eq("host_id", user.id);
+    setFollowers(followerCount ?? 0);
     const { data: raffles } = await supabase.from("raffles").select("id, title, cover_url, capacity, amount_cents, status").eq("host_id", user.id).order("created_at", { ascending: false });
     const rs = (raffles ?? []) as any[];
     const ids = rs.map((r) => r.id);
@@ -103,6 +107,7 @@ export default function HostDashboard() {
         {/* Stat row */}
         <View style={styles.stats}>
           <View style={styles.statBox}><Text style={[styles.statVal, { color: colors.red }]}>{liveCount}</Text><Text style={styles.statLabel}>Live</Text></View>
+          <View style={styles.statBox}><Text style={styles.statVal}>{followers}</Text><Text style={styles.statLabel}>Followers</Text></View>
           <View style={styles.statBox}><Text style={styles.statVal}>{money(revenueCents)}</Text><Text style={styles.statLabel}>Revenue</Text></View>
           <View style={styles.statBox}><Text style={styles.statVal}>{entrants}</Text><Text style={styles.statLabel}>Entrants</Text></View>
         </View>
