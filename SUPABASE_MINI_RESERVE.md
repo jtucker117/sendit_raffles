@@ -9,6 +9,10 @@ and will be handed to the mini winner later. Run once. Safe to re-run.
 ```sql
 alter table tickets add column if not exists mini_id uuid references raffles(id) on delete cascade;
 
+-- Allow the new 'reserved' status (the status column had a CHECK of just held/confirmed).
+alter table tickets drop constraint if exists tickets_status_check;
+alter table tickets add constraint tickets_status_check check (status in ('held','confirmed','reserved'));
+
 create or replace function public.reserve_mini_seats(p_parent uuid, p_mini uuid, p_count int)
 returns int language plpgsql security definer set search_path = public as $$
 declare v_cap int; v_free int; v_host uuid; v_paid_taken int; v_avail int; v_seat int; v_done int := 0; i int;

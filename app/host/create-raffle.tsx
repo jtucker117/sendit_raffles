@@ -1,15 +1,29 @@
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView,
-  ActivityIndicator, Image, Alert,
+  ActivityIndicator, Image, Alert, Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/lib/supabase";
 import { CoverPicker } from "@/components/CoverPicker";
+import { GameCard } from "@/components/GameCard";
 import { radius, AppColors } from "@/lib/theme";
 import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
+
+// Date/time picker: native HTML input on web, text fallback on native.
+function DateTimeField({ value, onChange, colors }: { value: string; onChange: (v: string) => void; colors: AppColors }) {
+  if (Platform.OS === "web") {
+    return React.createElement("input", {
+      type: "datetime-local",
+      value,
+      onChange: (e: any) => onChange(e.target.value),
+      style: { backgroundColor: colors.surfaceAlt, color: colors.text, border: `1px solid ${colors.inputBorder}`, borderRadius: 14, padding: 12, fontSize: 15, width: "100%", boxSizing: "border-box" },
+    });
+  }
+  return <TextInput value={value} onChangeText={onChange} placeholder="2026-07-01T18:00" placeholderTextColor={colors.faint} style={{ backgroundColor: colors.surfaceAlt, borderColor: colors.inputBorder, borderWidth: 1, borderRadius: radius.md, padding: 12, color: colors.text, fontSize: 15 }} />;
+}
 
 const TERMS = ["Donation", "Purchase", "Entry"] as const;
 const CATEGORIES = ["PEWS", "Cash", "Optics", "Gear", "Charity"] as const;
@@ -32,6 +46,7 @@ export default function CreateRaffleScreen() {
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [drawStyle, setDrawStyle] = useState<"wheel" | "scratch" | "lotto">("wheel");
   const [drawMode, setDrawMode] = useState<"single" | "elimination">("single");
+  const [scheduledAt, setScheduledAt] = useState(""); // datetime-local string; blank = launch now
   const [step, setStep] = useState(0); // 0 Prize · 1 Tickets · 2 Rules · 3 Publish
 
   // Revenue goal → per-seat price: goal ÷ PAID seats (free seats raise $0, so the
@@ -55,7 +70,7 @@ export default function CreateRaffleScreen() {
   }
 
 
-  async function create() {
+  async function create(mode: "open" | "draft" | "scheduled") {
     const cap = Math.max(2, Math.min(1000, parseInt(capacity, 10) || 0)); // paid seats
     const free = Math.max(0, Math.min(1000, parseInt(freeLimit, 10) || 0)); // extra free seats on top
     if (!title.trim()) { Alert.alert("Title required", "Give your game a title."); return; }
@@ -63,6 +78,15 @@ export default function CreateRaffleScreen() {
     if (!(parseFloat(amount) > 0)) {
       Alert.alert("Seat price required", "Set the amount per paid seat.");
       return;
+    }
+    let scheduledISO: string | null = null;
+    if (mode === "scheduled") {
+      const d = new Date(scheduledAt);
+      if (!scheduledAt || isNaN(d.getTime()) || d.getTime() <= Date.now()) {
+        Alert.alert("Pick a future time", "Choose a date and time in the future to schedule this game.");
+        return;
+      }
+      scheduledISO = d.toISOString();
     }
     setSaving(true);
     try {
@@ -79,14 +103,14 @@ export default function CreateRaffleScreen() {
         amount_cents: Math.round((parseFloat(amount) || 0) * 100),
         draw_style: drawStyle,
         draw_mode: drawMode,
-        status: "open",
+        status: mode,
+        scheduled_at: scheduledISO,
       });
       if (error) throw error;
-      // Navigate straight to home (web ignores Alert button callbacks, which
-      // is why the button "did nothing" before and created duplicates).
-      router.replace("/");
+      // Drafts/scheduled go to the dashboard so the host sees them; live games to home.
+      router.replace(mode === "open" ? "/" : "/host/dashboard");
     } catch (e: any) {
-      Alert.alert("Couldn't create game", e?.message ?? "Try again.");
+      Alert.alert("Couldn't save game", e?.message ?? "Try again.");
       setSaving(false);
     }
   }
@@ -108,7 +132,7 @@ export default function CreateRaffleScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: BOTTOM_NAV_HEIGHT + 40 }}>
-      <Text style={styles.h1}>Host a game</Text>
+      <Text style={styles.h1}>Launch a game</Text>
 
       {/* Step indicator */}
       <View style={styles.steps}>
@@ -227,16 +251,40 @@ export default function CreateRaffleScreen() {
         </>
       )}
 
-      {/* STEP 3 · Publish (review) */}
+      {/* STEP 3 · Publish (preview + review + launch options) */}
       {step === 3 && (
-        <View style={styles.review}>
-          <Text style={styles.reviewTitle}>{title || "Untitled game"}</Text>
-          {prize ? <Text style={styles.reviewRow}>🏆 {prize}</Text> : null}
-          <Text style={styles.reviewRow}>{cap} seats · {free} free · ${amount || 0}/seat</Text>
-          <Text style={styles.reviewRow}>Raises up to ${raised.toFixed(0)}{goal.trim() ? ` (goal $${goal})` : ""}</Text>
-          <Text style={styles.reviewRow}>{drawMode === "elimination" ? "Last man standing draw" : `${drawStyle} reveal · single pick`}</Text>
-          <Text style={styles.reviewNote}>Review the details, then launch. Players will be able to claim seats immediately.</Text>
-        </View>
+        <>
+          <Text style={styles.previewLabel}>PLAYER PREVIEW</Text>
+          <View style={styles.previewWrap}>
+            <GameCard
+              data={{ id: "preview", title: title || "Untitled game", cover_url: coverUrl, amount_cents: Math.round((parseFloat(amount) || 0) * 100), capacity: cap || 1, claimed: 0 }}
+              width={210}
+              onPress={() => {}}
+            />
+          </View>
+
+          <View style={styles.review}>
+            <Text style={styles.reviewTitle}>{title || "Untitled game"}</Text>
+            {prize ? <Text style={styles.reviewRow}>🏆 {prize}</Text> : null}
+            <Text style={styles.reviewRow}>{cap} paid · {free} free · ${amount || 0}/seat</Text>
+            <Text style={styles.reviewRow}>Sold out raises ${raised.toFixed(0)}{goal.trim() ? ` (goal $${goal})` : ""}</Text>
+            <Text style={styles.reviewRow}>{drawMode === "elimination" ? "Last man standing draw" : `${drawStyle} reveal · single pick`}</Text>
+          </View>
+
+          <Field label="Schedule for later (optional) — leave blank to launch now">
+            <DateTimeField value={scheduledAt} onChange={setScheduledAt} colors={colors} />
+          </Field>
+
+          <TouchableOpacity style={[styles.launchBtn, saving && { opacity: 0.6 }]} disabled={saving} onPress={() => create(scheduledAt ? "scheduled" : "open")}>
+            {saving ? <ActivityIndicator color={colors.onAccent} /> : <Text style={styles.launchText}>{scheduledAt ? "🗓️ Schedule game" : "🚀 Launch now"}</Text>}
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.draftBtn, saving && { opacity: 0.6 }]} disabled={saving} onPress={() => create("draft")}>
+            <Text style={styles.draftText}>Save as draft</Text>
+          </TouchableOpacity>
+          <Text style={styles.reviewNote}>
+            {scheduledAt ? "Players will see a countdown and can ask to be notified when it opens." : "Launch now lets players claim seats immediately. Drafts stay private until you publish them."}
+          </Text>
+        </>
       )}
 
       {/* Footer nav */}
@@ -250,13 +298,9 @@ export default function CreateRaffleScreen() {
             <Text style={[styles.navText, { color: colors.text }]}>Cancel</Text>
           </TouchableOpacity>
         )}
-        {step < 3 ? (
+        {step < 3 && (
           <TouchableOpacity style={[styles.navBtn, styles.navPrimary, !canNext && { opacity: 0.45 }]} disabled={!canNext} onPress={next}>
             <Text style={[styles.navText, { color: colors.onAccent }]}>Next</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity style={[styles.navBtn, styles.navPrimary, saving && { opacity: 0.6 }]} disabled={saving} onPress={create}>
-            {saving ? <ActivityIndicator color={colors.onAccent} /> : <Text style={[styles.navText, { color: colors.onAccent }]}>🚀 Launch game</Text>}
           </TouchableOpacity>
         )}
       </View>
@@ -313,6 +357,12 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   stepDotText: { color: colors.muted, fontWeight: "800", fontSize: 13 },
   stepLabel: { color: colors.muted, fontSize: 11, fontWeight: "600" },
   // review
+  previewLabel: { color: colors.muted, fontSize: 11, fontWeight: "800", letterSpacing: 1, marginBottom: 10 },
+  previewWrap: { alignItems: "center", marginBottom: 18 },
+  launchBtn: { backgroundColor: colors.red, borderRadius: radius.md, paddingVertical: 15, alignItems: "center", marginTop: 6 },
+  launchText: { color: colors.onAccent, fontSize: 16, fontWeight: "800" },
+  draftBtn: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingVertical: 13, alignItems: "center", marginTop: 10 },
+  draftText: { color: colors.text, fontSize: 15, fontWeight: "700" },
   review: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, padding: 18 },
   reviewTitle: { color: colors.text, fontSize: 20, fontWeight: "900", marginBottom: 8 },
   reviewRow: { color: colors.muted, fontSize: 14, marginTop: 4, textTransform: "capitalize" },
