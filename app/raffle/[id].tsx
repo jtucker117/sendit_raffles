@@ -144,13 +144,18 @@ export default function RaffleDetail() {
   const myFree = tickets.some((t) => t.type === "free" && t.owner_id === user?.id);
   const gridMode = raffle.capacity <= 120;
   const canPick = !isHost && raffle.status === "open";
-  const soldPct = Math.min(100, Math.round((paidUsed / Math.max(raffle.capacity, 1)) * 100));
+  // Mini-reserved seats are the mini's prize — not buyable, not "sold to players".
+  const reservedCount = tickets.filter((t) => t.status === "reserved").length;
+  const sellablePaid = Math.max(0, raffle.capacity - reservedCount);
+  const paidSold = Math.max(0, paidUsed - reservedCount);
+  const soldPct = Math.min(100, Math.round((paidSold / Math.max(sellablePaid, 1)) * 100));
   const freeLeft = Math.max(0, (raffle.free_seat_limit ?? 0) - freeUsed);
-  const paidLeft = Math.max(0, raffle.capacity - paidUsed);
+  const paidLeft = Math.max(0, sellablePaid - paidSold);
   const freeForAll = !!raffle.free_for_all;
   const isBogo = !!raffle.bogo;
   const totalLabel = freeForAll ? `${raffle.capacity} paid + free for all` : isBogo ? `${raffle.capacity} paid · BOGO` : `${totalSeats} seats`;
   const freeAvailable = freeForAll ? true : freeLeft > 0; // can a player still claim a free seat?
+  const oddsTotal = sellablePaid + (raffle.free_seat_limit ?? 0); // possible entries (excludes mini-reserved)
   const money = (c: number) => `$${(c / 100).toFixed(0)}`;
   const nameFor = (oid: string) => names[oid] ?? (oid === user?.id ? "You" : "Player");
 
@@ -433,12 +438,13 @@ export default function RaffleDetail() {
           </View>
           <View style={styles.bar}><View style={[styles.barFill, { width: `${soldPct}%` }]} /></View>
           <Text style={styles.selloutMeta}>
-            {paidLeft} of {raffle.capacity} paid left · {money(raffle.amount_cents)}/seat
+            {paidLeft} of {sellablePaid} paid left · {money(raffle.amount_cents)}/seat
+            {reservedCount > 0 ? ` · 🔒 ${reservedCount} reserved for minis` : ""}
             {freeForAll ? " · 🎁 1 free seat each" : isBogo ? " · 🎁 buy 1 get 1 free" : (raffle.free_seat_limit ?? 0) > 0 ? ` · ${freeLeft} of ${raffle.free_seat_limit} free left` : ""}
           </Text>
-          {raffle.show_odds !== false && raffle.status !== "complete" && totalSeats > 0 && (
+          {raffle.show_odds !== false && raffle.status !== "complete" && oddsTotal > 0 && (
             <View style={styles.oddsRow}>
-              <Text style={styles.oddsLine}>🎲 Odds: <Text style={styles.oddsStrong}>1 in {totalSeats}</Text> per seat ({(100 / totalSeats).toFixed(1)}%)</Text>
+              <Text style={styles.oddsLine}>🎲 Odds: <Text style={styles.oddsStrong}>1 in {oddsTotal}</Text> per seat ({(100 / oddsTotal).toFixed(1)}%)</Text>
               {myConfirmed > 0 && confirmedTickets.length > 0 && (
                 <Text style={styles.oddsSub}>Your odds right now: {((myConfirmed / confirmedTickets.length) * 100).toFixed(1)}% ({myConfirmed} of {confirmedTickets.length} entered)</Text>
               )}

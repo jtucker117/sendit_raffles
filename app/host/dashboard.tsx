@@ -7,6 +7,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/lib/supabase";
+import { notify } from "@/lib/notify";
 import { radius, AppColors } from "@/lib/theme";
 import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 
@@ -16,7 +17,7 @@ interface Row {
 }
 
 export default function HostDashboard() {
-  const { user, isHostApproved } = useAuth();
+  const { user, isHostApproved, isSuperadmin } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
@@ -29,6 +30,18 @@ export default function HostDashboard() {
   const [rows, setRows] = useState<Row[]>([]);
   const [topPlayers, setTopPlayers] = useState<{ id: string; name: string; seats: number; spent: number }[]>([]);
   const [followers, setFollowers] = useState(0);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggleSel = (id: string) => setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  async function deleteSelected() {
+    const ids = [...selected];
+    if (!ids.length) return;
+    const { error } = await supabase.from("raffles").delete().in("id", ids);
+    if (error) { notify("Couldn't delete", error.message); return; }
+    setSelected(new Set()); setSelectMode(false);
+    load();
+  }
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -130,6 +143,23 @@ export default function HostDashboard() {
           <Text style={styles.newBtnText}>+ New game</Text>
         </TouchableOpacity>
 
+        {isSuperadmin && rows.length > 0 && (
+          selectMode ? (
+            <View style={styles.selBar}>
+              <TouchableOpacity style={[styles.selDel, selected.size === 0 && styles.dim]} disabled={selected.size === 0} onPress={deleteSelected}>
+                <Text style={styles.selDelText}>🗑 Delete {selected.size}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.selCancel} onPress={() => { setSelectMode(false); setSelected(new Set()); }}>
+                <Text style={styles.selCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity style={styles.selStart} onPress={() => setSelectMode(true)}>
+              <Text style={styles.selStartText}>☑️ Select games to delete (superadmin)</Text>
+            </TouchableOpacity>
+          )
+        )}
+
         {loading ? (
           <ActivityIndicator color={colors.red} style={{ marginTop: 30 }} />
         ) : rows.length === 0 ? (
@@ -138,10 +168,11 @@ export default function HostDashboard() {
           <View style={styles.grid}>
             {rows.map((r) => (
               <View key={r.id} style={[styles.card, { width: cardW }]}>
-                <TouchableOpacity activeOpacity={0.9} onPress={() => router.push(`/raffle/${r.id}`)}>
+                <TouchableOpacity activeOpacity={0.9} onPress={() => selectMode ? toggleSel(r.id) : router.push(`/raffle/${r.id}`)}>
                   <View style={styles.coverWrap}>
                     {r.cover_url ? <Image source={{ uri: r.cover_url }} style={styles.cover} /> : <LinearGradient colors={[colors.navy, colors.bg]} style={styles.cover} />}
                     <LinearGradient colors={["transparent", "rgba(0,0,0,0.88)"]} style={StyleSheet.absoluteFill} />
+                    {selectMode && <View style={[styles.selCheck, selected.has(r.id) && styles.selCheckOn]}><Text style={styles.selCheckMark}>{selected.has(r.id) ? "✓" : ""}</Text></View>}
                     <View style={[styles.chip, r.status === "open" ? styles.chipLive : r.status === "scheduled" ? styles.chipLive : r.status === "complete" ? styles.chipDrawn : styles.chipCanceled]}>
                       <Text style={styles.chipText}>{statusChip(r.status)}</Text>
                     </View>
@@ -191,6 +222,16 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   topName: { color: colors.text, fontSize: 15, fontWeight: "700", flex: 1 },
   topMeta: { color: colors.muted, fontSize: 12, fontWeight: "600" },
   newBtn: { backgroundColor: colors.red, borderRadius: radius.md, paddingVertical: 13, alignItems: "center", marginBottom: 18 },
+  selStart: { alignSelf: "flex-start", marginBottom: 14, paddingVertical: 8, paddingHorizontal: 14, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border },
+  selStartText: { color: colors.muted, fontWeight: "700", fontSize: 13 },
+  selBar: { flexDirection: "row", gap: 10, marginBottom: 14 },
+  selDel: { flex: 1, backgroundColor: colors.danger, borderRadius: radius.md, paddingVertical: 12, alignItems: "center" },
+  selDelText: { color: "#fff", fontWeight: "800", fontSize: 14 },
+  selCancel: { paddingVertical: 12, paddingHorizontal: 18, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
+  selCancelText: { color: colors.text, fontWeight: "700", fontSize: 14 },
+  selCheck: { position: "absolute", top: 8, left: 8, width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: "#fff", backgroundColor: "rgba(0,0,0,0.4)", alignItems: "center", justifyContent: "center" },
+  selCheckOn: { backgroundColor: colors.red, borderColor: colors.red },
+  selCheckMark: { color: "#fff", fontSize: 15, fontWeight: "900" },
   newBtnText: { color: colors.onAccent, fontWeight: "800", fontSize: 15 },
   empty: { color: colors.muted, fontSize: 14, marginTop: 24, textAlign: "center" },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 14 },
