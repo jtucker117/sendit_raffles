@@ -21,6 +21,7 @@ interface Entry {
   seats: number[];
   sold: number;
   won: boolean;
+  noSeats: boolean;
 }
 
 type Tab = "all" | "active" | "won" | "past";
@@ -46,7 +47,7 @@ export default function MyTickets() {
     // My tickets, joined to their raffle.
     const { data: mine } = await supabase
       .from("tickets")
-      .select("seat_number, raffle_id, raffles!raffle_id(id, title, prize, cover_url, capacity, amount_cents, status)")
+      .select("seat_number, raffle_id, raffles!raffle_id(id, title, prize, cover_url, capacity, amount_cents, status, no_seats)")
       .eq("owner_id", user.id)
       .order("seat_number");
 
@@ -71,7 +72,7 @@ export default function MyTickets() {
         map[r.id] = {
           raffleId: r.id, title: r.title, prize: r.prize, cover_url: r.cover_url,
           capacity: r.capacity, amount_cents: r.amount_cents, status: r.status,
-          seats: [], sold: soldMap[r.id] ?? 0, won: wonSet.has(r.id),
+          seats: [], sold: soldMap[r.id] ?? 0, won: wonSet.has(r.id), noSeats: !!r.no_seats,
         };
       }
       map[r.id].seats.push(t.seat_number);
@@ -83,6 +84,12 @@ export default function MyTickets() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const money = (c: number) => `$${c % 100 === 0 ? (c / 100).toFixed(0) : (c / 100).toFixed(2)}`;
+  const seatLabel = (e: Entry) => {
+    const n = e.seats.length;
+    if (e.noSeats) return `${n} ${n === 1 ? "entry" : "entries"}`;
+    const s = [...e.seats].sort((a, b) => a - b);
+    return `${n === 1 ? "Seat" : "Seats"} ${s.map((x) => `#${x}`).join(", ")}`;
+  };
   const counts = {
     all: entries.length,
     active: entries.filter((e) => e.status === "open").length,
@@ -122,14 +129,16 @@ export default function MyTickets() {
         ) : (
           <View style={styles.grid}>
             {visible.map((e) => (
-              <GameCard
-                key={e.raffleId}
-                data={{ id: e.raffleId, title: e.title, cover_url: e.cover_url, amount_cents: e.amount_cents, capacity: e.capacity, claimed: e.sold }}
-                width={cardW}
-                onPress={() => router.push(`/raffle/${e.raffleId}`)}
-                badge={e.won ? "WON" : undefined}
-                footRight={`${e.seats.length} seat${e.seats.length === 1 ? "" : "s"}`}
-              />
+              <View key={e.raffleId} style={{ width: cardW }}>
+                <GameCard
+                  data={{ id: e.raffleId, title: e.title, cover_url: e.cover_url, amount_cents: e.amount_cents, capacity: e.capacity, claimed: e.sold }}
+                  width={cardW}
+                  onPress={() => router.push(`/raffle/${e.raffleId}`)}
+                  badge={e.won ? "WON" : undefined}
+                  footRight={e.noSeats ? `${e.seats.length}×` : `${e.seats.length} seat${e.seats.length === 1 ? "" : "s"}`}
+                />
+                <Text style={styles.seatCaption} numberOfLines={2}>🎟 {seatLabel(e)}</Text>
+              </View>
             ))}
           </View>
         )}
@@ -142,6 +151,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   h1: { color: colors.text, fontSize: 26, fontWeight: "900", letterSpacing: -0.4, marginBottom: 16 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 14 },
+  seatCaption: { color: colors.text, fontSize: 12, fontWeight: "700", marginTop: 6 },
   tabs: { flexDirection: "row", gap: 8, marginBottom: 18 },
   tab: { flex: 1, alignItems: "center", paddingVertical: 11, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   tabActive: { backgroundColor: colors.redSoft, borderColor: colors.red },
