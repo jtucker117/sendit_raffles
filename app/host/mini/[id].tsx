@@ -48,7 +48,15 @@ export default function CreateMini() {
   const load = useCallback(async () => {
     if (!id) return;
     const { data } = await supabase.from("raffles").select("id, title, category, host_id, amount_cents, capacity").eq("id", id).single();
-    if (data) { setParent(data as any); setTitle(`Mini — win seats in ${(data as any).title}`); }
+    if (data) {
+      setParent(data as any);
+      // Auto-number: next number is one past the highest existing "Mini N" for this parent.
+      const { data: minis } = await supabase.from("raffles").select("title").eq("parent_raffle_id", id);
+      let maxN = 0;
+      (minis ?? []).forEach((r: any) => { const m = /^Mini (\d+)\b/.exec(r.title || ""); if (m) maxN = Math.max(maxN, parseInt(m[1], 10)); });
+      const n = Math.max(maxN, minis?.length ?? 0) + 1;
+      setTitle(`Mini ${n} for ${(data as any).title}`);
+    }
     setLoading(false);
   }, [id]);
   useEffect(() => { load(); }, [load]);
@@ -127,7 +135,12 @@ export default function CreateMini() {
         </TouchableOpacity>
       </Field>
 
-      <Field label="Title" required><TextInput style={styles.input} value={title} onChangeText={setTitle} placeholderTextColor={colors.faint} /></Field>
+      <Field label="Title — auto-numbered">
+        <View style={styles.readonlyField}>
+          <Text style={styles.readonlyText}>{title}</Text>
+          <View style={styles.lockPill}><Text style={styles.lockText}>🔒 Auto</Text></View>
+        </View>
+      </Field>
 
       <Field label="Seats the winner wins in the main game" required>
         <TextInput style={styles.input} value={seatsAwarded} onChangeText={setSeatsAwarded} keyboardType="number-pad" placeholder="1" placeholderTextColor={colors.faint} />
@@ -203,6 +216,8 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   coverImg: { width: "100%", height: "100%" },
   coverText: { color: colors.muted, fontSize: 14 },
   input: { backgroundColor: colors.surfaceAlt, borderColor: colors.inputBorder, borderWidth: 1, borderRadius: radius.md, padding: 12, color: colors.text, fontSize: 15 },
+  readonlyField: { backgroundColor: colors.surfaceAlt, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, padding: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
+  readonlyText: { color: colors.text, fontSize: 15, fontWeight: "700", flexShrink: 1 },
   priceCard: { backgroundColor: colors.surfaceAlt, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, padding: 14 },
   priceTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 },
   priceBig: { color: colors.text, fontSize: 26, fontWeight: "900" },
