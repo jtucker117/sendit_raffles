@@ -8,12 +8,13 @@ import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/lib/supabase";
 import { radius, AppColors } from "@/lib/theme";
 import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
+import { GameCard } from "@/components/GameCard";
 
 interface Row {
   id: string; title: string; prize: string | null; cover_url: string | null;
   capacity: number; amount_cents: number; status: string; sold: number; winner?: string;
 }
-type Filter = "all" | "live" | "drawn";
+type Filter = "all" | "soon" | "drawn";
 
 export default function Live() {
   const { colors } = useTheme();
@@ -56,14 +57,16 @@ export default function Live() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const pct = (r: Row) => Math.min(100, Math.round((r.sold / Math.max(r.capacity, 1)) * 100));
-  const visible = rows.filter((r) => filter === "all" ? true : filter === "live" ? r.status === "open" : r.status === "complete");
-  const liveCount = rows.filter((r) => r.status === "open").length;
+  const isSoon = (r: Row) => r.status === "open" && r.sold >= r.capacity; // sold out, awaiting the host's draw
+  const visible = rows.filter((r) =>
+    filter === "soon" ? isSoon(r) : filter === "drawn" ? r.status === "complete" : (isSoon(r) || r.status === "complete"),
+  );
+  const liveCount = rows.filter(isSoon).length;
 
-  const cols = width >= 900 ? 3 : width >= 600 ? 2 : 1;
+  const cols = width >= 1100 ? 4 : width >= 760 ? 3 : 2;
   const contentW = Math.min(width, 1100) - 40;
   const gap = 14;
-  const cardW = cols === 1 ? contentW : (contentW - gap * (cols - 1)) / cols;
+  const cardW = (contentW - gap * (cols - 1)) / cols;
 
   return (
     <View style={styles.container}>
@@ -75,10 +78,11 @@ export default function Live() {
           {liveCount > 0 && <View style={styles.dot} />}
           <Text style={styles.h1}>Live & results</Text>
         </View>
+        <Text style={styles.sub}>Games that are sold out and about to draw, plus recent winners. Browse open games on the Browse tab.</Text>
 
         {/* Filter */}
         <View style={styles.tabs}>
-          {([["all", "All"], ["live", "Live now"], ["drawn", "Results"]] as [Filter, string][]).map(([k, label]) => (
+          {([["all", "All"], ["soon", "Drawing soon"], ["drawn", "Results"]] as [Filter, string][]).map(([k, label]) => (
             <TouchableOpacity key={k} style={[styles.tab, filter === k && styles.tabActive]} onPress={() => setFilter(k)}>
               <Text style={[styles.tabText, filter === k && styles.tabTextActive]}>{label}</Text>
             </TouchableOpacity>
@@ -88,36 +92,21 @@ export default function Live() {
         {loading ? (
           <ActivityIndicator color={colors.red} style={{ marginTop: 40 }} />
         ) : visible.length === 0 ? (
-          <Text style={styles.empty}>{filter === "live" ? "No live games right now." : filter === "drawn" ? "No results yet." : "Nothing here yet."}</Text>
+          <Text style={styles.empty}>{filter === "soon" ? "Nothing sold out and ready to draw right now." : filter === "drawn" ? "No results yet." : "No live action yet — check back when games sell out."}</Text>
         ) : (
           <View style={styles.grid}>
             {visible.map((r) => {
               const drawn = r.status === "complete";
               return (
-                <TouchableOpacity
-                  key={r.id} activeOpacity={0.9} style={[styles.card, { width: cardW }]}
+                <GameCard
+                  key={r.id}
+                  data={{ id: r.id, title: r.title, cover_url: r.cover_url, amount_cents: r.amount_cents, capacity: r.capacity, claimed: r.sold }}
+                  width={cardW}
                   onPress={() => router.push(drawn ? `/r/${r.id}` : `/raffle/${r.id}`)}
-                >
-                  <View style={styles.coverWrap}>
-                    {r.cover_url
-                      ? <Image source={{ uri: r.cover_url }} style={styles.cover} />
-                      : <LinearGradient colors={[colors.surfaceAlt, colors.border]} style={styles.cover} />}
-                    <View style={[styles.badge, drawn ? styles.badgeDrawn : styles.badgeLive]}>
-                      <Text style={styles.badgeText}>{drawn ? "DRAWN" : "● LIVE"}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.body}>
-                    <Text style={styles.cardTitle} numberOfLines={1}>{r.title}</Text>
-                    {drawn ? (
-                      <Text style={styles.cardMeta} numberOfLines={1}>🏆 {r.winner ?? "Winner"}</Text>
-                    ) : (
-                      <>
-                        <Text style={styles.cardMeta}>{r.sold} entrants · {pct(r)}% sold</Text>
-                        <View style={styles.bar}><View style={[styles.barFill, { width: `${pct(r)}%` }]} /></View>
-                      </>
-                    )}
-                  </View>
-                </TouchableOpacity>
+                  badge={drawn ? "DRAWN" : "● READY"}
+                  footLeft={drawn ? `🏆 ${r.winner ?? "Winner"}` : "Sold out"}
+                  footRight={drawn ? "Result" : "Drawing soon"}
+                />
               );
             })}
           </View>
@@ -129,9 +118,10 @@ export default function Live() {
 
 const makeStyles = (colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  titleRow: { flexDirection: "row", alignItems: "center", gap: 9, marginBottom: 16 },
+  titleRow: { flexDirection: "row", alignItems: "center", gap: 9, marginBottom: 6 },
   dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.red },
   h1: { color: colors.text, fontSize: 26, fontWeight: "900", letterSpacing: -0.4 },
+  sub: { color: colors.muted, fontSize: 13, marginBottom: 16, lineHeight: 18 },
   tabs: { flexDirection: "row", gap: 8, marginBottom: 18 },
   tab: { flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   tabActive: { backgroundColor: colors.redSoft, borderColor: colors.red },
