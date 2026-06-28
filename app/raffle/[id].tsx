@@ -530,22 +530,23 @@ export default function RaffleDetail() {
             nestedScrollEnabled
             showsVerticalScrollIndicator
           >
-            {Array.from({ length: raffle.capacity }, (_, i) => {
+            {Array.from({ length: raffle.capacity + (raffle.free_seat_limit ?? 0) }, (_, i) => {
               const seat = i + 1;
+              const isFree = seat > raffle.capacity; // free seats are numbered above the paid block
               const t = tickets.find((x) => x.seat_number === seat);
               const taken = !!t;
               const reserved = t?.status === "reserved"; // held for a mini
               const sel = selected.includes(seat);
-              const tappable = canPick && !taken;
+              const tappable = canPick && !taken && !isFree; // free seats are claimed via the button, not picked
               return (
                 <TouchableOpacity
                   key={seat}
                   activeOpacity={tappable ? 0.7 : 1}
                   disabled={!tappable}
                   onPress={() => toggleSeat(seat)}
-                  style={[styles.seat, taken ? styles.seatTaken : sel ? styles.seatSelected : styles.seatOpen]}
+                  style={[styles.seat, taken ? styles.seatTaken : sel ? styles.seatSelected : isFree ? styles.seatFree : styles.seatOpen]}
                 >
-                  <Text style={[styles.seatNum, sel ? styles.seatNumSelected : taken ? styles.seatNumTaken : null]}>{reserved ? "🔒" : seat}</Text>
+                  <Text style={[styles.seatNum, sel ? styles.seatNumSelected : taken ? styles.seatNumTaken : isFree ? styles.seatNumFree : null]}>{reserved ? "🔒" : isFree && !taken ? "🎁" : seat}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -564,7 +565,7 @@ export default function RaffleDetail() {
           </View>
         )}
         {canPick && gridMode && !raffle.no_seats && (
-          <Text style={styles.legend}>Tap open seats to select · amber = your pick · grey = taken · 🔒 = held for a mini</Text>
+          <Text style={styles.legend}>Tap open seats · amber = your pick · grey = taken · 🔒 = mini · 🎁 = free seat</Text>
         )}
 
         {/* Player extras: lucky dip + free seat */}
@@ -866,6 +867,8 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   board: { flexDirection: "row", flexWrap: "wrap", gap: 6, padding: 10 },
   seat: { width: 38, height: 38, borderRadius: 9, alignItems: "center", justifyContent: "center" },
   seatOpen: { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border },
+  seatFree: { backgroundColor: colors.greenSoft, borderWidth: 1, borderColor: colors.green },
+  seatNumFree: { color: colors.green },
   seatFree: { backgroundColor: colors.greenSoft },
   seatPaid: { backgroundColor: colors.redSoft },
   seatNum: { color: colors.muted, fontSize: 12, fontWeight: "700" },

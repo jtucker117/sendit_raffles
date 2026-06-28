@@ -96,6 +96,10 @@ export default function Home() {
           : <LinearGradient colors={[colors.surfaceAlt, colors.border]} style={styles.cardImg} />}
         <LinearGradient colors={["transparent", "rgba(0,0,0,0.82)"]} style={styles.cardShade} />
         {isFeatured && <View style={styles.tileFeatured}><Text style={styles.tileFeaturedText}>⭐ FEATURED</Text></View>}
+        {(() => {
+          const t = (r as any).bogo ? "🎁 BOGO" : (r as any).free_for_all ? "🎁 FREE SEAT" : (r as any).no_seats ? "🔢 NO SEATS" : null;
+          return t ? <View style={styles.tileType}><Text style={styles.tileTypeText}>{t}</Text></View> : null;
+        })()}
         {upcoming && (
           <View style={styles.soonFull}>
             <Text style={styles.soonFullEyebrow}>🔒 COMING SOON</Text>
@@ -230,6 +234,8 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   cardShade: { position: "absolute", left: 0, right: 0, bottom: 0, height: "55%" },
   tileFeatured: { position: "absolute", top: 8, left: 8, backgroundColor: colors.red, borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 4, zIndex: 2 },
   tileFeaturedText: { color: colors.onAccent, fontSize: 10, fontWeight: "900", letterSpacing: 0.5 },
+  tileType: { position: "absolute", top: 8, right: 8, backgroundColor: "rgba(0,0,0,0.7)", borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 4, zIndex: 2 },
+  tileTypeText: { color: "#fff", fontSize: 9.5, fontWeight: "900", letterSpacing: 0.5 },
   soonFull: { position: "absolute", left: 0, right: 0, top: 0, bottom: 36, alignItems: "center", justifyContent: "center", paddingHorizontal: 10 },
   soonFullEyebrow: { color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 1.5 },
   soonFullCount: { color: "#fff", fontSize: 26, fontWeight: "900", marginTop: 4, letterSpacing: -0.5, textShadowColor: "rgba(0,0,0,0.6)", textShadowRadius: 6 },
