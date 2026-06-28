@@ -141,19 +141,24 @@ Deno.serve(async (req) => {
     let awardedSeats: number[] = [];
     if (raffle.parent_raffle_id) {
       const parentId = raffle.parent_raffle_id;
-      const { data: parent } = await admin.from("raffles").select("capacity").eq("id", parentId).single();
-      const { data: taken } = await admin.from("tickets").select("seat_number").eq("raffle_id", parentId);
-      const used = new Set((taken ?? []).map((t: any) => t.seat_number));
-      const openSeats: number[] = [];
-      for (let s = 1; s <= (parent?.capacity ?? 0) && openSeats.length < (raffle.seats_awarded ?? 1); s++) {
-        if (!used.has(s)) openSeats.push(s);
-      }
-      for (const seat of openSeats) {
-        await admin.from("tickets").insert({
-          raffle_id: parentId, seat_number: seat, owner_id: winner.owner_id,
-          type: "free", status: "confirmed",
-        });
-        awardedSeats.push(seat);
+      // Transfer the seats that were reserved for THIS mini to the winner, so the
+      // parent board shows the winner on those exact seats.
+      const { data: handed } = await admin.from("tickets")
+        .update({ owner_id: winner.owner_id, type: "free", status: "confirmed" })
+        .eq("raffle_id", parentId).eq("mini_id", raffle_id).eq("status", "reserved")
+        .select("seat_number");
+      awardedSeats = (handed ?? []).map((t: any) => t.seat_number);
+      // Fallback for legacy minis that never reserved seats: grant open ones.
+      if (awardedSeats.length === 0) {
+        const { data: parent } = await admin.from("raffles").select("capacity").eq("id", parentId).single();
+        const { data: taken } = await admin.from("tickets").select("seat_number").eq("raffle_id", parentId);
+        const used = new Set((taken ?? []).map((t: any) => t.seat_number));
+        for (let s = 1; s <= (parent?.capacity ?? 0) && awardedSeats.length < (raffle.seats_awarded ?? 1); s++) {
+          if (!used.has(s)) {
+            await admin.from("tickets").insert({ raffle_id: parentId, seat_number: s, owner_id: winner.owner_id, type: "free", status: "confirmed" });
+            awardedSeats.push(s);
+          }
+        }
       }
     }
 
