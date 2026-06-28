@@ -380,7 +380,12 @@ export default function RaffleDetail() {
         {/* Seat board / pick-your-seats */}
         <Text style={styles.boardTitle}>{canPick ? "Pick your seats" : "Seat board"}</Text>
         {gridMode ? (
-          <View style={styles.board}>
+          <ScrollView
+            style={styles.boardScroll}
+            contentContainerStyle={styles.board}
+            nestedScrollEnabled
+            showsVerticalScrollIndicator
+          >
             {Array.from({ length: raffle.capacity }, (_, i) => {
               const seat = i + 1;
               const taken = tickets.some((x) => x.seat_number === seat);
@@ -398,7 +403,7 @@ export default function RaffleDetail() {
                 </TouchableOpacity>
               );
             })}
-          </View>
+          </ScrollView>
         ) : (
           <View>
             <Text style={styles.bigNote}>{raffle.capacity} seats · {claimed} claimed.</Text>
@@ -671,7 +676,8 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   pickInput: { width: 90, backgroundColor: colors.surfaceAlt, borderColor: colors.inputBorder, borderWidth: 1, borderRadius: radius.md, padding: 12, color: colors.text, textAlign: "center", fontWeight: "700" },
   payNote: { color: colors.faint, fontSize: 11, lineHeight: 16 },
   boardTitle: { color: colors.text, fontSize: 13, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.6, marginTop: 24, marginBottom: 12 },
-  board: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  boardScroll: { maxHeight: 260, marginTop: 6, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface },
+  board: { flexDirection: "row", flexWrap: "wrap", gap: 6, padding: 10 },
   seat: { width: 38, height: 38, borderRadius: 9, alignItems: "center", justifyContent: "center" },
   seatOpen: { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border },
   seatFree: { backgroundColor: colors.greenSoft },
