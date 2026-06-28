@@ -266,7 +266,7 @@ export default function ManageEntries() {
         </View>
       )}
 
-      <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}><Text style={styles.back}>← Back to game</Text></TouchableOpacity>
+      <TouchableOpacity style={styles.backBtn} onPress={() => router.replace(`/raffle/${id}`)}><Text style={styles.back}>← Back to game</Text></TouchableOpacity>
     </ScrollView>
   );
 }

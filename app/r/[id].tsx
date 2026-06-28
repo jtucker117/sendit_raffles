@@ -109,10 +109,8 @@ export default function PublicRecord() {
               <View style={styles.cert}>
                 <Text style={styles.certTitle}>Random.org Signed Draw</Text>
                 <Row k="Entrants" v={String(rec.entrants)} colors={colors} />
-                {rec.rounds?.length
-                  ? <Row k="Rounds" v={String(rec.rounds.length)} colors={colors} />
-                  : <Row k="Random.org drew" v={`entrant #${rec.randomorg_signed?.random?.data?.[0] ?? "—"} of ${rec.entrants}`} colors={colors} />}
-                <Row k="Winning seat" v={`#${rec.winning_seat}`} colors={colors} />
+                {rec.rounds?.length ? <Row k="Rounds" v={String(rec.rounds.length)} colors={colors} /> : null}
+                <Row k="Winning number" v={`#${rec.winning_seat}`} colors={colors} />
                 <Row k="Drawn" v={new Date(rec.drawn_at).toLocaleString()} colors={colors} />
                 <Text style={[styles.verifyMsg, verifyMsg?.startsWith("✓") && { color: colors.green }]}>
                   {verifyMsg ?? "Verifying…"}
