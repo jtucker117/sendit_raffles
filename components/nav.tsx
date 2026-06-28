@@ -56,6 +56,7 @@ export function AppHeader({ onMenu }: { onMenu: () => void }) {
             </View>
             <DDItem icon="person-outline" label="Edit my profile" onPress={() => go("/profile")} colors={colors} />
             <DDItem icon="lock-closed-outline" label="Change password" onPress={() => go("/settings/password")} colors={colors} />
+            <DDItem icon="gift-outline" label="My referrals" onPress={() => go("/referrals")} colors={colors} />
             {!isSuperadmin && <DDItem icon="chatbubble-ellipses-outline" label="Chat with creator / support" onPress={chatWithCreator} colors={colors} />}
             {user?.role === "player" && (
               <DDItem icon="rocket-outline" label="Request to be a host" onPress={requestHost} colors={colors} />

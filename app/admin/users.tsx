@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
@@ -65,12 +65,14 @@ export default function AdminUsers() {
   const pending = rows.filter(isPending).length;
 
   async function approve(id: string) {
-    await supabase.from("profiles").update({ host_approved: true, host_approved_at: new Date().toISOString() }).eq("id", id);
+    const { error } = await supabase.from("profiles").update({ host_approved: true, host_approved_at: new Date().toISOString() }).eq("id", id).select();
+    if (error) { Alert.alert("Couldn't approve", error.message); return; }
     load();
   }
   async function deny(id: string) {
     // Denying a request just keeps them a player (no "rejected host" limbo).
-    await supabase.from("profiles").update({ role: "player", host_approved: null, host_approved_at: null }).eq("id", id);
+    const { error } = await supabase.from("profiles").update({ role: "player", host_approved: null, host_approved_at: null }).eq("id", id).select();
+    if (error) { Alert.alert("Couldn't deny", error.message); return; }
     load();
   }
 
