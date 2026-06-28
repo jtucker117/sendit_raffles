@@ -17,7 +17,7 @@ interface Row {
   created_at: string;
 }
 
-type Filter = "all" | "host" | "player";
+type Filter = "all" | "pending" | "host" | "player";
 
 export default function AdminUsers() {
   const { isSuperadmin } = useAuth();
@@ -47,8 +47,14 @@ export default function AdminUsers() {
     );
   }
 
+  const isPending = (r: Row) => r.role === "host" && r.host_approved === null;
+
   const visible = rows
-    .filter((r) => (filter === "all" ? true : r.role === filter))
+    .filter((r) => {
+      if (filter === "all") return true;
+      if (filter === "pending") return isPending(r);
+      return r.role === filter;
+    })
     .filter((r) => {
       const s = q.trim().toLowerCase();
       return !s || r.display_name?.toLowerCase().includes(s) || r.email?.toLowerCase().includes(s);
@@ -56,11 +62,22 @@ export default function AdminUsers() {
 
   const hosts = rows.filter((r) => r.role === "host").length;
   const players = rows.filter((r) => r.role === "player").length;
+  const pending = rows.filter(isPending).length;
+
+  async function approve(id: string) {
+    await supabase.from("profiles").update({ host_approved: true, host_approved_at: new Date().toISOString() }).eq("id", id);
+    load();
+  }
+  async function deny(id: string) {
+    // Denying a request just keeps them a player (no "rejected host" limbo).
+    await supabase.from("profiles").update({ role: "player", host_approved: null, host_approved_at: null }).eq("id", id);
+    load();
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: BOTTOM_NAV_HEIGHT + 40 }}>
       <Text style={styles.h1}>🛡️ All Accounts</Text>
-      <Text style={styles.sub}>{rows.length} total · {hosts} hosts · {players} players</Text>
+      <Text style={styles.sub}>{rows.length} total · {hosts} hosts · {players} players{pending ? ` · ${pending} pending` : ""}</Text>
 
       <TextInput
         style={styles.search}
@@ -72,9 +89,11 @@ export default function AdminUsers() {
       />
 
       <View style={styles.tabs}>
-        {(["all", "host", "player"] as Filter[]).map((f) => (
+        {(["all", "pending", "host", "player"] as Filter[]).map((f) => (
           <TouchableOpacity key={f} style={[styles.tab, filter === f && styles.tabActive]} onPress={() => setFilter(f)}>
-            <Text style={[styles.tabText, filter === f && styles.tabTextActive]}>{f === "all" ? "All" : f === "host" ? "Hosts" : "Players"}</Text>
+            <Text style={[styles.tabText, filter === f && styles.tabTextActive]}>
+              {f === "all" ? "All" : f === "host" ? "Hosts" : f === "player" ? "Players" : `Pending${pending ? ` (${pending})` : ""}`}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -96,9 +115,19 @@ export default function AdminUsers() {
             <Text style={styles.meta}>
               {r.is_superadmin ? "🛡️ Superadmin · " : ""}
               {r.role === "host"
-                ? r.host_approved === true ? "✅ Approved" : r.host_approved === null ? "⏳ Pending" : "❌ Rejected"
+                ? r.host_approved === true ? "✅ Approved host" : r.host_approved === null ? "⏳ Wants to be a host" : "❌ Rejected"
                 : "Player"}
             </Text>
+            {isPending(r) && (
+              <View style={styles.actions}>
+                <TouchableOpacity style={[styles.actBtn, styles.approve]} onPress={() => approve(r.id)}>
+                  <Text style={styles.approveText}>✓ Approve</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.actBtn, styles.deny]} onPress={() => deny(r.id)}>
+                  <Text style={styles.denyText}>✕ Deny</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </TouchableOpacity>
         ))
       )}
@@ -131,6 +160,12 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   pillText: { color: colors.text, fontSize: 11, fontWeight: "700", textTransform: "uppercase" },
   email: { color: colors.muted, fontSize: 13, marginTop: 4 },
   meta: { color: colors.faint, fontSize: 12, marginTop: 6 },
+  actions: { flexDirection: "row", gap: 10, marginTop: 12 },
+  actBtn: { flex: 1, paddingVertical: 10, borderRadius: radius.md, alignItems: "center" },
+  approve: { backgroundColor: colors.green },
+  approveText: { color: "#fff", fontWeight: "800", fontSize: 13 },
+  deny: { borderWidth: 1, borderColor: colors.danger },
+  denyText: { color: colors.danger, fontWeight: "800", fontSize: 13 },
   empty: { color: colors.muted, marginTop: 24, textAlign: "center" },
   backBtn: { alignSelf: "center", marginTop: 20, padding: 10 },
   back: { color: colors.red, fontSize: 15, fontWeight: "600" },

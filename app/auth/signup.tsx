@@ -15,7 +15,6 @@ export function SignUpScreen({ onSwitchToSignIn }: SignUpScreenProps) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [role, setRole] = useState<"host" | "player">("player");
   const [formError, setFormError] = useState<string | null>(null);
 
   async function handleSignUp() {
@@ -44,7 +43,7 @@ export function SignUpScreen({ onSwitchToSignIn }: SignUpScreenProps) {
     }
 
     try {
-      await signUp(email, password, displayName, role);
+      await signUp(email, password, displayName, "player");
       // Success — auth context will handle navigation
     } catch (err) {
       // Error already set in context
@@ -63,27 +62,6 @@ export function SignUpScreen({ onSwitchToSignIn }: SignUpScreenProps) {
         {displayError && <View style={styles.errorBox}>
             <Text style={styles.errorText}>{displayError}</Text>
           </View>}
-
-        {/* Role Selection */}
-        <Text style={styles.label}>I'm a...</Text>
-        <View style={styles.roleButtons}>
-          <TouchableOpacity
-            style={[styles.roleButton, role === "player" && styles.roleButtonActive]}
-            onPress={() => setRole("player")}
-          >
-            <Text style={[styles.roleButtonText, role === "player" && styles.roleButtonTextActive]}>
-              Player
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.roleButton, role === "host" && styles.roleButtonActive]}
-            onPress={() => setRole("host")}
-          >
-            <Text style={[styles.roleButtonText, role === "host" && styles.roleButtonTextActive]}>
-              Host
-            </Text>
-          </TouchableOpacity>
-        </View>
 
         {/* Form Fields */}
         <View style={styles.field}>

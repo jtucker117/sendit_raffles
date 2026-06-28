@@ -1,17 +1,14 @@
 import { useState, useMemo } from "react";
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
 import { useRouter } from "expo-router";
-import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/lib/supabase";
 import { radius, AppColors } from "@/lib/theme";
 
 export default function Join() {
-  const { user } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
-  const isHost = user?.role === "host";
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -20,25 +17,21 @@ export default function Join() {
     if (!c) return;
     setBusy(true);
     try {
-      const fn = isHost ? "join_group_by_code" : "join_host_by_code";
-      const { error } = await supabase.rpc(fn, { p_code: c });
+      const { error } = await supabase.rpc("join_host_by_code", { p_code: c });
       if (error) throw error;
-      // Navigate straight to where the result shows (web ignores Alert button
-      // callbacks). Player -> home (the host's raffles now appear); host -> groups.
-      router.replace(isHost ? "/host/groups" : "/");
+      // Web ignores Alert button callbacks — go straight home where the host's games now appear.
+      router.replace("/");
     } catch (e: any) {
-      Alert.alert("Couldn't join", e?.message ?? "Check the code and try again.");
+      Alert.alert("Couldn't follow", e?.message ?? "Check the code and try again.");
       setBusy(false);
     }
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.h1}>{isHost ? "Join a group" : "Follow a host"}</Text>
+      <Text style={styles.h1}>Follow a host</Text>
       <Text style={styles.sub}>
-        {isHost
-          ? "Enter a group's code to join it. You'll then see that group and its games."
-          : "Enter a host's code to follow them. You'll only see games from hosts you've joined."}
+        Enter a host's code to follow them. You'll see their games and join their group chat.
       </Text>
 
       <TextInput
@@ -52,7 +45,7 @@ export default function Join() {
       />
 
       <TouchableOpacity style={[styles.button, busy && { opacity: 0.6 }]} onPress={redeem} disabled={busy}>
-        {busy ? <ActivityIndicator color={colors.onAccent} /> : <Text style={styles.buttonText}>{isHost ? "Join group" : "Follow host"}</Text>}
+        {busy ? <ActivityIndicator color={colors.onAccent} /> : <Text style={styles.buttonText}>Follow host</Text>}
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>

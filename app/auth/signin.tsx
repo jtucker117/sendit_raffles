@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Image } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Image, Platform } from "react-native";
 import { useAuth } from "@/lib/auth-context";
+import { supabase } from "@/lib/supabase";
 import { colors, radius } from "@/lib/theme";
 
 const LOGO = require("../../assets/logo.png");
@@ -14,6 +15,17 @@ export function SignInScreen({ onSwitchToSignUp }: SignInScreenProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  async function forgotPassword() {
+    const e = email.trim();
+    if (!e) { setFormError("Type your email above first, then tap Forgot password."); return; }
+    setFormError(null); setNotice(null);
+    const redirectTo = Platform.OS === "web" && typeof window !== "undefined" ? window.location.origin : undefined;
+    const { error: e2 } = await supabase.auth.resetPasswordForEmail(e, redirectTo ? { redirectTo } : undefined);
+    if (e2) { setFormError(e2.message); return; }
+    setNotice(`We sent a password-reset link to ${e}. Check your inbox (and spam).`);
+  }
 
   async function handleSignIn() {
     setFormError(null);
@@ -37,6 +49,11 @@ export function SignInScreen({ onSwitchToSignUp }: SignInScreenProps) {
       {displayError && (
         <View style={styles.errorBox}>
           <Text style={styles.errorText}>{displayError}</Text>
+        </View>
+      )}
+      {notice && (
+        <View style={styles.noticeBox}>
+          <Text style={styles.noticeText}>{notice}</Text>
         </View>
       )}
 
@@ -67,6 +84,10 @@ export function SignInScreen({ onSwitchToSignUp }: SignInScreenProps) {
         />
       </View>
 
+      <TouchableOpacity onPress={forgotPassword} disabled={loading} style={styles.forgot}>
+        <Text style={styles.forgotText}>Forgot password?</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={handleSignIn} disabled={loading}>
         {loading ? <ActivityIndicator color={colors.onAccent} /> : <Text style={styles.buttonText}>Sign In</Text>}
       </TouchableOpacity>
@@ -93,6 +114,10 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 15, color: colors.muted, marginBottom: 28, textAlign: "center" },
   errorBox: { backgroundColor: colors.red, borderRadius: radius.md, padding: 12, marginBottom: 16 },
   errorText: { color: "#fff", fontSize: 13, fontWeight: "600" },
+  noticeBox: { backgroundColor: colors.greenSoft, borderRadius: radius.md, padding: 12, marginBottom: 16 },
+  noticeText: { color: colors.green, fontSize: 13, fontWeight: "600" },
+  forgot: { alignSelf: "flex-end", marginTop: -6, marginBottom: 10, padding: 4 },
+  forgotText: { color: colors.red, fontSize: 13, fontWeight: "700" },
   field: { marginBottom: 16 },
   fieldLabel: { fontSize: 12.5, fontWeight: "600", color: colors.text, marginBottom: 8 },
   input: { borderWidth: 1, borderColor: colors.inputBorder, borderRadius: radius.md, paddingVertical: 12, paddingHorizontal: 12, fontSize: 15, color: colors.text, backgroundColor: colors.surfaceAlt },

@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image, Modal, Pressable } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Image, Modal, Pressable, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
@@ -14,18 +14,27 @@ export function AppHeader({ onMenu }: { onMenu: () => void }) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
-  const { user, isSuperadmin } = useAuth();
+  const { user, isSuperadmin, refreshProfile } = useAuth();
   const [open, setOpen] = useState(false);
 
   const go = (href: string) => { setOpen(false); router.push(href as any); };
 
   async function chatWithCreator() {
     setOpen(false);
-    if (isSuperadmin) { router.push("/messages"); return; }
     // Find the platform creator (superadmin) to start a DM with.
     const { data } = await supabase.from("profiles").select("id").eq("is_superadmin", true).limit(1).maybeSingle();
-    if (data?.id) router.push(`/messages/chat/${data.id}`);
+    if (data?.id && data.id !== user?.id) router.push(`/messages/chat/${data.id}`);
     else router.push("/messages");
+  }
+
+  async function requestHost() {
+    setOpen(false);
+    if (!user?.id) return;
+    // Flip to a pending host — the creator approves/denies in Host requests.
+    const { error } = await supabase.from("profiles").update({ role: "host", host_approved: null }).eq("id", user.id);
+    if (error) { Alert.alert("Couldn't send request", error.message); return; }
+    await refreshProfile();
+    Alert.alert("Request sent ✅", "The creator will review it. You'll get host tools once you're approved.");
   }
 
   return (
@@ -47,7 +56,19 @@ export function AppHeader({ onMenu }: { onMenu: () => void }) {
             </View>
             <DDItem icon="person-outline" label="Edit my profile" onPress={() => go("/profile")} colors={colors} />
             <DDItem icon="lock-closed-outline" label="Change password" onPress={() => go("/settings/password")} colors={colors} />
-            <DDItem icon="chatbubble-ellipses-outline" label={isSuperadmin ? "Open messages" : "Chat with creator / support"} onPress={chatWithCreator} colors={colors} />
+            {!isSuperadmin && <DDItem icon="chatbubble-ellipses-outline" label="Chat with creator / support" onPress={chatWithCreator} colors={colors} />}
+            {user?.role === "player" && (
+              <DDItem icon="rocket-outline" label="Request to be a host" onPress={requestHost} colors={colors} />
+            )}
+            {user?.role === "host" && user?.host_approved === null && (
+              <View style={ddItemStyle.row}>
+                <Ionicons name="time-outline" size={20} color={colors.muted} />
+                <Text style={[ddItemStyle.text, { color: colors.muted }]}>Host request pending…</Text>
+              </View>
+            )}
+            {isSuperadmin && (
+              <DDItem icon="shield-checkmark-outline" label="Host requests" onPress={() => go("/admin/users")} colors={colors} />
+            )}
           </Pressable>
         </Pressable>
       </Modal>
