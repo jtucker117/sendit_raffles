@@ -79,7 +79,7 @@ export default function HostCommunityChat() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Text style={styles.back}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>{hostName} · Community</Text>
+        <Text style={styles.headerTitle} numberOfLines={1}>{hostName} Group</Text>
         <View style={{ width: 50 }} />
       </View>
 
@@ -113,13 +113,13 @@ export default function HostCommunityChat() {
       <View style={styles.inputBar}>
         {canPost ? (
           <View style={styles.inputRow}>
-            <TextInput style={styles.input} placeholder="Message the community…" placeholderTextColor={colors.faint} value={text} onChangeText={setText} multiline editable={!sending} />
+            <TextInput style={styles.input} placeholder="Message the group…" placeholderTextColor={colors.faint} value={text} onChangeText={setText} multiline editable={!sending} />
             <TouchableOpacity style={[styles.send, (sending || !text.trim()) && styles.sendDim]} onPress={send} disabled={sending || !text.trim()}>
               <Text style={styles.sendText}>{sending ? "…" : "Send"}</Text>
             </TouchableOpacity>
           </View>
         ) : (
-          <Text style={styles.disabled}>🔒 The host has turned off commenting in this community.</Text>
+          <Text style={styles.disabled}>🔒 The host has turned off commenting in this group.</Text>
         )}
       </View>
     </KeyboardAvoidingView>

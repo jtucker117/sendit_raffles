@@ -43,7 +43,6 @@ export function SideMenu({ onClose }: { onClose: () => void }) {
       { label: "Dashboard", icon: "speedometer-outline", href: "/host/dashboard" },
       { label: "Create game", icon: "add-circle-outline", href: "/host/create-raffle" },
     );
-    items.push({ label: "Groups", icon: "people-outline", href: "/host/groups" });
   }
   if (isSuperadmin) items.push({ label: "All accounts", icon: "shield-checkmark-outline", href: "/admin/users" });
 

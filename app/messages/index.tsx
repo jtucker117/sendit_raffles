@@ -29,14 +29,18 @@ export default function Messages() {
     setLoading(true);
     // Direct conversations
     setConvos(await fetchDirectMessageConversations(user.id));
-    // Communities: hosts I follow (+ my own if I'm a host)
+    // Groups: each host has one group chat (host + their players). Mine if I'm a
+    // host, plus the groups of every host I follow. Named "<Host> Group".
     const { data: follows } = await supabase.from("host_followers").select("host_id").eq("follower_id", user.id);
     const hostIds = (follows ?? []).map((f: any) => f.host_id);
     const comm: { id: string; name: string; own?: boolean }[] = [];
-    if (user.role === "host") comm.push({ id: user.id, name: "Your community", own: true });
+    if (user.role === "host") {
+      const { data: me } = await supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle();
+      comm.push({ id: user.id, name: `${me?.display_name ?? "Your"} Group`, own: true });
+    }
     if (hostIds.length) {
       const { data: hosts } = await supabase.from("profiles").select("id, display_name").in("id", hostIds);
-      (hosts ?? []).forEach((h: any) => comm.push({ id: h.id, name: h.display_name }));
+      (hosts ?? []).forEach((h: any) => comm.push({ id: h.id, name: `${h.display_name} Group` }));
     }
     setCommunities(comm);
     setLoading(false);
@@ -53,7 +57,7 @@ export default function Messages() {
         <Text style={styles.h1}>Messages</Text>
 
         <View style={styles.tabs}>
-          {([["direct", "Direct"], ["communities", "Communities"]] as [Tab, string][]).map(([k, label]) => (
+          {([["direct", "Direct"], ["communities", "Groups"]] as [Tab, string][]).map(([k, label]) => (
             <TouchableOpacity key={k} style={[styles.tab, tab === k && styles.tabActive]} onPress={() => setTab(k)}>
               <Text style={[styles.tabText, tab === k && styles.tabTextActive]}>{label}</Text>
             </TouchableOpacity>
@@ -85,13 +89,13 @@ export default function Messages() {
             {/* COMMUNITIES */}
             {tab === "communities" && (
               communities.length === 0 ? (
-                <Text style={styles.empty}>Follow a host to join their community chat.</Text>
+                <Text style={styles.empty}>Follow a host to join their group chat.</Text>
               ) : communities.map((c) => (
                 <TouchableOpacity key={c.id} style={styles.row} onPress={() => router.push(`/messages/group/${c.id}`)}>
                   <View style={[styles.avatar, { backgroundColor: colors.navy }]}><Text style={styles.avatarInitial}>{c.name[0]?.toUpperCase()}</Text></View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.rowName}>{c.name}{c.own ? "" : " · Community"}</Text>
-                    <Text style={styles.rowSub}>{c.own ? "Your players' chat room" : "Group chat"}</Text>
+                    <Text style={styles.rowName}>{c.name}</Text>
+                    <Text style={styles.rowSub}>{c.own ? "You & your players" : "Host & players"}</Text>
                   </View>
                 </TouchableOpacity>
               ))
