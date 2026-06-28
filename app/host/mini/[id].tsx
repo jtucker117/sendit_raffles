@@ -63,10 +63,14 @@ export default function CreateMini() {
     );
   }
 
-  // Auto-price: a mini seat costs the same as a seat in the parent game.
-  // Host can't change it, so minis can't be marked up.
+  // Auto-price: spread the value of the awarded parent seats evenly across the
+  // mini seats. (awarded seats × parent price) ÷ mini seats. No round-up; host
+  // can't change it, so minis can't be marked up.
   const parentPriceCents = parent.amount_cents ?? 0;
-  const perSeatCents = parentPriceCents;
+  const seatsNum = Math.max(1, parseInt(seatsAwarded, 10) || 1);
+  const capNum = Math.max(0, parseInt(capacity, 10) || 0);
+  const totalValueCents = seatsNum * parentPriceCents;
+  const perSeatCents = capNum > 0 ? Math.round(totalValueCents / capNum) : 0;
   const money = (c: number) => `$${(c / 100).toFixed(2)}`;
 
   async function addCover() {
@@ -78,7 +82,7 @@ export default function CreateMini() {
     const cap = Math.max(2, Math.min(1000, parseInt(capacity, 10) || 0));
     const free = Math.max(0, Math.min(cap, parseInt(freeLimit, 10) || 0));
     const seats = Math.max(1, parseInt(seatsAwarded, 10) || 1);
-    const perCents = parentPriceCents;
+    const perCents = cap > 0 ? Math.round((seats * parentPriceCents) / cap) : 0;
     if (!title.trim()) { Alert.alert("Title required"); return; }
     if (!(parseInt(capacity, 10) >= 2)) { Alert.alert("Seats required", "Enter total seats (at least 2)."); return; }
     if (parent!.capacity != null && seats > parent!.capacity) {
@@ -142,7 +146,9 @@ export default function CreateMini() {
           <Text style={styles.priceSub}>
             {parentPriceCents === 0
               ? "The main game's seats are free, so this mini is free too."
-              : `Same as a seat in the main game (${money(parentPriceCents)} each). Locked — minis can't be marked up.`}
+              : capNum < 2
+                ? "Enter the number of mini seats to set the price."
+                : `${seatsNum} main seat${seatsNum === 1 ? "" : "s"} (${money(totalValueCents)}) ÷ ${capNum} mini seats = ${money(perSeatCents)} each. Locked — minis can't be marked up.`}
           </Text>
         </View>
       </Field>
