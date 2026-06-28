@@ -1,14 +1,14 @@
 import { useCallback, useMemo, useState } from "react";
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, RefreshControl,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, useWindowDimensions,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/lib/supabase";
 import { radius, AppColors } from "@/lib/theme";
 import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
+import { GameCard } from "@/components/GameCard";
 
 interface Entry {
   raffleId: string;
@@ -30,6 +30,11 @@ export default function MyTickets() {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const cols = width >= 1100 ? 4 : width >= 760 ? 3 : 2;
+  const gap = 14;
+  const contentW = Math.min(width, 1100) - 40;
+  const cardW = (contentW - gap * (cols - 1)) / cols;
 
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,30 +119,18 @@ export default function MyTickets() {
             </TouchableOpacity>
           </View>
         ) : (
-          visible.map((e) => {
-            const pct = Math.min(100, Math.round((e.sold / Math.max(e.capacity, 1)) * 100));
-            return (
-              <TouchableOpacity key={e.raffleId} activeOpacity={0.9} style={[styles.card, e.won && styles.cardWon]} onPress={() => router.push(`/raffle/${e.raffleId}`)}>
-                {e.cover_url
-                  ? <Image source={{ uri: e.cover_url }} style={styles.thumb} />
-                  : <LinearGradient colors={[colors.surfaceAlt, colors.border]} style={styles.thumb} />}
-                <View style={styles.cardBody}>
-                  <View style={styles.cardTopRow}>
-                    <Text style={styles.cardTitle} numberOfLines={1}>{e.title}</Text>
-                    {e.won && <View style={styles.wonPill}><Text style={styles.wonPillText}>WON</Text></View>}
-                  </View>
-                  <Text style={styles.seats} numberOfLines={1}>
-                    {e.seats.length} seat{e.seats.length === 1 ? "" : "s"} · {e.seats.map((s) => `#${s}`).join(", ")}
-                  </Text>
-                  <View style={styles.bar}><View style={[styles.barFill, { width: `${pct}%` }]} /></View>
-                  <View style={styles.cardFoot}>
-                    <Text style={styles.foot}>{money(e.amount_cents)} / seat</Text>
-                    <Text style={styles.footMuted}>{e.status === "open" ? `${pct}% sold` : e.status}</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            );
-          })
+          <View style={styles.grid}>
+            {visible.map((e) => (
+              <GameCard
+                key={e.raffleId}
+                data={{ id: e.raffleId, title: e.title, cover_url: e.cover_url, amount_cents: e.amount_cents, capacity: e.capacity, claimed: e.sold }}
+                width={cardW}
+                onPress={() => router.push(`/raffle/${e.raffleId}`)}
+                badge={e.won ? "WON" : undefined}
+                footRight={`${e.seats.length} seat${e.seats.length === 1 ? "" : "s"}`}
+              />
+            ))}
+          </View>
         )}
       </ScrollView>
     </View>
@@ -147,6 +140,7 @@ export default function MyTickets() {
 const makeStyles = (colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   h1: { color: colors.text, fontSize: 26, fontWeight: "900", letterSpacing: -0.4, marginBottom: 16 },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 14 },
   tabs: { flexDirection: "row", gap: 8, marginBottom: 18 },
   tab: { flex: 1, alignItems: "center", paddingVertical: 11, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   tabActive: { backgroundColor: colors.redSoft, borderColor: colors.red },

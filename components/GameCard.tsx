@@ -1,0 +1,68 @@
+// Shared game tile — the 4:5 image card with an overlaid footer used on the home
+// page. Reuse everywhere games are listed so they all look the same.
+import { useMemo } from "react";
+import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useTheme } from "@/lib/theme-context";
+import { radius, AppColors } from "@/lib/theme";
+
+export type GameCardData = {
+  id: string;
+  title: string;
+  cover_url?: string | null;
+  amount_cents?: number | null;
+  capacity?: number | null;
+  claimed?: number | null;
+};
+
+export function GameCard({
+  data, width, onPress, badge, footLeft, footRight,
+}: {
+  data: GameCardData;
+  width: number;
+  onPress: () => void;
+  badge?: string;
+  footLeft?: string;
+  footRight?: string;
+}) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const cap = data.capacity ?? 0;
+  const claimed = data.claimed ?? 0;
+  const pct = Math.min(100, Math.round((claimed / Math.max(cap, 1)) * 100));
+  const left = Math.max(cap - claimed, 0);
+  const price = data.amount_cents != null ? `$${(data.amount_cents / 100).toFixed(0)}` : "";
+
+  return (
+    <TouchableOpacity activeOpacity={0.9} style={[styles.card, { width }]} onPress={onPress}>
+      {data.cover_url
+        ? <Image source={{ uri: data.cover_url }} style={styles.img} />
+        : <LinearGradient colors={[colors.surfaceAlt, colors.border]} style={styles.img} />}
+      <LinearGradient colors={["transparent", "rgba(0,0,0,0.82)"]} style={styles.shade} />
+      {badge ? <View style={styles.badge}><Text style={styles.badgeText}>{badge}</Text></View> : null}
+      <View style={styles.footer}>
+        <Text style={styles.title} numberOfLines={1}>{data.title}</Text>
+        <View style={styles.bar}><View style={[styles.barFill, { width: `${pct}%` }]} /></View>
+        <View style={styles.row}>
+          <Text style={styles.price}>{footLeft ?? price}</Text>
+          <Text style={styles.left}>{footRight ?? `${left} left`}</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+const makeStyles = (colors: AppColors) => StyleSheet.create({
+  card: { backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: "hidden", aspectRatio: 4 / 5 },
+  img: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%" },
+  shade: { position: "absolute", left: 0, right: 0, bottom: 0, height: "55%" },
+  badge: { position: "absolute", top: 8, left: 8, backgroundColor: colors.red, borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 4 },
+  badgeText: { color: colors.onAccent, fontSize: 10, fontWeight: "900", letterSpacing: 0.5 },
+  footer: { position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 9, paddingBottom: 9, paddingTop: 4 },
+  title: { color: "#fff", fontSize: 13, fontWeight: "800" },
+  bar: { height: 4, borderRadius: radius.pill, backgroundColor: "rgba(255,255,255,0.28)", marginTop: 6, overflow: "hidden" },
+  barFill: { height: "100%", backgroundColor: colors.red },
+  row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 6 },
+  price: { color: "#fff", fontSize: 12, fontWeight: "800" },
+  left: { color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: "600" },
+});

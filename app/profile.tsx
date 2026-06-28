@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import {
   View, Text, Image, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, TextInput, Alert,
+  ActivityIndicator, TextInput, Alert, useWindowDimensions,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
@@ -11,13 +11,17 @@ import { pickAndUploadImage } from "@/lib/upload";
 import { useHostRaffles } from "@/lib/use-host-raffles";
 import { radius, AppColors } from "@/lib/theme";
 import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
-import { RaffleGrid } from "@/components/RaffleGrid";
+import { GameCard } from "@/components/GameCard";
 
 export default function Profile() {
   const { user, refreshProfile, signOut } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const cols = width >= 1100 ? 4 : width >= 760 ? 3 : 2;
+  const gap = 12;
+  const cardW = (Math.min(width, 900) - 40 - gap * (cols - 1)) / cols;
   const isHost = user?.role === "host";
   const { raffles, loading: rafflesLoading, reload: reloadRaffles } = useHostRaffles(isHost ? user?.id : undefined);
   useFocusEffect(useCallback(() => { reloadRaffles(); }, [reloadRaffles]));
@@ -26,6 +30,13 @@ export default function Profile() {
   const [editingBio, setEditingBio] = useState(false);
   const [bio, setBio] = useState(user?.bio ?? "");
   const [savingBio, setSavingBio] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [name, setName] = useState(user?.display_name ?? "");
+  const [savingName, setSavingName] = useState(false);
+
+  // Games I've entered (for the My games cards + All/Won filter)
+  const [myGames, setMyGames] = useState<{ id: string; title: string; cover_url: string | null; capacity: number; amount_cents: number; claimed: number; won: boolean }[]>([]);
+  const [gameFilter, setGameFilter] = useState<"all" | "won">("all");
 
   // Host payment handles (where players send money at checkout)
   const [pay, setPay] = useState({ venmo: "", cashapp: "", paypal: "", zelle: "" });
@@ -56,12 +67,28 @@ export default function Profile() {
   useFocusEffect(useCallback(() => {
     if (!user) return;
     (async () => {
-      const { data: tix } = await supabase.from("tickets").select("raffle_id, type, status, raffles(amount_cents)").eq("owner_id", user.id);
+      const { data: tix } = await supabase.from("tickets").select("raffle_id, type, status, raffles(id, title, cover_url, capacity, amount_cents)").eq("owner_id", user.id);
       const rids = new Set<string>(); let spent = 0;
       (tix ?? []).forEach((t: any) => { rids.add(t.raffle_id); if (t.type === "paid" && t.status === "confirmed") spent += t.raffles?.amount_cents ?? 0; });
       const { data: wins } = await supabase.from("draws").select("raffle_id, raffles(id, title, prize, cover_url)").eq("winner_id", user.id);
+      const wonSet = new Set((wins ?? []).map((w: any) => w.raffle_id));
       setStats({ entered: rids.size, won: (wins ?? []).length, spentCents: spent });
       setWinnings((wins ?? []).map((w: any) => ({ raffleId: w.raffle_id, title: w.raffles?.title ?? "Game", prize: w.raffles?.prize ?? null, cover_url: w.raffles?.cover_url ?? null })));
+
+      // Build "My games" cards (one per entered raffle) with sold counts + won flag.
+      const idArr = [...rids];
+      const soldMap: Record<string, number> = {};
+      if (idArr.length) {
+        const { data: all } = await supabase.from("tickets").select("raffle_id").in("raffle_id", idArr);
+        (all ?? []).forEach((t: any) => { soldMap[t.raffle_id] = (soldMap[t.raffle_id] ?? 0) + 1; });
+      }
+      const gmap: Record<string, any> = {};
+      (tix ?? []).forEach((t: any) => {
+        const r = t.raffles; if (!r || gmap[r.id]) return;
+        gmap[r.id] = { id: r.id, title: r.title, cover_url: r.cover_url, capacity: r.capacity, amount_cents: r.amount_cents, claimed: soldMap[r.id] ?? 0, won: wonSet.has(r.id) };
+      });
+      setMyGames(Object.values(gmap));
+
       const { data: p } = await supabase.from("profiles").select("created_at").eq("id", user.id).single();
       setMemberSince(p?.created_at ?? null);
     })();
@@ -88,6 +115,22 @@ export default function Profile() {
       Alert.alert("Upload failed", e?.message ?? "Please try again.");
     } finally {
       setUploading(null);
+    }
+  }
+
+  async function saveName() {
+    const n = name.trim();
+    if (!n) { Alert.alert("Name required", "Enter a display name."); return; }
+    try {
+      setSavingName(true);
+      const { error } = await supabase.from("profiles").update({ display_name: n }).eq("id", user!.id).select();
+      if (error) throw error;
+      await refreshProfile();
+      setEditingName(false);
+    } catch (e: any) {
+      Alert.alert("Couldn't save name", e?.message ?? "Please try again.");
+    } finally {
+      setSavingName(false);
     }
   }
 
@@ -136,8 +179,26 @@ export default function Profile() {
           </View>
         </TouchableOpacity>
 
-        <Text style={styles.name}>{user.display_name}</Text>
+        {editingName ? (
+          <View style={styles.nameEdit}>
+            <TextInput value={name} onChangeText={setName} placeholder="Display name" placeholderTextColor={colors.faint} style={styles.nameInput} />
+            <View style={styles.bioActions}>
+              <TouchableOpacity style={[styles.smallBtn, { backgroundColor: colors.red }]} onPress={saveName} disabled={savingName}>
+                <Text style={styles.smallBtnText}>{savingName ? "Saving…" : "Save"}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.smallBtn, styles.smallBtnGhost]} onPress={() => { setName(user.display_name ?? ""); setEditingName(false); }}>
+                <Text style={[styles.smallBtnText, { color: colors.text }]}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity onPress={() => setEditingName(true)} style={styles.nameRow}>
+            <Text style={styles.name}>{user.display_name}</Text>
+            <Text style={styles.editPencil}>✎</Text>
+          </TouchableOpacity>
+        )}
         <Text style={styles.role}>{isHost ? "🎡 Host" : "🎫 Player"}{hostStatus}{memberSince ? ` · member since ${new Date(memberSince).getFullYear()}` : ""}</Text>
+        {user.email ? <Text style={styles.email}>{user.email} · 🔒 email can't be changed</Text> : null}
 
         {/* Player stats */}
         <View style={styles.statsRow}>
@@ -213,36 +274,48 @@ export default function Profile() {
         </View>
       )}
 
-      {/* My winnings */}
-      {winnings.length > 0 && (
+      {/* My games (entered), with All / Won filter */}
+      {myGames.length > 0 && (
         <View style={styles.feed}>
-          <Text style={styles.feedTitle}>My winnings</Text>
-          {winnings.map((w) => (
-            <TouchableOpacity key={w.raffleId} style={styles.winRow} activeOpacity={0.9} onPress={() => router.push(`/raffle/${w.raffleId}`)}>
-              {w.cover_url
-                ? <Image source={{ uri: w.cover_url }} style={styles.winThumb} />
-                : <View style={[styles.winThumb, { backgroundColor: colors.navy }]} />}
-              <View style={{ flex: 1 }}>
-                <Text style={styles.winTitle} numberOfLines={1}>{w.title}</Text>
-                {w.prize ? <Text style={styles.winPrize} numberOfLines={1}>🏆 {w.prize}</Text> : null}
+          <View style={styles.gamesHead}>
+            <Text style={styles.feedTitle}>My games</Text>
+            <View style={styles.miniTabs}>
+              {(["all", "won"] as const).map((f) => (
+                <TouchableOpacity key={f} style={[styles.miniTab, gameFilter === f && styles.miniTabOn]} onPress={() => setGameFilter(f)}>
+                  <Text style={[styles.miniTabText, gameFilter === f && styles.miniTabTextOn]}>{f === "all" ? "All games" : "Won"}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          {(() => {
+            const list = gameFilter === "won" ? myGames.filter((g) => g.won) : myGames;
+            if (!list.length) return <Text style={styles.empty}>No {gameFilter === "won" ? "wins" : "games"} yet.</Text>;
+            return (
+              <View style={styles.grid}>
+                {list.map((g) => (
+                  <GameCard key={g.id} data={g} width={cardW} onPress={() => router.push(`/raffle/${g.id}`)} badge={g.won ? "WON" : undefined} />
+                ))}
               </View>
-              <View style={styles.winBadge}><Text style={styles.winBadgeText}>WON</Text></View>
-            </TouchableOpacity>
-          ))}
-          <Text style={styles.claimNote}>Contact the host to arrange your prize.</Text>
+            );
+          })()}
+          {gameFilter === "won" && myGames.some((g) => g.won) && <Text style={styles.claimNote}>Contact the host to arrange your prize.</Text>}
         </View>
       )}
 
-      {/* Host feed of raffles */}
+      {/* Games I host */}
       {isHost && (
         <View style={styles.feed}>
-          <Text style={styles.feedTitle}>Games</Text>
+          <Text style={styles.feedTitle}>Games I host</Text>
           {rafflesLoading ? (
             <ActivityIndicator color={colors.red} style={{ marginTop: 16 }} />
           ) : raffles.length === 0 ? (
             <Text style={styles.empty}>No games yet — create your first one from Home.</Text>
           ) : (
-            <RaffleGrid raffles={raffles as any} onPress={(id) => router.push(`/raffle/${id}`)} />
+            <View style={styles.grid}>
+              {(raffles as any[]).map((r) => (
+                <GameCard key={r.id} data={{ id: r.id, title: r.title, cover_url: r.cover_url, amount_cents: r.amount_cents, capacity: r.capacity, claimed: r.claimed }} width={cardW} onPress={() => router.push(`/raffle/${r.id}`)} />
+              ))}
+            </View>
           )}
         </View>
       )}
@@ -277,7 +350,19 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   avatarBadgeText: { color: colors.onAccent, fontSize: 13 },
 
   name: { color: colors.text, fontSize: 22, fontWeight: "800", marginTop: 10, letterSpacing: -0.3 },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10 },
+  editPencil: { color: colors.red, fontSize: 16, fontWeight: "700" },
+  nameEdit: { width: "100%", maxWidth: 360, marginTop: 12 },
+  nameInput: { backgroundColor: colors.surfaceAlt, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, padding: 12, color: colors.text, fontSize: 16, fontWeight: "700", textAlign: "center" },
   role: { color: colors.muted, fontSize: 14, marginTop: 2 },
+  email: { color: colors.faint, fontSize: 12, marginTop: 4 },
+  gamesHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
+  miniTabs: { flexDirection: "row", gap: 6 },
+  miniTab: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border },
+  miniTabOn: { backgroundColor: colors.redSoft, borderColor: colors.red },
+  miniTabText: { color: colors.muted, fontSize: 12, fontWeight: "700" },
+  miniTabTextOn: { color: colors.text },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   codeChip: { alignItems: "center", marginTop: 14, backgroundColor: colors.surfaceAlt, borderColor: colors.red, borderWidth: 1, borderRadius: radius.md, paddingVertical: 10, paddingHorizontal: 18 },
   codeLabel: { color: colors.muted, fontSize: 10, fontWeight: "700", letterSpacing: 1 },
   codeValue: { color: colors.red, fontSize: 22, fontWeight: "800", letterSpacing: 3, marginTop: 2 },
