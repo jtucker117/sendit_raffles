@@ -54,6 +54,7 @@ export default function CreateRaffleScreen() {
   const [showOdds, setShowOdds] = useState(true); // show winning odds to players
   const [freeForAll, setFreeForAll] = useState(false); // everyone gets 1 free seat
   const [bogo, setBogo] = useState(false); // buy one get one free
+  const [freeCountOn, setFreeCountOn] = useState(false); // "set a number of free seats" checkbox
   const [dupName, setDupName] = useState(""); // set when relaunching from an old game
   const [step, setStep] = useState(0); // 0 Prize · 1 Tickets · 2 Rules · 3 Publish
 
@@ -80,6 +81,7 @@ export default function CreateRaffleScreen() {
       setShowOdds(data.show_odds ?? true);
       setFreeForAll(data.free_for_all ?? false);
       setBogo(data.bogo ?? false);
+      setFreeCountOn((data.free_seat_limit ?? 0) > 0);
       setDupName(data.title ?? "");
     })();
   }, [params.from]);
@@ -107,7 +109,7 @@ export default function CreateRaffleScreen() {
 
   async function create(mode: "open" | "draft" | "scheduled") {
     const cap = Math.max(2, Math.min(1000, parseInt(capacity, 10) || 0)); // paid seats
-    const free = Math.max(0, Math.min(1000, parseInt(freeLimit, 10) || 0)); // extra free seats on top
+    const free = freeCountOn ? Math.max(0, Math.min(1000, parseInt(freeLimit, 10) || 0)) : 0; // extra free seats on top (only when the checkbox is on)
     if (!title.trim()) { Alert.alert("Title required", "Give your game a title."); return; }
     if (!(parseInt(capacity, 10) >= 2)) { Alert.alert("Paid seats required", "Enter the number of paid seats (at least 2)."); return; }
     if (!(parseFloat(amount) > 0)) {
@@ -217,35 +219,38 @@ export default function CreateRaffleScreen() {
       {/* STEP 1 · Tickets */}
       {step === 1 && (
         <>
-          <View style={styles.row2}>
-            <Field label="Paid seats (max 1000)" style={{ flex: 1 }} required>
-              <TextInput style={styles.input} value={capacity} onChangeText={setCapacity} keyboardType="number-pad" placeholder="e.g. 100" placeholderTextColor={colors.faint} />
-            </Field>
-            <Field label="Free seats (0 = none)" style={{ flex: 1 }}>
-              <TextInput style={[styles.input, freeForAll && styles.inputLocked]} editable={!freeForAll} value={freeForAll ? "" : freeLimit} onChangeText={setFreeLimit} keyboardType="number-pad" placeholder={freeForAll ? "free for all" : "0"} placeholderTextColor={colors.faint} />
-            </Field>
-          </View>
+          <Field label="Paid seats (max 1000)" required>
+            <TextInput style={styles.input} value={capacity} onChangeText={setCapacity} keyboardType="number-pad" placeholder="e.g. 100" placeholderTextColor={colors.faint} />
+          </Field>
+
+          <Text style={styles.freeHeading}>FREE SEATS (optional)</Text>
+          <TouchableOpacity style={styles.modeRow} onPress={() => { const v = !freeCountOn; setFreeCountOn(v); if (v) { setFreeForAll(false); setBogo(false); } else setFreeLimit("0"); }}>
+            <View style={[styles.toggleBox, freeCountOn && styles.toggleBoxOn]}>{freeCountOn ? <Text style={styles.toggleCheck}>✓</Text> : null}</View>
+            <Text style={styles.toggleLabel}>🎁 Add a set number of free seats</Text>
+          </TouchableOpacity>
+          {freeCountOn && (
+            <TextInput style={[styles.input, { marginLeft: 34, marginTop: -2 }]} value={freeLimit} onChangeText={setFreeLimit} keyboardType="number-pad" placeholder="how many free seats? e.g. 2" placeholderTextColor={colors.faint} />
+          )}
+          <TouchableOpacity style={styles.modeRow} onPress={() => { const v = !freeForAll; setFreeForAll(v); if (v) { setBogo(false); setFreeCountOn(false); setFreeLimit("0"); } }}>
+            <View style={[styles.toggleBox, freeForAll && styles.toggleBoxOn]}>{freeForAll ? <Text style={styles.toggleCheck}>✓</Text> : null}</View>
+            <Text style={styles.toggleLabel}>🎁 Give everyone 1 free seat (they claim it)</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.modeRow} onPress={() => { const v = !bogo; setBogo(v); if (v) { setFreeForAll(false); setFreeCountOn(false); setFreeLimit("0"); } }}>
+            <View style={[styles.toggleBox, bogo && styles.toggleBoxOn]}>{bogo ? <Text style={styles.toggleCheck}>✓</Text> : null}</View>
+            <Text style={styles.toggleLabel}>🎁 BOGO — buy one seat, get one free</Text>
+          </TouchableOpacity>
           <Text style={styles.seatsNote}>
             {(() => {
               const cap = parseInt(capacity, 10) || 0;
               const free = parseInt(freeLimit, 10) || 0;
-              if (!cap) return "Free seats are added on top of paid seats. Players claim free seats; BOGO grants one free per paid seat.";
-              if (freeForAll) return `${cap} paid seats + 1 free seat for every player (they claim it).`;
+              if (!cap) return "Set paid seats. Free options are added on top.";
+              if (freeForAll) return `${cap} paid seats + 1 free seat for every player.`;
               if (bogo) return `${cap} paid seats · every paid seat earns 1 free seat (BOGO).`;
-              return free > 0
-                ? `${cap} paid + ${free} free = ${cap + free} total seats. Free seats are a first-come bonus players claim.`
+              return freeCountOn && free > 0
+                ? `${cap} paid + ${free} free = ${cap + free} total seats.`
                 : `${cap} paid seats · no free seats.`;
             })()}
           </Text>
-
-          <TouchableOpacity style={styles.modeRow} onPress={() => { setFreeForAll((v) => !v); if (!freeForAll) setBogo(false); }}>
-            <View style={[styles.toggleBox, freeForAll && styles.toggleBoxOn]}>{freeForAll ? <Text style={styles.toggleCheck}>✓</Text> : null}</View>
-            <Text style={styles.toggleLabel}>🎁 Give everyone 1 free seat (they claim it)</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.modeRow} onPress={() => { setBogo((v) => !v); if (!bogo) setFreeForAll(false); }}>
-            <View style={[styles.toggleBox, bogo && styles.toggleBoxOn]}>{bogo ? <Text style={styles.toggleCheck}>✓</Text> : null}</View>
-            <Text style={styles.toggleLabel}>🎁 BOGO — buy one seat, get one free</Text>
-          </TouchableOpacity>
 
           <Field label="Entry word">
             <View style={styles.segment}>
@@ -402,6 +407,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   toggleLabel: { color: colors.text, fontSize: 14, fontWeight: "600" },
   inputLocked: { opacity: 0.5 },
   modeRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8 },
+  freeHeading: { color: colors.muted, fontSize: 11, fontWeight: "800", letterSpacing: 1, marginTop: 14, marginBottom: 4 },
   row2: { flexDirection: "row", gap: 12 },
   seatsNote: { color: colors.muted, fontSize: 12.5, lineHeight: 18, marginTop: -6, marginBottom: 14 },
   catWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },

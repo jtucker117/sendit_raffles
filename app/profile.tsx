@@ -123,6 +123,8 @@ export default function Profile() {
     if (!n) { Alert.alert("Name required", "Enter a display name."); return; }
     try {
       setSavingName(true);
+      const { data: avail } = await supabase.rpc("name_available", { p_name: n });
+      if (avail === false) { Alert.alert("Name taken", "That display name is already in use — pick another."); setSavingName(false); return; }
       const { error } = await supabase.from("profiles").update({ display_name: n }).eq("id", user!.id).select();
       if (error) throw error;
       await refreshProfile();

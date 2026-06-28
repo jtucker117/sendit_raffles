@@ -114,6 +114,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
 
     try {
+      // Display names must be unique — check before creating the account.
+      const { data: avail } = await supabase.rpc("name_available", { p_name: displayName });
+      if (avail === false) {
+        throw new Error("That display name is already taken. Please choose another.");
+      }
       // Sign up with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
