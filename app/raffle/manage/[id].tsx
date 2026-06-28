@@ -8,7 +8,7 @@ import { radius, AppColors } from "@/lib/theme";
 import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 
 interface Raffle { id: string; host_id: string; title: string; status: string; amount_cents: number; capacity: number; }
-interface Ticket { id: string; seat_number: number; owner_id: string; type: "free" | "paid"; status: string; paid_method: string | null; }
+interface Ticket { id: string; seat_number: number; owner_id: string; type: "free" | "paid"; status: string; paid_method: string | null; mini_id: string | null; }
 
 const PAYMENT_METHODS = ["Venmo", "Cash App", "Card", "PayPal", "Zelle"] as const;
 
@@ -27,7 +27,7 @@ export default function ManageEntries() {
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
-  const [tab, setTab] = useState<"pending" | "confirmed">("pending");
+  const [tab, setTab] = useState<"pending" | "confirmed" | "seats">("pending");
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -161,6 +161,9 @@ export default function ManageEntries() {
         <TouchableOpacity style={[styles.tab, tab === "confirmed" && styles.tabActive]} onPress={() => setTab("confirmed")}>
           <Text style={[styles.tabText, tab === "confirmed" && styles.tabTextActive]}>Confirmed · {confirmed.length}</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={[styles.tab, tab === "seats" && styles.tabActive]} onPress={() => setTab("seats")}>
+          <Text style={[styles.tabText, tab === "seats" && styles.tabTextActive]}>Seats · {tickets.length}</Text>
+        </TouchableOpacity>
       </View>
 
       {tab === "pending" ? (
@@ -220,7 +223,7 @@ export default function ManageEntries() {
             })}
           </>
         )
-      ) : (
+      ) : tab === "confirmed" ? (
         confirmed.length === 0 ? (
           <Text style={styles.empty}>No confirmed entries yet.</Text>
         ) : (
@@ -240,6 +243,27 @@ export default function ManageEntries() {
             ))}
           </View>
         )
+      ) : (
+        // SEATS — every seat: who has it, how they paid, mini-prize seats
+        <View style={styles.card}>
+          {[...tickets].sort((a, b) => a.seat_number - b.seat_number).map((t) => {
+            const isMini = !!t.mini_id;
+            const pay = t.type === "free" ? "🎁 Free seat"
+              : isMini ? "🔒 Mini prize seat"
+              : t.status === "held" ? "Paid · pending payment"
+              : `Paid · ${t.paid_method ?? "confirmed"}`;
+            return (
+              <View key={t.id} style={styles.row}>
+                <Text style={styles.seatNumCol}>#{t.seat_number}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowName}>{isMini && t.status === "reserved" ? "Held for a mini" : nameFor(t.owner_id)}</Text>
+                  <Text style={styles.rowMeta}>{pay}</Text>
+                </View>
+              </View>
+            );
+          })}
+          {tickets.length === 0 && <Text style={styles.empty}>No seats taken yet.</Text>}
+        </View>
       )}
 
       <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}><Text style={styles.back}>← Back to game</Text></TouchableOpacity>
@@ -274,6 +298,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   rowWrap: { borderTopWidth: 1, borderTopColor: colors.border },
   row: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 12 },
   rowName: { color: colors.text, fontSize: 15, fontWeight: "700" },
+  seatNumCol: { color: colors.muted, fontSize: 14, fontWeight: "800", width: 44 },
   rowMeta: { color: colors.muted, fontSize: 12, marginTop: 1, textTransform: "capitalize" },
   pill: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.pill },
   pillGreen: { backgroundColor: colors.greenSoft },
