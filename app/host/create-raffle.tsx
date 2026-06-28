@@ -93,7 +93,7 @@ export default function CreateRaffleScreen() {
 
   const cap = parseInt(capacity, 10) || 0;
   const free = parseInt(freeLimit, 10) || 0;
-  const paid = Math.max(cap - free, 0);
+  const paid = cap; // free seats are added on top — all capacity is paid
   const raised = (parseFloat(amount) || 0) * paid;
 
   const STEPS = ["Prize", "Tickets", "Rules", "Publish"];
@@ -188,8 +188,8 @@ export default function CreateRaffleScreen() {
             <TextInput style={styles.input} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="e.g. 10" placeholderTextColor={colors.faint} />
             <Text style={styles.helper}>
               {goal.trim()
-                ? `Goal $${goal} ÷ ${paid} paid seat${paid === 1 ? "" : "s"} = $${amount || 0}/seat → raises $${raised.toFixed(0)} (${free} free)`
-                : `Full board ≈ $${raised.toFixed(0)} from ${paid} paid seat${paid === 1 ? "" : "s"} (${free} free)`}
+                ? `Goal $${goal} ÷ ${paid} paid seat${paid === 1 ? "" : "s"} = $${amount || 0}/seat → sold out raises $${raised.toFixed(0)}${free > 0 ? ` (+ ${free} free seat${free === 1 ? "" : "s"}, no charge)` : ""}`
+                : `Sold out ≈ $${raised.toFixed(0)} from ${paid} paid seat${paid === 1 ? "" : "s"}${free > 0 ? ` (+ ${free} free, no charge)` : ""}`}
             </Text>
           </Field>
         </>
