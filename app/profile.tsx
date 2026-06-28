@@ -67,7 +67,7 @@ export default function Profile() {
   useFocusEffect(useCallback(() => {
     if (!user) return;
     (async () => {
-      const { data: tix } = await supabase.from("tickets").select("raffle_id, type, status, raffles!raffle_id(id, title, cover_url, capacity, amount_cents)").eq("owner_id", user.id);
+      const { data: tix } = await supabase.from("tickets").select("raffle_id, type, status, raffles!raffle_id(id, title, cover_url, capacity, amount_cents, status)").eq("owner_id", user.id);
       const rids = new Set<string>(); let spent = 0;
       (tix ?? []).forEach((t: any) => { rids.add(t.raffle_id); if (t.type === "paid" && t.status === "confirmed") spent += t.raffles?.amount_cents ?? 0; });
       const { data: wins } = await supabase.from("draws").select("raffle_id, raffles(id, title, prize, cover_url)").eq("winner_id", user.id);
@@ -79,13 +79,13 @@ export default function Profile() {
       const idArr = [...rids];
       const soldMap: Record<string, number> = {};
       if (idArr.length) {
-        const { data: all } = await supabase.from("tickets").select("raffle_id").in("raffle_id", idArr);
-        (all ?? []).forEach((t: any) => { soldMap[t.raffle_id] = (soldMap[t.raffle_id] ?? 0) + 1; });
+        const { data: all } = await supabase.from("tickets").select("raffle_id, type").in("raffle_id", idArr);
+        (all ?? []).forEach((t: any) => { if (t.type === "paid") soldMap[t.raffle_id] = (soldMap[t.raffle_id] ?? 0) + 1; });
       }
       const gmap: Record<string, any> = {};
       (tix ?? []).forEach((t: any) => {
         const r = t.raffles; if (!r || gmap[r.id]) return;
-        gmap[r.id] = { id: r.id, title: r.title, cover_url: r.cover_url, capacity: r.capacity, amount_cents: r.amount_cents, claimed: soldMap[r.id] ?? 0, won: wonSet.has(r.id) };
+        gmap[r.id] = { id: r.id, title: r.title, cover_url: r.cover_url, capacity: r.capacity, amount_cents: r.amount_cents, claimed: soldMap[r.id] ?? 0, won: wonSet.has(r.id), status: r.status };
       });
       setMyGames(Object.values(gmap));
 
@@ -315,7 +315,7 @@ export default function Profile() {
           ) : (
             <View style={styles.grid}>
               {(raffles as any[]).map((r) => (
-                <GameCard key={r.id} data={{ id: r.id, title: r.title, cover_url: r.cover_url, amount_cents: r.amount_cents, capacity: r.capacity, claimed: r.claimed }} width={cardW} onPress={() => router.push(`/raffle/${r.id}`)} />
+                <GameCard key={r.id} data={{ id: r.id, title: r.title, cover_url: r.cover_url, amount_cents: r.amount_cents, capacity: r.capacity, claimed: r.claimed, status: r.status }} width={cardW} onPress={() => router.push(`/raffle/${r.id}`)} />
               ))}
             </View>
           )}

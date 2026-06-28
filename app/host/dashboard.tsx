@@ -50,19 +50,20 @@ export default function HostDashboard() {
     const { count: followerCount } = await supabase
       .from("host_followers").select("follower_id", { count: "exact", head: true }).eq("host_id", user.id);
     setFollowers(followerCount ?? 0);
-    const { data: raffles } = await supabase.from("raffles").select("id, title, cover_url, capacity, amount_cents, status").eq("host_id", user.id).order("created_at", { ascending: false });
+    const { data: raffles } = await supabase.from("raffles").select("id, title, cover_url, capacity, amount_cents, status, parent_raffle_id").eq("host_id", user.id).order("created_at", { ascending: false });
     const rs = (raffles ?? []) as any[];
     const ids = rs.map((r) => r.id);
     const amountByRaffle: Record<string, number> = {};
     rs.forEach((r) => { amountByRaffle[r.id] = r.amount_cents; });
 
-    const tally: Record<string, { claimed: number; confirmed: number; paidConfirmed: number }> = {};
+    const tally: Record<string, { claimed: number; confirmed: number; paidConfirmed: number; paid: number }> = {};
     const ownerAgg: Record<string, { seats: number; spent: number }> = {};
     if (ids.length) {
       const { data: tix } = await supabase.from("tickets").select("raffle_id, owner_id, type, status").in("raffle_id", ids);
       (tix ?? []).forEach((t: any) => {
-        const e = tally[t.raffle_id] ?? (tally[t.raffle_id] = { claimed: 0, confirmed: 0, paidConfirmed: 0 });
+        const e = tally[t.raffle_id] ?? (tally[t.raffle_id] = { claimed: 0, confirmed: 0, paidConfirmed: 0, paid: 0 });
         e.claimed++;
+        if (t.type === "paid") e.paid++; // all paid seats (held + confirmed + reserved) for the FULL check
         if (t.status === "confirmed") {
           e.confirmed++;
           if (t.type === "paid") e.paidConfirmed++;
@@ -74,7 +75,8 @@ export default function HostDashboard() {
     }
     setRows(rs.map((r) => ({
       id: r.id, title: r.title, cover_url: r.cover_url, capacity: r.capacity, amount_cents: r.amount_cents, status: r.status,
-      claimed: tally[r.id]?.claimed ?? 0, confirmed: tally[r.id]?.confirmed ?? 0, paidConfirmed: tally[r.id]?.paidConfirmed ?? 0,
+      isMini: !!r.parent_raffle_id,
+      claimed: tally[r.id]?.claimed ?? 0, confirmed: tally[r.id]?.confirmed ?? 0, paidConfirmed: tally[r.id]?.paidConfirmed ?? 0, paid: tally[r.id]?.paid ?? 0,
     })));
 
     // Top 3 players in this host's community by spend (then seats)
@@ -176,6 +178,11 @@ export default function HostDashboard() {
                     <View style={[styles.chip, r.status === "open" ? styles.chipLive : r.status === "scheduled" ? styles.chipLive : r.status === "complete" ? styles.chipDrawn : styles.chipCanceled]}>
                       <Text style={styles.chipText}>{statusChip(r.status)}</Text>
                     </View>
+                    {r.status === "complete" || r.status === "canceled" ? (
+                      <View style={styles.stamp} pointerEvents="none"><Text style={styles.closedStampText}>CLOSED</Text></View>
+                    ) : r.status === "open" && r.capacity > 0 && r.paid >= r.capacity ? (
+                      <View style={styles.stamp} pointerEvents="none"><Text style={styles.fullStampText}>FULL</Text></View>
+                    ) : null}
                     <View style={styles.overlay}>
                       <Text style={styles.cardTitle} numberOfLines={1}>{r.title}</Text>
                       <Text style={styles.cardMeta}>{r.claimed}/{r.capacity} · {money(r.paidConfirmed * r.amount_cents)}</Text>
@@ -191,7 +198,7 @@ export default function HostDashboard() {
                     <TouchableOpacity style={[styles.actionBtn, styles.actionPrimary, r.confirmed < 1 && styles.dim]} disabled={r.confirmed < 1} onPress={() => router.push(`/raffle/${r.id}`)}>
                       <Text style={[styles.actionText, { color: colors.onAccent }]} numberOfLines={1}>Draw</Text>
                     </TouchableOpacity>
-                  ) : (
+                  ) : r.isMini ? null : (
                     <TouchableOpacity style={[styles.actionBtn, styles.actionPrimary]} onPress={() => router.push(`/host/create-raffle?from=${r.id}`)}>
                       <Text style={[styles.actionText, { color: colors.onAccent }]} numberOfLines={1}>Relaunch</Text>
                     </TouchableOpacity>
@@ -244,6 +251,9 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   chipCanceled: { backgroundColor: "rgba(0,0,0,0.6)" },
   chipText: { color: "#fff", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
   overlay: { position: "absolute", left: 0, right: 0, bottom: 0, padding: 10 },
+  stamp: { position: "absolute", top: "38%", left: -8, right: -8, alignItems: "center", justifyContent: "center", transform: [{ rotate: "-13deg" }], zIndex: 4 },
+  fullStampText: { color: "#FF2A2A", fontSize: 30, fontWeight: "900", letterSpacing: 4, borderWidth: 4, borderColor: "#FF2A2A", borderRadius: 8, paddingHorizontal: 14, paddingVertical: 2, backgroundColor: "rgba(255,42,42,0.12)", textShadowColor: "rgba(0,0,0,0.55)", textShadowRadius: 5, overflow: "hidden" },
+  closedStampText: { color: "#E6E8EB", fontSize: 26, fontWeight: "900", letterSpacing: 3, borderWidth: 4, borderColor: "#E6E8EB", borderRadius: 8, paddingHorizontal: 14, paddingVertical: 2, backgroundColor: "rgba(0,0,0,0.45)", textShadowColor: "rgba(0,0,0,0.7)", textShadowRadius: 5, overflow: "hidden" },
   cardTitle: { color: "#fff", fontSize: 15, fontWeight: "900" },
   cardMeta: { color: "rgba(255,255,255,0.85)", fontSize: 11, marginTop: 3 },
   bar: { height: 5, borderRadius: radius.pill, backgroundColor: "rgba(255,255,255,0.25)", marginTop: 8, overflow: "hidden" },

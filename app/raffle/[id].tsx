@@ -651,9 +651,11 @@ export default function RaffleDetail() {
                 <Text style={[styles.btnText, { color: colors.text }]}>Edit game</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity style={[styles.btn, styles.btnOutline]} onPress={() => router.push(`/host/create-raffle?from=${raffle.id}`)}>
-              <Text style={[styles.btnText, { color: colors.text }]}>🔁 Duplicate / relaunch</Text>
-            </TouchableOpacity>
+            {!isMini && (
+              <TouchableOpacity style={[styles.btn, styles.btnOutline]} onPress={() => router.push(`/host/create-raffle?from=${raffle.id}`)}>
+                <Text style={[styles.btnText, { color: colors.text }]}>🔁 Duplicate / relaunch</Text>
+              </TouchableOpacity>
+            )}
             {raffle.status === "open" && (
               <>
                 <TouchableOpacity style={[styles.btn, raffle.featured ? styles.btnRed : styles.btnOutline]} onPress={toggleFeatured}>

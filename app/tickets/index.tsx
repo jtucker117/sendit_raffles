@@ -131,7 +131,7 @@ export default function MyTickets() {
             {visible.map((e) => (
               <View key={e.raffleId} style={{ width: cardW }}>
                 <GameCard
-                  data={{ id: e.raffleId, title: e.title, cover_url: e.cover_url, amount_cents: e.amount_cents, capacity: e.capacity, claimed: e.sold }}
+                  data={{ id: e.raffleId, title: e.title, cover_url: e.cover_url, amount_cents: e.amount_cents, capacity: e.capacity, claimed: e.sold, status: e.status }}
                   width={cardW}
                   onPress={() => router.push(`/raffle/${e.raffleId}`)}
                   badge={e.won ? "WON" : undefined}

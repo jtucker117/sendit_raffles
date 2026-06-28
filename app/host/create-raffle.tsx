@@ -67,6 +67,7 @@ export default function CreateRaffleScreen() {
     (async () => {
       const { data } = await supabase.from("raffles").select("*").eq("id", from).single();
       if (!data) return;
+      if (data.parent_raffle_id) return; // minis can't be duplicated/relaunched — main games only
       setTitle(data.title ?? "");
       setPrize(data.prize ?? "");
       setCategory(data.category ?? "");
