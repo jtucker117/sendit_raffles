@@ -93,7 +93,7 @@ export default function HostDashboard() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const money = (c: number) => `$${(c / 100).toFixed(0)}`;
+  const money = (c: number) => `$${c % 100 === 0 ? (c / 100).toFixed(0) : (c / 100).toFixed(2)}`;
   const liveCount = rows.filter((r) => r.status === "open").length;
   const revenueCents = rows.reduce((sum, r) => sum + r.paidConfirmed * r.amount_cents, 0);
   const entrants = rows.reduce((sum, r) => sum + r.confirmed, 0);

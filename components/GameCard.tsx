@@ -31,7 +31,7 @@ export function GameCard({
   const claimed = data.claimed ?? 0;
   const pct = Math.min(100, Math.round((claimed / Math.max(cap, 1)) * 100));
   const left = Math.max(cap - claimed, 0);
-  const price = data.amount_cents != null ? `$${(data.amount_cents / 100).toFixed(0)}` : "";
+  const price = data.amount_cents != null ? `$${data.amount_cents % 100 === 0 ? (data.amount_cents / 100).toFixed(0) : (data.amount_cents / 100).toFixed(2)}` : "";
 
   return (
     <TouchableOpacity activeOpacity={0.9} style={[styles.card, { width }]} onPress={onPress}>

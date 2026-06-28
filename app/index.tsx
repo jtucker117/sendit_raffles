@@ -72,7 +72,7 @@ export default function Home() {
     );
   }
 
-  const money = (c: number) => `$${(c / 100).toFixed(0)}`;
+  const money = (c: number) => `$${c % 100 === 0 ? (c / 100).toFixed(0) : (c / 100).toFixed(2)}`;
   const isHost = user.role === "host";
   const claimedOf = (r: RaffleRow) => counts[r.id] ?? 0;
   const soldPct = (r: RaffleRow) => Math.min(100, Math.round((claimedOf(r) / Math.max(r.capacity, 1)) * 100));

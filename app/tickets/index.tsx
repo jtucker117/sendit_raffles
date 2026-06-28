@@ -82,7 +82,7 @@ export default function MyTickets() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const money = (c: number) => `$${(c / 100).toFixed(0)}`;
+  const money = (c: number) => `$${c % 100 === 0 ? (c / 100).toFixed(0) : (c / 100).toFixed(2)}`;
   const counts = {
     all: entries.length,
     active: entries.filter((e) => e.status === "open").length,

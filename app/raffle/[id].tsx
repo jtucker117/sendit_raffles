@@ -157,7 +157,7 @@ export default function RaffleDetail() {
   const totalLabel = freeForAll ? `${raffle.capacity} paid + free for all` : isBogo ? `${raffle.capacity} paid · BOGO` : `${totalSeats} seats`;
   const freeAvailable = freeForAll ? true : freeLeft > 0; // can a player still claim a free seat?
   const oddsTotal = sellablePaid + (raffle.free_seat_limit ?? 0); // possible entries (excludes mini-reserved)
-  const money = (c: number) => `$${(c / 100).toFixed(0)}`;
+  const money = (c: number) => `$${c % 100 === 0 ? (c / 100).toFixed(0) : (c / 100).toFixed(2)}`;
   const nameFor = (oid: string) => names[oid] ?? (oid === user?.id ? "You" : "Player");
 
   // Draft / scheduled state
@@ -372,7 +372,8 @@ export default function RaffleDetail() {
           </TouchableOpacity>
         )}
         <Text style={styles.title}>{raffle.title}</Text>
-        {raffle.prize ? <Text style={styles.prize}>🏆 {raffle.prize}</Text> : null}
+        {raffle.prize ? <Text style={styles.prizeBold}>🏆 {raffle.prize}</Text> : null}
+        <Text style={styles.priceTop}>{money(raffle.amount_cents)} per {raffle.no_seats ? "entry" : "seat"}</Text>
         {raffle.description ? <Text style={styles.desc}>{raffle.description}</Text> : null}
 
         {isMini && (
@@ -808,6 +809,8 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   pad: { padding: 20 },
   title: { color: colors.text, fontSize: 24, fontWeight: "800", letterSpacing: -0.3 },
   prize: { color: colors.muted, fontSize: 16, marginTop: 6 },
+  prizeBold: { color: colors.text, fontSize: 18, fontWeight: "800", letterSpacing: -0.2, marginTop: 8 },
+  priceTop: { color: colors.red, fontSize: 18, fontWeight: "900", marginTop: 4 },
   desc: { color: colors.muted, fontSize: 14, marginTop: 10, lineHeight: 20 },
   winnerCard: { backgroundColor: colors.surface, borderColor: colors.red, borderWidth: 1, borderRadius: radius.lg, padding: 18, marginTop: 18, alignItems: "center" },
   winnerEyebrow: { color: colors.red, fontSize: 12, fontWeight: "800", letterSpacing: 1.5 },
