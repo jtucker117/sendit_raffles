@@ -83,7 +83,12 @@ export function CoverPicker({
       disabled={disabled || uploading}
       style={[styles.box, { height }, dragging && styles.boxDrag, disabled && { opacity: 0.5 }]}
     >
-      {value ? <Image source={{ uri: value }} style={styles.img} resizeMode="cover" /> : null}
+      {value ? (
+        <>
+          <Image source={{ uri: value }} style={styles.img} blurRadius={18} />
+          <Image source={{ uri: value }} style={styles.imgFront} resizeMode="contain" />
+        </>
+      ) : null}
       {uploading ? (
         <View style={styles.center}><ActivityIndicator color={colors.red} /></View>
       ) : value ? (
@@ -101,6 +106,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   box: { borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceAlt, overflow: "hidden", alignItems: "center", justifyContent: "center" },
   boxDrag: { borderColor: colors.red, borderWidth: 2, borderStyle: "dashed", backgroundColor: colors.redSoft },
   img: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%" },
+  imgFront: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%" },
   center: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", padding: 12 },
   text: { color: colors.muted, fontSize: 14, textAlign: "center" },
   caption: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.45)", paddingVertical: 6, alignItems: "center" },

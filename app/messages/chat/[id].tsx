@@ -32,6 +32,9 @@ export default function DirectMessageChatScreen() {
     const loaded = await fetchDirectMessageThread(user.id, otherId);
     setMessages(loaded);
     setLoading(false);
+    // Mark their messages to me as read so the unread badge clears.
+    supabase.from("direct_messages").update({ read_at: new Date().toISOString() })
+      .eq("recipient_id", user.id).eq("sender_id", otherId).is("read_at", null);
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 50);
   }, [otherId, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 

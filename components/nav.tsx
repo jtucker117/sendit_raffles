@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity, Image, Modal, Pressable, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useRouter, usePathname } from "expo-router";
+import { useMemo, useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
 import { radius, AppColors } from "@/lib/theme";
@@ -14,8 +14,17 @@ export function AppHeader({ onMenu }: { onMenu: () => void }) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
+  const pathname = usePathname();
   const { user, isSuperadmin, refreshProfile, signOut } = useAuth();
   const [open, setOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    if (!user?.id) { setUnread(0); return; }
+    supabase.from("direct_messages").select("id", { count: "exact", head: true })
+      .eq("recipient_id", user.id).is("read_at", null)
+      .then(({ count }) => setUnread(count ?? 0));
+  }, [user?.id, pathname]);
 
   const go = (href: string) => { setOpen(false); router.push(href as any); };
 
@@ -41,6 +50,7 @@ export function AppHeader({ onMenu }: { onMenu: () => void }) {
     <View style={styles.header}>
       <TouchableOpacity onPress={onMenu} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
         <Ionicons name="menu" size={26} color={colors.text} />
+        {unread > 0 && <View style={styles.navDot} />}
       </TouchableOpacity>
       <Image source={LOGO} style={styles.logo} resizeMode="contain" />
       <TouchableOpacity onPress={() => setOpen(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -104,6 +114,14 @@ export function SideMenu({ onClose }: { onClose: () => void }) {
   const { user, isSuperadmin, isHostApproved, signOut } = useAuth();
   const { colors, mode, toggle } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase.from("direct_messages").select("id", { count: "exact", head: true })
+      .eq("recipient_id", user.id).is("read_at", null)
+      .then(({ count }) => setUnread(count ?? 0));
+  }, [user?.id]);
 
   const items: Item[] = [
     { label: "Home", icon: "home-outline", href: "/" },
@@ -141,6 +159,9 @@ export function SideMenu({ onClose }: { onClose: () => void }) {
             <TouchableOpacity key={it.href} style={styles.item} onPress={() => go(it.href)}>
               <Ionicons name={it.icon} size={22} color={colors.text} />
               <Text style={styles.itemText}>{it.label}</Text>
+              {it.href === "/messages" && unread > 0 && (
+                <View style={styles.menuBadge}><Text style={styles.menuBadgeText}>{unread > 99 ? "99+" : unread}</Text></View>
+              )}
             </TouchableOpacity>
           ))}
         </View>
@@ -171,6 +192,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   logo: { width: 38, height: 38 },
+  navDot: { position: "absolute", top: -3, right: -4, minWidth: 10, height: 10, borderRadius: 5, backgroundColor: colors.red, borderWidth: 1.5, borderColor: colors.surface },
 
   ddBackdrop: { flex: 1, alignItems: "flex-end", paddingTop: HEADER_HEIGHT + 6, paddingRight: 10, backgroundColor: "rgba(0,0,0,0.25)" },
   dropdown: { minWidth: 230, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, paddingVertical: 6, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
@@ -188,6 +210,8 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   items: { gap: 4 },
   item: { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 13, paddingHorizontal: 10, borderRadius: radius.md },
   itemText: { color: colors.text, fontSize: 16, fontWeight: "600" },
+  menuBadge: { marginLeft: "auto", backgroundColor: colors.red, borderRadius: radius.pill, minWidth: 22, height: 22, paddingHorizontal: 7, alignItems: "center", justifyContent: "center" },
+  menuBadgeText: { color: colors.onAccent, fontSize: 12, fontWeight: "900" },
   toggle: { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 13, paddingHorizontal: 10, marginTop: 8, borderTopWidth: 1, borderTopColor: colors.border },
   signOut: { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 13, paddingHorizontal: 10, borderTopWidth: 1, borderTopColor: colors.border },
   signOutText: { color: colors.red, fontSize: 16, fontWeight: "700" },
