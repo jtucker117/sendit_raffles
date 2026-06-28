@@ -42,6 +42,8 @@ export default function Home() {
   const loadRaffles = useCallback(async () => {
     if (!user) return;
     setLoadingRaffles(true);
+    // Flip any scheduled games whose time has arrived to open before we load.
+    await supabase.rpc("open_due_games");
     const { data } = await supabase.from("raffles").select("*").in("status", ["open", "scheduled"]).order("created_at", { ascending: false });
     const rows = (data ?? []) as RaffleRow[];
     setRaffles(rows);
@@ -165,17 +167,19 @@ export default function Home() {
             {/* Grid */}
             <Text style={styles.sectionTitle}>{isHost ? "Open games" : "Games from hosts you follow"}</Text>
             <View style={styles.grid}>
-              {gridItems.map((r) => (
+              {gridItems.map((r) => {
+                const upcoming = r.status === "scheduled" && !!r.scheduled_at && new Date(r.scheduled_at).getTime() > nowMs;
+                return (
                 <TouchableOpacity key={r.id} activeOpacity={0.9} style={[styles.card, { width: cardW }]} onPress={() => router.push(`/raffle/${r.id}`)}>
                   {r.cover_url
-                    ? <Image source={{ uri: r.cover_url }} style={styles.cardImg} blurRadius={r.status === "scheduled" ? 12 : 0} />
+                    ? <Image source={{ uri: r.cover_url }} style={styles.cardImg} blurRadius={upcoming ? 12 : 0} />
                     : <LinearGradient colors={[colors.surfaceAlt, colors.border]} style={styles.cardImg} />}
                   <LinearGradient colors={["transparent", "rgba(0,0,0,0.82)"]} style={styles.cardShade} />
-                  {r.status === "scheduled" && (
+                  {upcoming && (
                     <View style={styles.soonFull}>
                       <Text style={styles.soonFullEyebrow}>🔒 COMING SOON</Text>
-                      {r.scheduled_at ? <Text style={styles.soonFullCount}>{fmtCountdown(new Date(r.scheduled_at).getTime() - nowMs)}</Text> : null}
-                      {r.scheduled_at ? <Text style={styles.soonFullWhen}>{new Date(r.scheduled_at).toLocaleDateString()}</Text> : null}
+                      <Text style={styles.soonFullCount}>{fmtCountdown(new Date(r.scheduled_at!).getTime() - nowMs)}</Text>
+                      <Text style={styles.soonFullWhen}>{new Date(r.scheduled_at!).toLocaleDateString()}</Text>
                     </View>
                   )}
                   <View style={styles.cardFooter}>
@@ -183,11 +187,12 @@ export default function Home() {
                     <View style={styles.bar}><View style={[styles.barFill, { width: `${soldPct(r)}%` }]} /></View>
                     <View style={styles.cardRow}>
                       <Text style={styles.cardPrice}>{money(r.amount_cents)}</Text>
-                      <Text style={styles.cardLeft}>{r.status === "scheduled" ? "Coming soon" : `${Math.max(r.capacity - claimedOf(r), 0)} left`}</Text>
+                      <Text style={styles.cardLeft}>{upcoming ? "Coming soon" : `${Math.max(r.capacity - claimedOf(r), 0)} left`}</Text>
                     </View>
                   </View>
                 </TouchableOpacity>
-              ))}
+                );
+              })}
             </View>
               </>
             )}
