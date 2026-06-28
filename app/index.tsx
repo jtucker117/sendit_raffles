@@ -130,9 +130,14 @@ export default function Home() {
                 {/* Featured hero */}
             {featured && (
               <TouchableOpacity activeOpacity={0.9} style={styles.hero} onPress={() => router.push(`/raffle/${featured.id}`)}>
-                {featured.cover_url
-                  ? <Image source={{ uri: featured.cover_url }} style={styles.heroImg} />
-                  : <LinearGradient colors={[colors.navy, colors.bg]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroImg} />}
+                {featured.cover_url ? (
+                  <>
+                    <Image source={{ uri: featured.cover_url }} style={styles.heroBlur} blurRadius={22} />
+                    <Image source={{ uri: featured.cover_url }} style={styles.heroImg} resizeMode="contain" />
+                  </>
+                ) : (
+                  <LinearGradient colors={[colors.navy, colors.bg]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroImg} />
+                )}
                 <LinearGradient colors={["transparent", "rgba(0,0,0,0.75)"]} style={styles.heroShade} />
                 <View style={styles.heroInfo}>
                   <View style={styles.pillLive}><Text style={styles.pillLiveText}>● OPEN</Text></View>
@@ -191,7 +196,8 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   bannerText: { color: colors.text, fontSize: 13, lineHeight: 18 },
 
   hero: { borderRadius: radius.lg, overflow: "hidden", height: 220, marginBottom: 16, backgroundColor: colors.surface },
-  heroImg: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%" },
+  heroBlur: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%" },
+  heroImg: { position: "absolute", top: 10, left: 10, right: 10, bottom: 56 },
   heroShade: { ...StyleSheet.absoluteFillObject },
   heroInfo: { position: "absolute", left: 0, right: 0, bottom: 0, padding: 18 },
   pillLive: { alignSelf: "flex-start", backgroundColor: colors.red, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 5 },

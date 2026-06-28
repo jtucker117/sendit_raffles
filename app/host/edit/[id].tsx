@@ -6,7 +6,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/lib/supabase";
-import { pickAndUploadImage } from "@/lib/upload";
+import { CoverPicker } from "@/components/CoverPicker";
 import { radius, AppColors } from "@/lib/theme";
 import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 
@@ -35,7 +35,6 @@ export default function EditGame() {
   const [allowed, setAllowed] = useState(false);
   const [claimed, setClaimed] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
 
   const [title, setTitle] = useState("");
   const [prize, setPrize] = useState("");
@@ -70,14 +69,6 @@ export default function EditGame() {
 
   const locked = claimed > 0 && !isSuperadmin;
 
-  async function changeCover() {
-    try {
-      setUploading(true);
-      const url = await pickAndUploadImage("covers", user!.id, [16, 9]);
-      if (url) setCoverUrl(url);
-    } catch (e: any) { Alert.alert("Upload failed", e?.message ?? "Try again."); }
-    finally { setUploading(false); }
-  }
 
   async function save() {
     if (!title.trim()) { Alert.alert("Title required"); return; }
@@ -119,9 +110,7 @@ export default function EditGame() {
       )}
 
       <Field label="Cover photo">
-        <TouchableOpacity style={styles.coverPick} onPress={changeCover} disabled={uploading}>
-          {coverUrl ? <Image source={{ uri: coverUrl }} style={styles.coverImg} /> : <Text style={styles.coverText}>{uploading ? "Uploading…" : "📷 Change cover"}</Text>}
-        </TouchableOpacity>
+        <CoverPicker bucket="covers" userId={user!.id} value={coverUrl} onChange={setCoverUrl} aspect={[16, 9]} />
       </Field>
 
       <Field label="Title"><TextInput style={styles.input} value={title} onChangeText={setTitle} placeholderTextColor={colors.faint} /></Field>

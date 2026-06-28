@@ -39,3 +39,24 @@ export async function pickAndUploadImage(
 
   return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
 }
+
+// Upload an already-obtained Blob/File (e.g. from a web drag-and-drop) straight
+// to storage. Returns the public URL.
+export async function uploadImageBlob(
+  bucket: "avatars" | "covers",
+  userId: string,
+  blob: Blob,
+  filename?: string,
+): Promise<string> {
+  const ext = (filename?.split(".").pop() || blob.type?.split("/")[1] || "jpg")
+    .split("?")[0]
+    .toLowerCase()
+    .slice(0, 4);
+  const path = `${userId}/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from(bucket).upload(path, blob, {
+    contentType: blob.type || "image/jpeg",
+    upsert: true,
+  });
+  if (error) throw error;
+  return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+}

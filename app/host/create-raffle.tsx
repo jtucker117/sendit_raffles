@@ -7,7 +7,7 @@ import { useRouter } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/lib/supabase";
-import { pickAndUploadImage } from "@/lib/upload";
+import { CoverPicker } from "@/components/CoverPicker";
 import { radius, AppColors } from "@/lib/theme";
 import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 
@@ -45,7 +45,6 @@ export default function CreateRaffleScreen() {
     const g = parseFloat(goal);
     if (paid > 0 && g > 0) setAmount(String(Math.ceil(g / paid)));
   }, [goal, capacity, freeLimit]);
-  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   if (!isHostApproved) {
@@ -57,17 +56,6 @@ export default function CreateRaffleScreen() {
     );
   }
 
-  async function addCover() {
-    try {
-      setUploading(true);
-      const url = await pickAndUploadImage("covers", user!.id, [16, 9]);
-      if (url) setCoverUrl(url);
-    } catch (e: any) {
-      Alert.alert("Upload failed", e?.message ?? "Try again.");
-    } finally {
-      setUploading(false);
-    }
-  }
 
   async function create() {
     const cap = Math.max(2, Math.min(1000, parseInt(capacity, 10) || 0));
@@ -144,9 +132,7 @@ export default function CreateRaffleScreen() {
       {/* STEP 0 · Prize */}
       {step === 0 && (
         <>
-          <TouchableOpacity style={styles.coverPick} onPress={addCover} disabled={uploading}>
-            {coverUrl ? <Image source={{ uri: coverUrl }} style={styles.coverImg} /> : <Text style={styles.coverText}>{uploading ? "Uploading…" : "📷 Add cover photo (optional)"}</Text>}
-          </TouchableOpacity>
+          <CoverPicker bucket="covers" userId={user!.id} value={coverUrl} onChange={setCoverUrl} aspect={[16, 9]} />
           <Field label="Title" required>
             <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="e.g. Spring PEW Drop" placeholderTextColor={colors.faint} />
           </Field>

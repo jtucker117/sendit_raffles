@@ -6,7 +6,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/lib/supabase";
-import { pickAndUploadImage } from "@/lib/upload";
+import { CoverPicker } from "@/components/CoverPicker";
 import { radius, AppColors } from "@/lib/theme";
 import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 
@@ -42,7 +42,6 @@ export default function CreateMini() {
   const [term, setTerm] = useState<(typeof TERMS)[number]>("Donation");
   const [drawMode, setDrawMode] = useState<"single" | "elimination">("single");
   const [drawStyle, setDrawStyle] = useState<"wheel" | "scratch" | "lotto">("wheel");
-  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -80,11 +79,6 @@ export default function CreateMini() {
   const totalValueCents = seatsNum * parentPriceCents;
   const perSeatCents = capNum > 0 ? Math.round(totalValueCents / capNum) : 0;
   const money = (c: number) => `$${(c / 100).toFixed(2)}`;
-
-  async function addCover() {
-    try { setUploading(true); const url = await pickAndUploadImage("covers", user!.id, [16, 9]); if (url) setCoverUrl(url); }
-    catch (e: any) { Alert.alert("Upload failed", e?.message ?? "Try again."); } finally { setUploading(false); }
-  }
 
   async function create() {
     const cap = Math.max(2, Math.min(1000, parseInt(capacity, 10) || 0));
@@ -130,9 +124,7 @@ export default function CreateMini() {
       </View>
 
       <Field label="Cover photo">
-        <TouchableOpacity style={styles.coverPick} onPress={addCover} disabled={uploading}>
-          {coverUrl ? <Image source={{ uri: coverUrl }} style={styles.coverImg} /> : <Text style={styles.coverText}>{uploading ? "Uploading…" : "📷 Add cover (optional)"}</Text>}
-        </TouchableOpacity>
+        <CoverPicker bucket="covers" userId={user!.id} value={coverUrl} onChange={setCoverUrl} aspect={[16, 9]} height={130} />
       </Field>
 
       <Field label="Title — auto-numbered">
