@@ -12,6 +12,7 @@ import { DrawWheel, WheelEntrant } from "@/components/DrawWheel";
 import { DrawScratch } from "@/components/DrawScratch";
 import { DrawLotto } from "@/components/DrawLotto";
 import { DrawElimination, ElimRound } from "@/components/DrawElimination";
+import { Confetti } from "@/components/Confetti";
 import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 
 interface Raffle {
@@ -122,6 +123,8 @@ export default function RaffleDetail() {
   const gridMode = raffle.capacity <= 120;
   const canPick = !isHost && raffle.status === "open";
   const soldPct = Math.min(100, Math.round((claimed / Math.max(raffle.capacity, 1)) * 100));
+  const freeLeft = Math.max(0, raffle.free_seat_limit - freeUsed);
+  const paidLeft = Math.max(0, (raffle.capacity - raffle.free_seat_limit) - (claimed - freeUsed));
   const money = (c: number) => `$${(c / 100).toFixed(0)}`;
   const nameFor = (oid: string) => names[oid] ?? (oid === user?.id ? "You" : "Player");
 
@@ -329,7 +332,7 @@ export default function RaffleDetail() {
             <Text style={styles.selloutPct}>{soldPct}%</Text>
           </View>
           <View style={styles.bar}><View style={[styles.barFill, { width: `${soldPct}%` }]} /></View>
-          <Text style={styles.selloutMeta}>{open} open · {freeUsed}/{raffle.free_seat_limit} free claimed · {money(raffle.amount_cents)}/seat</Text>
+          <Text style={styles.selloutMeta}>{paidLeft} paid left · {freeLeft} free left · {money(raffle.amount_cents)}/seat</Text>
         </View>
 
         {/* Minis hanging off this game */}
@@ -416,16 +419,16 @@ export default function RaffleDetail() {
         {/* Player extras: lucky dip + free seat */}
         {canPick && (
           <View style={{ gap: 10, marginTop: 14 }}>
-            <TouchableOpacity style={[styles.btn, styles.btnOutline, open <= 0 && styles.btnDim]} disabled={open <= 0} onPress={() => router.push(`/checkout/${raffle.id}?random=1`)}>
-              <Text style={[styles.btnText, { color: colors.text }]}>🎲 Lucky dip — random paid seat · {money(raffle.amount_cents)}</Text>
+            <TouchableOpacity style={[styles.btn, styles.btnOutline, paidLeft <= 0 && styles.btnDim]} disabled={paidLeft <= 0} onPress={() => router.push(`/checkout/${raffle.id}?random=1`)}>
+              <Text style={[styles.btnText, { color: colors.text }]}>🎲 {paidLeft <= 0 ? "No paid seats left" : `Lucky dip — random paid seat · ${money(raffle.amount_cents)}`}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.btn, styles.btnGreen, (claiming || myFree || freeUsed >= raffle.free_seat_limit || open <= 0) && styles.btnDim]}
-              disabled={claiming || myFree || freeUsed >= raffle.free_seat_limit || open <= 0}
+              style={[styles.btn, styles.btnGreen, (claiming || myFree || freeLeft <= 0) && styles.btnDim]}
+              disabled={claiming || myFree || freeLeft <= 0}
               onPress={() => claim("free", 0)}
             >
               <Text style={[styles.btnText, { color: colors.green }]}>
-                {myFree ? "Free seat claimed" : freeUsed >= raffle.free_seat_limit ? "No free seats left" : "Claim free seat — random"}
+                {myFree ? "Free seat claimed" : freeLeft <= 0 ? "No free seats left" : "Claim free seat — random"}
               </Text>
             </TouchableOpacity>
             <Text style={styles.payNote}>Paid seats are confirmed by the host after payment (Venmo / Cash App / Card / PayPal / Zelle).</Text>
@@ -491,6 +494,7 @@ export default function RaffleDetail() {
       {/* ---- Draw event overlay ---- */}
       <Modal visible={stage !== "idle"} transparent animationType="fade" onRequestClose={closeDraw}>
         <View style={styles.overlay}>
+          {stage === "done" && <Confetti />}
           <View style={styles.sheet}>
             {stage === "confirm" && (
               <>
