@@ -14,7 +14,7 @@ export function AppHeader({ onMenu }: { onMenu: () => void }) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
-  const { user, isSuperadmin, refreshProfile } = useAuth();
+  const { user, isSuperadmin, refreshProfile, signOut } = useAuth();
   const [open, setOpen] = useState(false);
 
   const go = (href: string) => { setOpen(false); router.push(href as any); };
@@ -69,6 +69,11 @@ export function AppHeader({ onMenu }: { onMenu: () => void }) {
             {isSuperadmin && (
               <DDItem icon="shield-checkmark-outline" label="Host requests" onPress={() => go("/admin/users")} colors={colors} />
             )}
+            <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 4 }} />
+            <TouchableOpacity style={ddItemStyle.row} onPress={() => { setOpen(false); signOut(); }}>
+              <Ionicons name="log-out-outline" size={20} color={colors.red} />
+              <Text style={[ddItemStyle.text, { color: colors.red }]}>Sign out</Text>
+            </TouchableOpacity>
           </Pressable>
         </Pressable>
       </Modal>
