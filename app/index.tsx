@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView,
   Image, RefreshControl, useWindowDimensions,
@@ -17,6 +17,7 @@ const CATEGORIES = ["All", "PEWS", "Cash", "Optics", "Gear", "Charity"];
 interface RaffleRow {
   id: string; title: string; prize: string | null; cover_url: string | null;
   capacity: number; entry_word: string; amount_cents: number; category?: string | null;
+  status?: string; scheduled_at?: string | null;
 }
 
 export default function Home() {
@@ -29,6 +30,13 @@ export default function Home() {
   const [raffles, setRaffles] = useState<RaffleRow[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [loadingRaffles, setLoadingRaffles] = useState(true);
+  const [nowMs, setNowMs] = useState(Date.now());
+  useEffect(() => { const t = setInterval(() => setNowMs(Date.now()), 1000); return () => clearInterval(t); }, []);
+  const fmtCountdown = (ms: number) => {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
+    return d > 0 ? `${d}d ${h}h ${m}m` : h > 0 ? `${h}h ${m}m ${ss}s` : `${m}m ${ss}s`;
+  };
   const [cat, setCat] = useState("All");
 
   const loadRaffles = useCallback(async () => {
@@ -160,7 +168,13 @@ export default function Home() {
                     ? <Image source={{ uri: r.cover_url }} style={styles.cardImg} blurRadius={r.status === "scheduled" ? 12 : 0} />
                     : <LinearGradient colors={[colors.surfaceAlt, colors.border]} style={styles.cardImg} />}
                   <LinearGradient colors={["transparent", "rgba(0,0,0,0.82)"]} style={styles.cardShade} />
-                  {r.status === "scheduled" && <View style={styles.soonBadge}><Text style={styles.soonBadgeText}>🗓 SOON</Text></View>}
+                  {r.status === "scheduled" && (
+                    <View style={styles.soonFull}>
+                      <Text style={styles.soonFullEyebrow}>🔒 COMING SOON</Text>
+                      {r.scheduled_at ? <Text style={styles.soonFullCount}>{fmtCountdown(new Date(r.scheduled_at).getTime() - nowMs)}</Text> : null}
+                      {r.scheduled_at ? <Text style={styles.soonFullWhen}>{new Date(r.scheduled_at).toLocaleDateString()}</Text> : null}
+                    </View>
+                  )}
                   <View style={styles.cardFooter}>
                     <Text style={styles.cardTitle} numberOfLines={1}>{r.title}</Text>
                     <View style={styles.bar}><View style={[styles.barFill, { width: `${soldPct(r)}%` }]} /></View>
@@ -221,8 +235,10 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   card: { backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: "hidden", aspectRatio: 4 / 5 },
   cardImg: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%" },
   cardShade: { position: "absolute", left: 0, right: 0, bottom: 0, height: "55%" },
-  soonBadge: { position: "absolute", top: 8, left: 8, backgroundColor: "rgba(0,0,0,0.7)", borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 4 },
-  soonBadgeText: { color: "#fff", fontSize: 10, fontWeight: "900", letterSpacing: 0.5 },
+  soonFull: { position: "absolute", left: 0, right: 0, top: 0, bottom: 36, alignItems: "center", justifyContent: "center", paddingHorizontal: 10 },
+  soonFullEyebrow: { color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 1.5 },
+  soonFullCount: { color: "#fff", fontSize: 26, fontWeight: "900", marginTop: 4, letterSpacing: -0.5, textShadowColor: "rgba(0,0,0,0.6)", textShadowRadius: 6 },
+  soonFullWhen: { color: "rgba(255,255,255,0.92)", fontSize: 12, fontWeight: "600", marginTop: 2 },
   cardFooter: { position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 9, paddingBottom: 9, paddingTop: 4 },
   cardTitle: { color: "#fff", fontSize: 13, fontWeight: "800" },
   bar: { height: 4, borderRadius: radius.pill, backgroundColor: "rgba(255,255,255,0.28)", marginTop: 6, overflow: "hidden" },
