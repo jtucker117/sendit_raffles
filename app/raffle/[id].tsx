@@ -117,14 +117,17 @@ export default function RaffleDetail() {
 
   const isHost = raffle.host_id === user?.id;
   const freeUsed = tickets.filter((t) => t.type === "free").length;
+  const paidUsed = tickets.filter((t) => t.type === "paid").length;
   const claimed = tickets.length;
-  const open = raffle.capacity - claimed;
+  // Free seats are ADDED ON TOP of the paid capacity (paid 1..capacity, free above).
+  const totalSeats = raffle.capacity + (raffle.free_seat_limit ?? 0);
+  const open = raffle.capacity - paidUsed;
   const myFree = tickets.some((t) => t.type === "free" && t.owner_id === user?.id);
   const gridMode = raffle.capacity <= 120;
   const canPick = !isHost && raffle.status === "open";
-  const soldPct = Math.min(100, Math.round((claimed / Math.max(raffle.capacity, 1)) * 100));
-  const freeLeft = Math.max(0, raffle.free_seat_limit - freeUsed);
-  const paidLeft = Math.max(0, (raffle.capacity - raffle.free_seat_limit) - (claimed - freeUsed));
+  const soldPct = Math.min(100, Math.round((paidUsed / Math.max(raffle.capacity, 1)) * 100));
+  const freeLeft = Math.max(0, (raffle.free_seat_limit ?? 0) - freeUsed);
+  const paidLeft = Math.max(0, raffle.capacity - paidUsed);
   const money = (c: number) => `$${(c / 100).toFixed(0)}`;
   const nameFor = (oid: string) => names[oid] ?? (oid === user?.id ? "You" : "Player");
 
@@ -344,11 +347,11 @@ export default function RaffleDetail() {
         {/* Sellout progress */}
         <View style={styles.sellout}>
           <View style={styles.selloutTop}>
-            <Text style={styles.selloutSold}>{claimed} / {raffle.capacity} sold</Text>
+            <Text style={styles.selloutSold}>{paidUsed} / {raffle.capacity} paid sold</Text>
             <Text style={styles.selloutPct}>{soldPct}%</Text>
           </View>
           <View style={styles.bar}><View style={[styles.barFill, { width: `${soldPct}%` }]} /></View>
-          <Text style={styles.selloutMeta}>{paidLeft} paid left · {freeLeft} free left · {money(raffle.amount_cents)}/seat</Text>
+          <Text style={styles.selloutMeta}>{paidLeft} paid left{(raffle.free_seat_limit ?? 0) > 0 ? ` · ${freeLeft} of ${raffle.free_seat_limit} free left` : ""} · {money(raffle.amount_cents)}/seat</Text>
         </View>
 
         {/* Minis hanging off this game */}

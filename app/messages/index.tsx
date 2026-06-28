@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
@@ -67,6 +68,20 @@ export default function Messages() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
+  async function toggleDMRead(c: any, makeRead: boolean) {
+    if (!user?.id) return;
+    if (makeRead) await supabase.from("direct_messages").update({ read_at: new Date().toISOString() }).eq("recipient_id", user.id).eq("sender_id", c.otherUser.id).is("read_at", null);
+    else await supabase.from("direct_messages").update({ read_at: null }).eq("recipient_id", user.id).eq("sender_id", c.otherUser.id);
+    load();
+  }
+  async function toggleGroupRead(c: any, makeRead: boolean) {
+    if (!user?.id) return;
+    const key = c.kind === "room" ? `room:${c.id}` : `host:${c.id}`;
+    if (makeRead) await supabase.from("chat_reads").upsert({ user_id: user.id, room_key: key, last_read_at: new Date().toISOString() });
+    else await supabase.from("chat_reads").delete().eq("user_id", user.id).eq("room_key", key);
+    load();
+  }
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -100,7 +115,9 @@ export default function Messages() {
                       <Text style={[styles.rowName, c.unread && styles.rowNameUnread]}>{c.otherUser.display_name}</Text>
                       <Text style={[styles.rowSub, c.unread && styles.rowSubUnread]} numberOfLines={1}>{c.sender_id === user?.id ? "You: " : ""}{c.content}</Text>
                     </View>
-                    {c.unread && <View style={styles.unreadDot} />}
+                    <TouchableOpacity onPress={() => toggleDMRead(c, !!c.unread)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                      <Ionicons name={c.unread ? "mail-unread" : "mail-open-outline"} size={20} color={c.unread ? colors.red : colors.faint} />
+                    </TouchableOpacity>
                   </TouchableOpacity>
                 ))}
               </>
@@ -117,7 +134,9 @@ export default function Messages() {
                     <Text style={[styles.rowName, c.unread && styles.rowNameUnread]}>{c.name}</Text>
                     <Text style={[styles.rowSub, c.unread && styles.rowSubUnread]}>{c.sub}</Text>
                   </View>
-                  {c.unread && <View style={styles.unreadDot} />}
+                  <TouchableOpacity onPress={() => toggleGroupRead(c, !!c.unread)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Ionicons name={c.unread ? "mail-unread" : "mail-open-outline"} size={20} color={c.unread ? colors.red : colors.faint} />
+                  </TouchableOpacity>
                 </TouchableOpacity>
               ))
             )}

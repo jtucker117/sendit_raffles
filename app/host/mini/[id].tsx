@@ -83,8 +83,8 @@ export default function CreateMini() {
   const totalValueCents = seatsNum * parentPriceCents;
   const perSeatCents = capNum > 0 ? Math.round(totalValueCents / capNum) : 0;
   const money = (c: number) => `$${(c / 100).toFixed(2)}`;
-  // Minis only pull from the paid pool: (capacity − free seats) − paid already taken.
-  const maxAward = Math.max(0, (parent.capacity ?? 0) - (parent.free_seat_limit ?? 0) - takenSeats);
+  // Minis pull from the paid block (free seats are separate now): capacity − paid taken.
+  const maxAward = Math.max(0, (parent.capacity ?? 0) - takenSeats);
   const overAward = seatsNum > maxAward;
 
   async function create() {

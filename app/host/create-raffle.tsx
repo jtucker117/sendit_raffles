@@ -39,12 +39,10 @@ export default function CreateRaffleScreen() {
   // so the goal is always met. Auto-fills whenever the goal, seat count, or
   // free-seat count changes (still manually editable after).
   useEffect(() => {
-    const cap = parseInt(capacity, 10) || 0;
-    const free = parseInt(freeLimit, 10) || 0;
-    const paid = Math.max(cap - free, 1);
+    const cap = parseInt(capacity, 10) || 0; // paid seats
     const g = parseFloat(goal);
-    if (paid > 0 && g > 0) setAmount(String(Math.ceil(g / paid)));
-  }, [goal, capacity, freeLimit]);
+    if (cap > 0 && g > 0) setAmount(String(Math.ceil(g / cap)));
+  }, [goal, capacity]);
   const [saving, setSaving] = useState(false);
 
   if (!isHostApproved) {
@@ -58,13 +56,12 @@ export default function CreateRaffleScreen() {
 
 
   async function create() {
-    const cap = Math.max(2, Math.min(1000, parseInt(capacity, 10) || 0));
-    const free = Math.max(0, Math.min(cap, parseInt(freeLimit, 10) || 0));
+    const cap = Math.max(2, Math.min(1000, parseInt(capacity, 10) || 0)); // paid seats
+    const free = Math.max(0, Math.min(1000, parseInt(freeLimit, 10) || 0)); // extra free seats on top
     if (!title.trim()) { Alert.alert("Title required", "Give your game a title."); return; }
-    if (!(parseInt(capacity, 10) >= 2)) { Alert.alert("Seats required", "Enter the total number of seats (at least 2)."); return; }
-    const paidSeats = cap - free;
-    if (paidSeats > 0 && !(parseFloat(amount) > 0)) {
-      Alert.alert("Seat price required", "Set the amount per seat (or make every seat free).");
+    if (!(parseInt(capacity, 10) >= 2)) { Alert.alert("Paid seats required", "Enter the number of paid seats (at least 2)."); return; }
+    if (!(parseFloat(amount) > 0)) {
+      Alert.alert("Seat price required", "Set the amount per paid seat.");
       return;
     }
     setSaving(true);
@@ -158,13 +155,23 @@ export default function CreateRaffleScreen() {
       {step === 1 && (
         <>
           <View style={styles.row2}>
-            <Field label="Total seats (max 1000)" style={{ flex: 1 }} required>
+            <Field label="Paid seats (max 1000)" style={{ flex: 1 }} required>
               <TextInput style={styles.input} value={capacity} onChangeText={setCapacity} keyboardType="number-pad" placeholder="e.g. 100" placeholderTextColor={colors.faint} />
             </Field>
-            <Field label="Free seats (max)" style={{ flex: 1 }}>
+            <Field label="Free seats (0 = none)" style={{ flex: 1 }}>
               <TextInput style={styles.input} value={freeLimit} onChangeText={setFreeLimit} keyboardType="number-pad" placeholder="0" placeholderTextColor={colors.faint} />
             </Field>
           </View>
+          <Text style={styles.seatsNote}>
+            {(() => {
+              const cap = parseInt(capacity, 10) || 0;
+              const free = parseInt(freeLimit, 10) || 0;
+              if (!cap) return "Free seats are added on top of paid seats (e.g. 5 paid + 2 free = 7 total). Set free to 0 for none.";
+              return free > 0
+                ? `${cap} paid + ${free} free = ${cap + free} total seats. Free seats are a first-come bonus — they don't take a paid spot.`
+                : `${cap} paid seats · no free seats.`;
+            })()}
+          </Text>
           <Field label="Entry word">
             <View style={styles.segment}>
               {TERMS.map((t) => (
@@ -286,6 +293,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   multiline: { minHeight: 80, textAlignVertical: "top" },
   helper: { color: colors.faint, fontSize: 12, marginTop: 6 },
   row2: { flexDirection: "row", gap: 12 },
+  seatsNote: { color: colors.muted, fontSize: 12.5, lineHeight: 18, marginTop: -6, marginBottom: 14 },
   catWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   catChip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.inputBorder, backgroundColor: colors.surfaceAlt },
   catChipActive: { backgroundColor: colors.red, borderColor: colors.red },
