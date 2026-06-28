@@ -187,8 +187,14 @@ export default function RaffleDetail() {
     load();
   }
   async function toggleFeatured() {
-    const { error } = await supabase.from("raffles").update({ featured: !raffle!.featured }).eq("id", raffle!.id);
-    if (error) { showError(error, "Couldn't update featured"); return; }
+    if (raffle!.featured) {
+      const { error } = await supabase.from("raffles").update({ featured: false }).eq("id", raffle!.id);
+      if (error) { showError(error, "Couldn't update featured"); return; }
+    } else {
+      // One featured game per host per day during beta; featuring a new one replaces the old.
+      const { error } = await supabase.rpc("feature_game", { p_game: raffle!.id });
+      if (error) { showError(error, "Couldn't feature"); return; }
+    }
     load();
   }
 
@@ -390,7 +396,7 @@ export default function RaffleDetail() {
                 <CertRow k="Entrants" v={String(confirmedTickets.length)} />
                 {draw.rounds?.length
                   ? <CertRow k="Rounds" v={String(draw.rounds.length)} />
-                  : <CertRow k="Winning number" v={String(draw.randomorg_signed?.random?.data?.[0] ?? "—")} />}
+                  : <CertRow k="Random.org drew" v={`entrant #${draw.randomorg_signed?.random?.data?.[0] ?? "—"} of ${draw.randomorg_signed?.random?.max ?? confirmedTickets.length}`} />}
                 <CertRow k="Winning seat" v={`#${draw.winning_seat}`} />
                 <CertRow k="Drawn" v={new Date(draw.drawn_at).toLocaleString()} />
                 <Text style={styles.sigLabel}>SIGNATURE</Text>
@@ -590,9 +596,8 @@ export default function RaffleDetail() {
             {raffle.status === "open" && (
               <>
                 <TouchableOpacity style={[styles.btn, raffle.featured ? styles.btnRed : styles.btnOutline]} onPress={toggleFeatured}>
-                  <Text style={[styles.btnText, { color: raffle.featured ? colors.onAccent : colors.text }]}>{raffle.featured ? "⭐ Featured on home — tap to remove" : "⭐ Feature on home"}</Text>
+                  <Text style={[styles.btnText, { color: raffle.featured ? colors.onAccent : colors.text }]}>{raffle.featured ? "⭐ Featured on home — tap to remove" : "⭐ Feature on home (BETA)"}</Text>
                 </TouchableOpacity>
-                {!raffle.featured && <Text style={styles.featNote}>Free during beta · $10/game after launch (or Zelle/Venmo the creator).</Text>}
               </>
             )}
             {raffle.status !== "canceled" && raffle.status !== "complete" && (
