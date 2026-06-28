@@ -285,8 +285,9 @@ export default function RaffleDetail() {
   async function onDelete() {
     if (!confirmDelete) { setConfirmDelete(true); setTimeout(() => setConfirmDelete(false), 3000); return; }
     const { error } = await supabase.from("raffles").delete().eq("id", raffle!.id);
-    if (error) { Alert.alert("Delete failed", error.message); return; }
-    router.replace("/");
+    if (error) { showError(error, "Delete failed"); return; }
+    // Return to the host's dashboard (where they manage games) rather than the public Games page.
+    router.replace(isHost ? "/host/dashboard" : "/");
   }
 
   // Verify the draw against Random.org's API — every round for elimination, or
