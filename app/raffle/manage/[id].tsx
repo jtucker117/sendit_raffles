@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { radius, AppColors } from "@/lib/theme";
 import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 
-interface Raffle { id: string; host_id: string; title: string; status: string; amount_cents: number; }
+interface Raffle { id: string; host_id: string; title: string; status: string; amount_cents: number; capacity: number; }
 interface Ticket { id: string; seat_number: number; owner_id: string; type: "free" | "paid"; status: string; paid_method: string | null; }
 
 const PAYMENT_METHODS = ["Venmo", "Cash App", "Card", "PayPal", "Zelle"] as const;
@@ -33,7 +33,7 @@ export default function ManageEntries() {
     if (!id) return;
     setLoading(true);
     const [{ data: r }, { data: t }] = await Promise.all([
-      supabase.from("raffles").select("id, host_id, title, status, amount_cents").eq("id", id).single(),
+      supabase.from("raffles").select("id, host_id, title, status, amount_cents, capacity").eq("id", id).single(),
       supabase.from("tickets").select("*").eq("raffle_id", id).order("seat_number"),
     ]);
     if (r) setRaffle(r as Raffle);
@@ -63,9 +63,19 @@ export default function ManageEntries() {
   }
 
   const nameFor = (oid: string) => names[oid] ?? (oid === user?.id ? "You" : "Player");
-  const money = (c: number) => `$${(c / 100).toFixed(0)}`;
+  const money = (c: number) => `$${(c / 100).toFixed(2)}`;
   const pending = tickets.filter((t) => t.type === "paid" && t.status === "held").sort((a, b) => a.seat_number - b.seat_number);
   const confirmed = tickets.filter((t) => t.status === "confirmed").sort((a, b) => a.seat_number - b.seat_number);
+
+  // Revenue summary
+  const price = raffle.amount_cents;
+  const confirmedPaid = tickets.filter((t) => t.type === "paid" && t.status === "confirmed").length;
+  const heldPaid = tickets.filter((t) => t.type === "paid" && t.status === "held").length;
+  const reservedPaid = tickets.filter((t) => t.type === "paid" && t.status === "reserved").length;
+  const sellablePaid = Math.max(0, raffle.capacity - reservedPaid); // seats that can actually generate revenue
+  const collectedCents = confirmedPaid * price;
+  const pendingCents = heldPaid * price;
+  const maxCents = sellablePaid * price;
 
   // Bulk-confirm every selected pending seat with one payment method.
   async function confirmBulk(method: string) {
@@ -119,7 +129,30 @@ export default function ManageEntries() {
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: BOTTOM_NAV_HEIGHT + 40 }}>
       <Text style={styles.eyebrow}>MANAGE ENTRIES</Text>
       <Text style={styles.title}>{raffle.title}</Text>
-      <Text style={styles.sub}>Seat price {money(raffle.amount_cents)} · confirm payments, remove or refund players.</Text>
+      <Text style={styles.sub}>Confirm payments, remove or refund players.</Text>
+
+      {/* Revenue summary */}
+      <View style={styles.moneyCard}>
+        <View style={styles.moneyTop}>
+          <Text style={styles.moneyPrice}>{money(price)}</Text>
+          <Text style={styles.moneyPriceLabel}>per seat</Text>
+        </View>
+        <View style={styles.moneyRow}>
+          <View style={styles.moneyBox}>
+            <Text style={[styles.moneyVal, { color: colors.green }]}>{money(collectedCents)}</Text>
+            <Text style={styles.moneyLabel}>Collected ({confirmedPaid})</Text>
+          </View>
+          <View style={styles.moneyBox}>
+            <Text style={[styles.moneyVal, { color: colors.red }]}>{money(pendingCents)}</Text>
+            <Text style={styles.moneyLabel}>Pending ({heldPaid})</Text>
+          </View>
+          <View style={styles.moneyBox}>
+            <Text style={styles.moneyVal}>{money(maxCents)}</Text>
+            <Text style={styles.moneyLabel}>If sold out ({sellablePaid})</Text>
+          </View>
+        </View>
+        {reservedPaid > 0 && <Text style={styles.moneyNote}>{reservedPaid} seat{reservedPaid === 1 ? "" : "s"} reserved for a mini (no revenue — they're the prize).</Text>}
+      </View>
 
       <View style={styles.tabs}>
         <TouchableOpacity style={[styles.tab, tab === "pending" && styles.tabActive]} onPress={() => setTab("pending")}>
@@ -175,7 +208,7 @@ export default function ManageEntries() {
                     <View key={t.id} style={styles.row}>
                       <TouchableOpacity style={styles.rowSelect} onPress={() => toggleSel(t.id)}>
                         <View style={[styles.check, selected.has(t.id) && styles.checkOn]}>{selected.has(t.id) ? <Text style={styles.checkMark}>✓</Text> : null}</View>
-                        <Text style={styles.rowMeta}>Seat #{t.seat_number} · paid</Text>
+                        <Text style={styles.rowMeta}>Seat #{t.seat_number} · {money(price)}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={[styles.pill, styles.pillRed, busyTicket === t.id && styles.dim]} disabled={busyTicket === t.id} onPress={() => removeTicket(t.id)}>
                         <Text style={styles.pillRedText}>{confirmRemove === t.id ? "Sure?" : "Reject"}</Text>
@@ -196,7 +229,7 @@ export default function ManageEntries() {
               <View key={t.id} style={styles.row}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.rowName}>{nameFor(t.owner_id)}</Text>
-                  <Text style={styles.rowMeta}>Seat #{t.seat_number} · {t.type}{t.paid_method ? ` · ${t.paid_method}` : ""}</Text>
+                  <Text style={styles.rowMeta}>Seat #{t.seat_number} · {t.type === "paid" ? money(price) : "free"}{t.paid_method ? ` · ${t.paid_method}` : ""}</Text>
                 </View>
                 {raffle.status === "open" && (
                   <TouchableOpacity style={[styles.pill, styles.pillRed, busyTicket === t.id && styles.dim]} disabled={busyTicket === t.id} onPress={() => removeTicket(t.id)}>
@@ -221,6 +254,15 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   eyebrow: { color: colors.red, fontSize: 12, fontWeight: "800", letterSpacing: 1.2 },
   title: { color: colors.text, fontSize: 24, fontWeight: "800", letterSpacing: -0.3, marginTop: 4 },
   sub: { color: colors.muted, fontSize: 13, marginTop: 6, lineHeight: 18 },
+  moneyCard: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, padding: 16, marginTop: 16 },
+  moneyTop: { flexDirection: "row", alignItems: "baseline", gap: 8, marginBottom: 12 },
+  moneyPrice: { color: colors.text, fontSize: 26, fontWeight: "900" },
+  moneyPriceLabel: { color: colors.muted, fontSize: 13, fontWeight: "600" },
+  moneyRow: { flexDirection: "row", gap: 10 },
+  moneyBox: { flex: 1, backgroundColor: colors.surfaceAlt, borderRadius: radius.md, paddingVertical: 12, alignItems: "center" },
+  moneyVal: { color: colors.text, fontSize: 17, fontWeight: "900" },
+  moneyLabel: { color: colors.muted, fontSize: 10.5, fontWeight: "700", marginTop: 3, textAlign: "center" },
+  moneyNote: { color: colors.faint, fontSize: 11.5, marginTop: 10, lineHeight: 16 },
   tabs: { flexDirection: "row", gap: 8, marginTop: 18 },
   tab: { flex: 1, paddingVertical: 11, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, alignItems: "center", backgroundColor: colors.surface },
   tabActive: { borderColor: colors.red, backgroundColor: colors.redSoft },
