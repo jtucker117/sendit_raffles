@@ -26,6 +26,8 @@ export default function Announcements() {
   const [image, setImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [posting, setPosting] = useState(false);
+  const [xEveryone, setXEveryone] = useState(false);
+  const [xHosts, setXHosts] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -52,8 +54,16 @@ export default function Announcements() {
     const { error } = await supabase.from("announcements").insert({
       author_id: user!.id, title: title.trim() || null, content: body.trim(), image_url: image,
     });
-    if (error) Alert.alert("Couldn't post", error.message);
-    else { setTitle(""); setBody(""); setImage(null); await load(); }
+    if (error) { Alert.alert("Couldn't post", error.message); setPosting(false); return; }
+    // Optionally cross-post into the platform group(s) so people can reply there.
+    const rooms: string[] = [];
+    if (xEveryone) rooms.push("everyone");
+    if (xHosts) rooms.push("hosts");
+    if (rooms.length) {
+      const msg = `📢 ${title.trim() || "Announcement"}${body.trim() ? `\n\n${body.trim()}` : ""}`;
+      await supabase.from("platform_chat").insert(rooms.map((room) => ({ room, author_id: user!.id, content: msg })));
+    }
+    setTitle(""); setBody(""); setImage(null); setXEveryone(false); setXHosts(false); await load();
     setPosting(false);
   }
 
@@ -85,6 +95,15 @@ export default function Announcements() {
                 <Text style={styles.addImgText}>{uploading ? "Uploading…" : "Add screenshot"}</Text>
               </TouchableOpacity>
             )}
+            <Text style={styles.xLabel}>Also post to a group so people can reply:</Text>
+            <View style={styles.xChips}>
+              <TouchableOpacity style={[styles.xChip, xEveryone && styles.xChipOn]} onPress={() => setXEveryone((v) => !v)}>
+                <Text style={[styles.xChipText, xEveryone && styles.xChipTextOn]}>{xEveryone ? "✓ " : ""}Community</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.xChip, xHosts && styles.xChipOn]} onPress={() => setXHosts((v) => !v)}>
+                <Text style={[styles.xChipText, xHosts && styles.xChipTextOn]}>{xHosts ? "✓ " : ""}Hosts</Text>
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity style={[styles.postBtn, posting && { opacity: 0.5 }]} disabled={posting} onPress={post}>
               <Text style={styles.postText}>{posting ? "Posting…" : "Post announcement"}</Text>
             </TouchableOpacity>
@@ -127,6 +146,12 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   preview: { width: "100%", height: 200 },
   removeImg: { position: "absolute", top: 8, right: 8, backgroundColor: "rgba(0,0,0,0.6)", borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 5 },
   removeImgText: { color: "#fff", fontSize: 12, fontWeight: "700" },
+  xLabel: { color: colors.muted, fontSize: 12.5, fontWeight: "600" },
+  xChips: { flexDirection: "row", gap: 8 },
+  xChip: { borderWidth: 1, borderColor: colors.inputBorder, borderRadius: radius.pill, paddingVertical: 8, paddingHorizontal: 14, backgroundColor: colors.surfaceAlt },
+  xChipOn: { backgroundColor: colors.redSoft, borderColor: colors.red },
+  xChipText: { color: colors.muted, fontSize: 13, fontWeight: "700" },
+  xChipTextOn: { color: colors.text },
   postBtn: { backgroundColor: colors.red, borderRadius: radius.md, paddingVertical: 13, alignItems: "center" },
   postText: { color: colors.onAccent, fontWeight: "800", fontSize: 14 },
   empty: { color: colors.muted, fontSize: 14, marginTop: 24, textAlign: "center" },
