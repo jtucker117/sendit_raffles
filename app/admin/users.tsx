@@ -28,6 +28,7 @@ export default function AdminUsers() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>("all");
   const [q, setQ] = useState("");
+  const [sort, setSort] = useState<"az" | "new" | "old">("az");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -58,6 +59,11 @@ export default function AdminUsers() {
     .filter((r) => {
       const s = q.trim().toLowerCase();
       return !s || r.display_name?.toLowerCase().includes(s) || r.email?.toLowerCase().includes(s);
+    })
+    .sort((a, b) => {
+      if (sort === "az") return (a.display_name ?? "").localeCompare(b.display_name ?? "");
+      if (sort === "new") return (b.created_at ?? "").localeCompare(a.created_at ?? "");
+      return (a.created_at ?? "").localeCompare(b.created_at ?? "");
     });
 
   const hosts = rows.filter((r) => r.role === "host").length;
@@ -96,6 +102,15 @@ export default function AdminUsers() {
             <Text style={[styles.tabText, filter === f && styles.tabTextActive]}>
               {f === "all" ? "All" : f === "host" ? "Hosts" : f === "player" ? "Players" : `Pending${pending ? ` (${pending})` : ""}`}
             </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <View style={styles.sortRow}>
+        <Text style={styles.sortLabel}>Sort:</Text>
+        {([["az", "A–Z"], ["new", "Newest"], ["old", "Oldest"]] as const).map(([k, label]) => (
+          <TouchableOpacity key={k} style={[styles.sortChip, sort === k && styles.sortChipOn]} onPress={() => setSort(k)}>
+            <Text style={[styles.sortChipText, sort === k && styles.sortChipTextOn]}>{label}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -153,6 +168,12 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   tabActive: { backgroundColor: colors.red, borderColor: colors.red },
   tabText: { color: colors.muted, fontWeight: "600", fontSize: 13 },
   tabTextActive: { color: colors.onAccent },
+  sortRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14, flexWrap: "wrap" },
+  sortLabel: { color: colors.muted, fontSize: 12.5, fontWeight: "700" },
+  sortChip: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border },
+  sortChipOn: { backgroundColor: colors.redSoft, borderColor: colors.red },
+  sortChipText: { color: colors.muted, fontSize: 12, fontWeight: "700" },
+  sortChipTextOn: { color: colors.text },
   card: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 10 },
   cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   name: { color: colors.text, fontSize: 16, fontWeight: "700", flex: 1 },
