@@ -578,6 +578,38 @@ export default function RaffleDetail() {
           <Text style={styles.legend}>Tap open seats · amber = your pick · grey = taken · 🔒 = mini · 🎁 = free seat</Text>
         )}
 
+        {/* Entries — everyone can see who's in and who's paid */}
+        {tickets.length > 0 && (() => {
+          const rows = [...tickets].sort((a, b) => a.seat_number - b.seat_number);
+          const paidCount = rows.filter((t) => t.status === "confirmed" && t.type === "paid").length;
+          const pendCount = rows.filter((t) => t.status === "held").length;
+          return (
+            <View style={styles.entriesSection}>
+              <Text style={styles.boardTitle}>Entries ({rows.length})</Text>
+              <Text style={styles.entriesSub}>
+                ✅ {paidCount} paid{pendCount > 0 ? ` · ⏳ ${pendCount} awaiting payment` : ""}
+              </Text>
+              {rows.map((t) => {
+                const reserved = t.status === "reserved";
+                const isFreeSeat = t.type === "free";
+                const paid = t.status === "confirmed" && t.type === "paid";
+                const mine = user?.id === t.owner_id && !reserved;
+                const who = reserved ? "Reserved for a mini" : (names[t.owner_id] ?? "Player");
+                const label = reserved ? "🔒 Mini prize" : isFreeSeat ? "🎁 Free seat" : paid ? "Paid" : "Not paid yet";
+                const tone = reserved ? colors.muted : (paid || isFreeSeat) ? colors.green : colors.red;
+                const bg = reserved ? colors.surfaceAlt : (paid || isFreeSeat) ? colors.greenSoft : colors.redSoft;
+                return (
+                  <View key={t.id} style={styles.entRow}>
+                    <Text style={styles.entSeat}>#{t.seat_number}</Text>
+                    <Text style={[styles.entName, mine && styles.entNameMine]} numberOfLines={1}>{who}{mine ? " (you)" : ""}</Text>
+                    <View style={[styles.entPill, { backgroundColor: bg }]}><Text style={[styles.entPillText, { color: tone }]}>{label}</Text></View>
+                  </View>
+                );
+              })}
+            </View>
+          );
+        })()}
+
         {/* Player extras: lucky dip + free seat */}
         {canPick && (
           <View style={{ gap: 10, marginTop: 14 }}>
@@ -782,6 +814,14 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   miniBannerText: { color: colors.text, fontSize: 13, lineHeight: 18, fontWeight: "600" },
   miniBogoNote: { backgroundColor: colors.surfaceAlt, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, padding: 12, marginTop: 8 },
   miniBogoText: { color: colors.muted, fontSize: 12.5, lineHeight: 18, fontWeight: "600" },
+  entriesSection: { marginTop: 22 },
+  entriesSub: { color: colors.muted, fontSize: 12.5, fontWeight: "600", marginTop: -8, marginBottom: 10 },
+  entRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: colors.border },
+  entSeat: { color: colors.muted, fontSize: 13, fontWeight: "800", width: 42 },
+  entName: { color: colors.text, fontSize: 14, fontWeight: "600", flex: 1 },
+  entNameMine: { color: colors.red, fontWeight: "800" },
+  entPill: { borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
+  entPillText: { fontSize: 11, fontWeight: "800", letterSpacing: 0.3 },
   miniSection: { marginTop: 18 },
   miniHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   miniAdd: { color: colors.red, fontSize: 14, fontWeight: "800" },
