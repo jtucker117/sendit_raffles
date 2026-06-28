@@ -23,6 +23,7 @@ interface Raffle {
   draw_mode?: "single" | "elimination";
   parent_raffle_id?: string | null; seats_awarded?: number;
   scheduled_at?: string | null; show_odds?: boolean; featured?: boolean;
+  free_for_all?: boolean; bogo?: boolean;
 }
 interface Ticket { id: string; seat_number: number; owner_id: string; type: "free" | "paid"; status: string; }
 
@@ -146,6 +147,10 @@ export default function RaffleDetail() {
   const soldPct = Math.min(100, Math.round((paidUsed / Math.max(raffle.capacity, 1)) * 100));
   const freeLeft = Math.max(0, (raffle.free_seat_limit ?? 0) - freeUsed);
   const paidLeft = Math.max(0, raffle.capacity - paidUsed);
+  const freeForAll = !!raffle.free_for_all;
+  const isBogo = !!raffle.bogo;
+  const totalLabel = freeForAll ? `${raffle.capacity} paid + free for all` : isBogo ? `${raffle.capacity} paid · BOGO` : `${totalSeats} seats`;
+  const freeAvailable = freeForAll ? true : freeLeft > 0; // can a player still claim a free seat?
   const money = (c: number) => `$${(c / 100).toFixed(0)}`;
   const nameFor = (oid: string) => names[oid] ?? (oid === user?.id ? "You" : "Player");
 
@@ -423,11 +428,14 @@ export default function RaffleDetail() {
         {/* Sellout progress */}
         <View style={styles.sellout}>
           <View style={styles.selloutTop}>
-            <Text style={styles.selloutSold}>{paidUsed} / {raffle.capacity} paid sold</Text>
-            <Text style={styles.selloutPct}>{soldPct}%</Text>
+            <Text style={styles.selloutSold}>{totalLabel}</Text>
+            <Text style={styles.selloutPct}>{soldPct}% sold</Text>
           </View>
           <View style={styles.bar}><View style={[styles.barFill, { width: `${soldPct}%` }]} /></View>
-          <Text style={styles.selloutMeta}>{paidLeft} paid left{(raffle.free_seat_limit ?? 0) > 0 ? ` · ${freeLeft} of ${raffle.free_seat_limit} free left` : ""} · {money(raffle.amount_cents)}/seat</Text>
+          <Text style={styles.selloutMeta}>
+            {paidLeft} of {raffle.capacity} paid left · {money(raffle.amount_cents)}/seat
+            {freeForAll ? " · 🎁 1 free seat each" : isBogo ? " · 🎁 buy 1 get 1 free" : (raffle.free_seat_limit ?? 0) > 0 ? ` · ${freeLeft} of ${raffle.free_seat_limit} free left` : ""}
+          </Text>
           {raffle.show_odds !== false && raffle.status !== "complete" && totalSeats > 0 && (
             <View style={styles.oddsRow}>
               <Text style={styles.oddsLine}>🎲 Odds: <Text style={styles.oddsStrong}>1 in {totalSeats}</Text> per seat ({(100 / totalSeats).toFixed(1)}%)</Text>
@@ -536,15 +544,19 @@ export default function RaffleDetail() {
             <TouchableOpacity style={[styles.btn, styles.btnOutline, paidLeft <= 0 && styles.btnDim]} disabled={paidLeft <= 0} onPress={() => router.push(`/checkout/${raffle.id}?random=1`)}>
               <Text style={[styles.btnText, { color: colors.text }]}>🎲 {paidLeft <= 0 ? "No paid seats left" : `Lucky dip — random paid seat · ${money(raffle.amount_cents)}`}</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.btn, styles.btnGreen, (claiming || myFree || freeLeft <= 0) && styles.btnDim]}
-              disabled={claiming || myFree || freeLeft <= 0}
-              onPress={() => claim("free", 0)}
-            >
-              <Text style={[styles.btnText, { color: colors.green }]}>
-                {myFree ? "Free seat claimed" : freeLeft <= 0 ? "No free seats left" : "Claim free seat — random"}
-              </Text>
-            </TouchableOpacity>
+            {isBogo ? (
+              <Text style={styles.bogoNote}>🎁 Buy one, get one free — your free seat is added automatically when the host confirms your payment.</Text>
+            ) : (freeForAll || (raffle.free_seat_limit ?? 0) > 0) ? (
+              <TouchableOpacity
+                style={[styles.btn, styles.btnGreen, (claiming || myFree || !freeAvailable) && styles.btnDim]}
+                disabled={claiming || myFree || !freeAvailable}
+                onPress={() => claim("free", 0)}
+              >
+                <Text style={[styles.btnText, { color: colors.green }]}>
+                  {myFree ? "Free seat claimed ✓" : !freeAvailable ? "No free seats left" : freeForAll ? "🎁 Claim your free seat" : "Claim free seat — random"}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
             <Text style={styles.payNote}>Paid seats are confirmed by the host after payment (Venmo / Cash App / Card / PayPal / Zelle).</Text>
           </View>
         )}
@@ -763,6 +775,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   notifyText: { color: colors.red, fontWeight: "800", fontSize: 14 },
   notifyTextOn: { color: colors.text },
   featNote: { color: colors.faint, fontSize: 12, textAlign: "center", marginTop: -4 },
+  bogoNote: { color: colors.green, fontSize: 13, fontWeight: "700", lineHeight: 18, backgroundColor: colors.greenSoft, borderRadius: radius.md, padding: 12 },
   pad: { padding: 20 },
   title: { color: colors.text, fontSize: 24, fontWeight: "800", letterSpacing: -0.3 },
   prize: { color: colors.muted, fontSize: 16, marginTop: 6 },

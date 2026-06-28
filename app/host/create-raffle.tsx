@@ -52,6 +52,8 @@ export default function CreateRaffleScreen() {
   const [drawMode, setDrawMode] = useState<"single" | "elimination">("single");
   const [scheduledAt, setScheduledAt] = useState(""); // datetime-local string; blank = launch now
   const [showOdds, setShowOdds] = useState(true); // show winning odds to players
+  const [freeForAll, setFreeForAll] = useState(false); // everyone gets 1 free seat
+  const [bogo, setBogo] = useState(false); // buy one get one free
   const [dupName, setDupName] = useState(""); // set when relaunching from an old game
   const [step, setStep] = useState(0); // 0 Prize · 1 Tickets · 2 Rules · 3 Publish
 
@@ -76,6 +78,8 @@ export default function CreateRaffleScreen() {
       setDrawStyle((data.draw_style ?? "wheel") as any);
       setDrawMode((data.draw_mode ?? "single") as any);
       setShowOdds(data.show_odds ?? true);
+      setFreeForAll(data.free_for_all ?? false);
+      setBogo(data.bogo ?? false);
       setDupName(data.title ?? "");
     })();
   }, [params.from]);
@@ -135,6 +139,8 @@ export default function CreateRaffleScreen() {
         draw_style: drawStyle,
         draw_mode: drawMode,
         show_odds: showOdds,
+        free_for_all: freeForAll,
+        bogo: bogo,
         status: mode,
         scheduled_at: scheduledISO,
       });
@@ -216,19 +222,31 @@ export default function CreateRaffleScreen() {
               <TextInput style={styles.input} value={capacity} onChangeText={setCapacity} keyboardType="number-pad" placeholder="e.g. 100" placeholderTextColor={colors.faint} />
             </Field>
             <Field label="Free seats (0 = none)" style={{ flex: 1 }}>
-              <TextInput style={styles.input} value={freeLimit} onChangeText={setFreeLimit} keyboardType="number-pad" placeholder="0" placeholderTextColor={colors.faint} />
+              <TextInput style={[styles.input, freeForAll && styles.inputLocked]} editable={!freeForAll} value={freeForAll ? "" : freeLimit} onChangeText={setFreeLimit} keyboardType="number-pad" placeholder={freeForAll ? "free for all" : "0"} placeholderTextColor={colors.faint} />
             </Field>
           </View>
           <Text style={styles.seatsNote}>
             {(() => {
               const cap = parseInt(capacity, 10) || 0;
               const free = parseInt(freeLimit, 10) || 0;
-              if (!cap) return "Free seats are added on top of paid seats (e.g. 5 paid + 2 free = 7 total). Set free to 0 for none.";
+              if (!cap) return "Free seats are added on top of paid seats. Players claim free seats; BOGO grants one free per paid seat.";
+              if (freeForAll) return `${cap} paid seats + 1 free seat for every player (they claim it).`;
+              if (bogo) return `${cap} paid seats · every paid seat earns 1 free seat (BOGO).`;
               return free > 0
-                ? `${cap} paid + ${free} free = ${cap + free} total seats. Free seats are a first-come bonus — they don't take a paid spot.`
+                ? `${cap} paid + ${free} free = ${cap + free} total seats. Free seats are a first-come bonus players claim.`
                 : `${cap} paid seats · no free seats.`;
             })()}
           </Text>
+
+          <TouchableOpacity style={styles.modeRow} onPress={() => { setFreeForAll((v) => !v); if (!freeForAll) setBogo(false); }}>
+            <View style={[styles.toggleBox, freeForAll && styles.toggleBoxOn]}>{freeForAll ? <Text style={styles.toggleCheck}>✓</Text> : null}</View>
+            <Text style={styles.toggleLabel}>🎁 Give everyone 1 free seat (they claim it)</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.modeRow} onPress={() => { setBogo((v) => !v); if (!bogo) setFreeForAll(false); }}>
+            <View style={[styles.toggleBox, bogo && styles.toggleBoxOn]}>{bogo ? <Text style={styles.toggleCheck}>✓</Text> : null}</View>
+            <Text style={styles.toggleLabel}>🎁 BOGO — buy one seat, get one free</Text>
+          </TouchableOpacity>
+
           <Field label="Entry word">
             <View style={styles.segment}>
               {TERMS.map((t) => (
@@ -382,6 +400,8 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   toggleBoxOn: { backgroundColor: colors.red, borderColor: colors.red },
   toggleCheck: { color: colors.onAccent, fontSize: 14, fontWeight: "900" },
   toggleLabel: { color: colors.text, fontSize: 14, fontWeight: "600" },
+  inputLocked: { opacity: 0.5 },
+  modeRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8 },
   row2: { flexDirection: "row", gap: 12 },
   seatsNote: { color: colors.muted, fontSize: 12.5, lineHeight: 18, marginTop: -6, marginBottom: 14 },
   catWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
