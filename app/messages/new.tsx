@@ -14,7 +14,7 @@ import { supabase } from "@/lib/supabase";
 
 export default function NewMessageScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isSuperadmin } = useAuth();
   const [users, setUsers] = useState<any[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [search, setSearch] = useState("");
@@ -27,8 +27,8 @@ export default function NewMessageScreen() {
   useEffect(() => {
     if (search.trim()) {
       const filtered = users.filter((u) =>
-        u.display_name.toLowerCase().includes(search.toLowerCase()) ||
-        u.email.toLowerCase().includes(search.toLowerCase())
+        u.display_name?.toLowerCase().includes(search.toLowerCase()) ||
+        (isSuperadmin && u.email?.toLowerCase().includes(search.toLowerCase()))
       );
       setFilteredUsers(filtered);
     } else {
@@ -40,7 +40,7 @@ export default function NewMessageScreen() {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("*")
+        .select(isSuperadmin ? "id, display_name, email" : "id, display_name")
         .neq("id", user?.id)
         .order("display_name");
 
@@ -103,7 +103,7 @@ export default function NewMessageScreen() {
             >
               <View>
                 <Text style={styles.userName}>{u.display_name}</Text>
-                <Text style={styles.userEmail}>{u.email}</Text>
+                {isSuperadmin && u.email ? <Text style={styles.userEmail}>{u.email}</Text> : null}
               </View>
               <Text style={styles.arrow}>→</Text>
             </TouchableOpacity>
