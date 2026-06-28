@@ -14,14 +14,14 @@ type Tab = "direct" | "communities";
 
 export default function Messages() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isSuperadmin } = useAuth();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { fetchDirectMessageConversations } = useMessaging();
 
   const [tab, setTab] = useState<Tab>("direct");
   const [convos, setConvos] = useState<any[]>([]);
-  const [communities, setCommunities] = useState<{ id: string; name: string; own?: boolean }[]>([]);
+  const [communities, setCommunities] = useState<{ id: string; name: string; own?: boolean; kind: "room" | "host"; sub: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -33,18 +33,22 @@ export default function Messages() {
     // host, plus the groups of every host I follow. Named "<Host> Group".
     const { data: follows } = await supabase.from("host_followers").select("host_id").eq("follower_id", user.id);
     const hostIds = (follows ?? []).map((f: any) => f.host_id);
-    const comm: { id: string; name: string; own?: boolean }[] = [];
+    const comm: { id: string; name: string; own?: boolean; kind: "room" | "host"; sub: string }[] = [];
+    // Permanent platform rooms, pinned at the top.
+    comm.push({ id: "everyone", name: "Community", kind: "room", sub: "Everyone — players & hosts" });
+    if (user.role === "host" || isSuperadmin) comm.push({ id: "hosts", name: "Hosts", kind: "room", sub: "Hosts & creator only" });
+    // Per-host groups.
     if (user.role === "host") {
       const { data: me } = await supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle();
-      comm.push({ id: user.id, name: `${me?.display_name ?? "Your"} Group`, own: true });
+      comm.push({ id: user.id, name: `${me?.display_name ?? "Your"} Group`, own: true, kind: "host", sub: "You & your players" });
     }
     if (hostIds.length) {
       const { data: hosts } = await supabase.from("profiles").select("id, display_name").in("id", hostIds);
-      (hosts ?? []).forEach((h: any) => comm.push({ id: h.id, name: `${h.display_name} Group` }));
+      (hosts ?? []).forEach((h: any) => comm.push({ id: h.id, name: `${h.display_name} Group`, kind: "host", sub: "Host & players" }));
     }
     setCommunities(comm);
     setLoading(false);
-  }, [user?.id, user?.role]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id, user?.role, isSuperadmin]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -91,11 +95,11 @@ export default function Messages() {
               communities.length === 0 ? (
                 <Text style={styles.empty}>Follow a host to join their group chat.</Text>
               ) : communities.map((c) => (
-                <TouchableOpacity key={c.id} style={styles.row} onPress={() => router.push(`/messages/group/${c.id}`)}>
-                  <View style={[styles.avatar, { backgroundColor: colors.navy }]}><Text style={styles.avatarInitial}>{c.name[0]?.toUpperCase()}</Text></View>
+                <TouchableOpacity key={c.kind + c.id} style={styles.row} onPress={() => router.push(c.kind === "room" ? `/messages/room/${c.id}` : `/messages/group/${c.id}`)}>
+                  <View style={[styles.avatar, { backgroundColor: c.kind === "room" ? colors.red : colors.navy }]}><Text style={styles.avatarInitial}>{c.name[0]?.toUpperCase()}</Text></View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.rowName}>{c.name}</Text>
-                    <Text style={styles.rowSub}>{c.own ? "You & your players" : "Host & players"}</Text>
+                    <Text style={styles.rowSub}>{c.sub}</Text>
                   </View>
                 </TouchableOpacity>
               ))
