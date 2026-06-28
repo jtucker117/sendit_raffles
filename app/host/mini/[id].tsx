@@ -31,14 +31,13 @@ export default function CreateMini() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
 
-  const [parent, setParent] = useState<{ id: string; title: string; category: string | null; host_id: string } | null>(null);
+  const [parent, setParent] = useState<{ id: string; title: string; category: string | null; host_id: string; amount_cents: number | null; capacity: number | null } | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [title, setTitle] = useState("");
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [capacity, setCapacity] = useState("");
   const [freeLimit, setFreeLimit] = useState("");
-  const [amount, setAmount] = useState("");
   const [seatsAwarded, setSeatsAwarded] = useState("1");
   const [term, setTerm] = useState<(typeof TERMS)[number]>("Donation");
   const [drawMode, setDrawMode] = useState<"single" | "elimination">("single");
@@ -48,7 +47,7 @@ export default function CreateMini() {
 
   const load = useCallback(async () => {
     if (!id) return;
-    const { data } = await supabase.from("raffles").select("id, title, category, host_id").eq("id", id).single();
+    const { data } = await supabase.from("raffles").select("id, title, category, host_id, amount_cents, capacity").eq("id", id).single();
     if (data) { setParent(data as any); setTitle(`Mini — win seats in ${(data as any).title}`); }
     setLoading(false);
   }, [id]);
@@ -64,6 +63,17 @@ export default function CreateMini() {
     );
   }
 
+  // Auto-price: the mini's paid seats recover the value of the parent seats
+  // being pulled. Host can't mark it up. Always rounds up so seats aren't undersold.
+  const parentPriceCents = parent.amount_cents ?? 0;
+  const seatsNum = Math.max(1, parseInt(seatsAwarded, 10) || 1);
+  const capNum = Math.max(0, parseInt(capacity, 10) || 0);
+  const freeNum = Math.max(0, Math.min(capNum, parseInt(freeLimit, 10) || 0));
+  const paidSeats = Math.max(0, capNum - freeNum);
+  const totalValueCents = seatsNum * parentPriceCents;
+  const perSeatCents = paidSeats > 0 ? Math.ceil(totalValueCents / paidSeats) : 0;
+  const money = (c: number) => `$${(c / 100).toFixed(2)}`;
+
   async function addCover() {
     try { setUploading(true); const url = await pickAndUploadImage("covers", user!.id, [16, 9]); if (url) setCoverUrl(url); }
     catch (e: any) { Alert.alert("Upload failed", e?.message ?? "Try again."); } finally { setUploading(false); }
@@ -73,9 +83,13 @@ export default function CreateMini() {
     const cap = Math.max(2, Math.min(1000, parseInt(capacity, 10) || 0));
     const free = Math.max(0, Math.min(cap, parseInt(freeLimit, 10) || 0));
     const seats = Math.max(1, parseInt(seatsAwarded, 10) || 1);
+    const paid = Math.max(0, cap - free);
+    const perCents = paid > 0 ? Math.ceil((seats * parentPriceCents) / paid) : 0;
     if (!title.trim()) { Alert.alert("Title required"); return; }
     if (!(parseInt(capacity, 10) >= 2)) { Alert.alert("Seats required", "Enter total seats (at least 2)."); return; }
-    if ((cap - free) > 0 && !(parseFloat(amount) > 0)) { Alert.alert("Seat price required", "Set a price (or make all seats free)."); return; }
+    if (parent!.capacity != null && seats > parent!.capacity) {
+      Alert.alert("Too many seats", `The main game only has ${parent!.capacity} seats — you can't award more than that.`); return;
+    }
     setSaving(true);
     try {
       const { error } = await supabase.from("raffles").insert({
@@ -87,7 +101,7 @@ export default function CreateMini() {
         capacity: cap,
         free_seat_limit: free,
         entry_word: term.toLowerCase(),
-        amount_cents: Math.round((parseFloat(amount) || 0) * 100),
+        amount_cents: perCents,
         draw_style: drawStyle,
         draw_mode: drawMode,
         parent_raffle_id: parent!.id,
@@ -125,8 +139,20 @@ export default function CreateMini() {
         <View style={{ flex: 1 }}><Field label="Mini seats" required><TextInput style={styles.input} value={capacity} onChangeText={setCapacity} keyboardType="number-pad" placeholder="e.g. 50" placeholderTextColor={colors.faint} /></Field></View>
         <View style={{ flex: 1 }}><Field label="Free seats"><TextInput style={styles.input} value={freeLimit} onChangeText={setFreeLimit} keyboardType="number-pad" placeholder="0" placeholderTextColor={colors.faint} /></Field></View>
       </View>
-      <Field label={`Amount per ${term.toLowerCase()} ($)`} required>
-        <TextInput style={styles.input} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="e.g. 5" placeholderTextColor={colors.faint} />
+      <Field label={`Price per ${term.toLowerCase()} — auto-set`}>
+        <View style={styles.priceCard}>
+          <View style={styles.priceTop}>
+            <Text style={styles.priceBig}>{money(perSeatCents)}</Text>
+            <View style={styles.lockPill}><Text style={styles.lockText}>🔒 Locked</Text></View>
+          </View>
+          <Text style={styles.priceSub}>
+            {parentPriceCents === 0
+              ? "The main game's seats are free, so this mini is free too."
+              : paidSeats === 0
+                ? "All mini seats are free — nothing to charge."
+                : `${seatsNum} seat${seatsNum === 1 ? "" : "s"} × ${money(parentPriceCents)} = ${money(totalValueCents)} of value, split across ${paidSeats} paid seat${paidSeats === 1 ? "" : "s"} (rounded up). The price matches what the seats actually cost — minis can't be marked up.`}
+          </Text>
+        </View>
       </Field>
 
       <Field label="Entry word">
@@ -179,6 +205,12 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   coverImg: { width: "100%", height: "100%" },
   coverText: { color: colors.muted, fontSize: 14 },
   input: { backgroundColor: colors.surfaceAlt, borderColor: colors.inputBorder, borderWidth: 1, borderRadius: radius.md, padding: 12, color: colors.text, fontSize: 15 },
+  priceCard: { backgroundColor: colors.surfaceAlt, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, padding: 14 },
+  priceTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 },
+  priceBig: { color: colors.text, fontSize: 26, fontWeight: "900" },
+  lockPill: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.sm, paddingHorizontal: 9, paddingVertical: 4 },
+  lockText: { color: colors.muted, fontSize: 12, fontWeight: "700" },
+  priceSub: { color: colors.muted, fontSize: 12.5, lineHeight: 18 },
   row2: { flexDirection: "row", gap: 12 },
   seg: { flexDirection: "row", gap: 8 },
   segItem: { flex: 1, paddingVertical: 11, borderRadius: radius.md, borderWidth: 1, borderColor: colors.inputBorder, alignItems: "center", backgroundColor: colors.surfaceAlt },
