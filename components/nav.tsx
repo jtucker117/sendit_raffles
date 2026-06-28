@@ -1,27 +1,73 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Image, Modal, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
 import { radius, AppColors } from "@/lib/theme";
+import { supabase } from "@/lib/supabase";
 
 const LOGO = require("../assets/logo.png");
 
-// Persistent top bar with a hamburger that opens the side menu.
+// Persistent top bar: hamburger (side menu) left, logo center, profile menu right.
 export function AppHeader({ onMenu }: { onMenu: () => void }) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const router = useRouter();
+  const { user, isSuperadmin } = useAuth();
+  const [open, setOpen] = useState(false);
+
+  const go = (href: string) => { setOpen(false); router.push(href as any); };
+
+  async function chatWithCreator() {
+    setOpen(false);
+    if (isSuperadmin) { router.push("/messages"); return; }
+    // Find the platform creator (superadmin) to start a DM with.
+    const { data } = await supabase.from("profiles").select("id").eq("is_superadmin", true).limit(1).maybeSingle();
+    if (data?.id) router.push(`/messages/chat/${data.id}`);
+    else router.push("/messages");
+  }
+
   return (
     <View style={styles.header}>
       <TouchableOpacity onPress={onMenu} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
         <Ionicons name="menu" size={26} color={colors.text} />
       </TouchableOpacity>
       <Image source={LOGO} style={styles.logo} resizeMode="contain" />
-      <View style={{ width: 26 }} />
+      <TouchableOpacity onPress={() => setOpen(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <Ionicons name="person-circle-outline" size={28} color={colors.text} />
+      </TouchableOpacity>
+
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <Pressable style={styles.ddBackdrop} onPress={() => setOpen(false)}>
+          <Pressable style={styles.dropdown} onPress={() => {}}>
+            <View style={styles.ddHead}>
+              <Text style={styles.ddName} numberOfLines={1}>{user?.display_name ?? "My profile"}</Text>
+              <Text style={styles.ddRole}>{user?.role === "host" ? "Host" : "Player"}{isSuperadmin ? " · Superadmin" : ""}</Text>
+            </View>
+            <DDItem icon="person-outline" label="Edit my profile" onPress={() => go("/profile")} colors={colors} />
+            <DDItem icon="lock-closed-outline" label="Change password" onPress={() => go("/settings/password")} colors={colors} />
+            <DDItem icon="chatbubble-ellipses-outline" label={isSuperadmin ? "Open messages" : "Chat with creator / support"} onPress={chatWithCreator} colors={colors} />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
+
+function DDItem({ icon, label, onPress, colors }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void; colors: AppColors }) {
+  return (
+    <TouchableOpacity style={ddItemStyle.row} onPress={onPress}>
+      <Ionicons name={icon} size={20} color={colors.text} />
+      <Text style={[ddItemStyle.text, { color: colors.text }]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+const ddItemStyle = StyleSheet.create({
+  row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 14 },
+  text: { fontSize: 15, fontWeight: "600" },
+});
 
 type Item = { label: string; icon: keyof typeof Ionicons.glyphMap; href: string };
 
@@ -98,6 +144,12 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   logo: { width: 38, height: 38 },
+
+  ddBackdrop: { flex: 1, alignItems: "flex-end", paddingTop: HEADER_HEIGHT + 6, paddingRight: 10, backgroundColor: "rgba(0,0,0,0.25)" },
+  dropdown: { minWidth: 230, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, paddingVertical: 6, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
+  ddHead: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: colors.border, marginBottom: 4 },
+  ddName: { color: colors.text, fontSize: 15, fontWeight: "800" },
+  ddRole: { color: colors.muted, fontSize: 12, marginTop: 2 },
 
   overlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 100, flexDirection: "row" },
   backdrop: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.55)" },
