@@ -132,6 +132,14 @@ export default function RaffleDetail() {
   const confirmedTickets = tickets.filter((t) => t.status === "confirmed").sort((a, b) => a.seat_number - b.seat_number);
   const wheelEntrants: WheelEntrant[] = confirmedTickets.map((t) => ({ seat: t.seat_number, name: nameFor(t.owner_id) }));
   const pendingPaid = tickets.filter((t) => t.type === "paid" && t.status === "held");
+  // Can't draw the main game while payments are pending or any mini is unfinished.
+  const openMinis = minis.filter((m: any) => m.status !== "complete" && m.status !== "canceled");
+  const drawBlocked = confirmedTickets.length < 1 || pendingPaid.length > 0 || openMinis.length > 0;
+  const drawLabel =
+    confirmedTickets.length < 1 ? "Run the draw (need 1+ entry)"
+    : pendingPaid.length > 0 ? `Confirm ${pendingPaid.length} pending payment${pendingPaid.length === 1 ? "" : "s"} first`
+    : openMinis.length > 0 ? `Finish ${openMinis.length} mini${openMinis.length === 1 ? "" : "s"} first`
+    : "Run the draw";
 
   async function claim(type: "free" | "paid", seat: number) {
     setClaiming(true);
@@ -160,6 +168,14 @@ export default function RaffleDetail() {
   // ---- Draw event flow ----
   function openDraw() {
     if (confirmedTickets.length < 1) { Alert.alert("No entries yet", "Confirm at least one entry before drawing."); return; }
+    if (pendingPaid.length > 0) {
+      Alert.alert("Pending payments", `Mark all ${pendingPaid.length} pending payment${pendingPaid.length === 1 ? "" : "s"} as paid (or remove them) before drawing — every entry must be confirmed so they're on the wheel.`);
+      return;
+    }
+    if (openMinis.length > 0) {
+      Alert.alert("Finish minis first", `Run all ${openMinis.length} mini${openMinis.length === 1 ? "" : "s"} for this game before drawing the main game.`);
+      return;
+    }
     setDrawErr(""); setSpinTo(null); setLiveWinner(null);
     setCountdown(COUNTDOWN_SECONDS);
     setStage("confirm");
@@ -349,16 +365,20 @@ export default function RaffleDetail() {
             {minis.length === 0 ? (
               <Text style={styles.bigNote}>No minis yet. A mini is a smaller game whose winner gets seats in this one.</Text>
             ) : (
-              minis.map((m) => (
-                <TouchableOpacity key={m.id} style={styles.miniRow} onPress={() => router.push(`/raffle/${m.id}`)}>
-                  {m.cover_url ? <Image source={{ uri: m.cover_url }} style={styles.miniThumb} /> : <View style={[styles.miniThumb, { backgroundColor: colors.navy }]} />}
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.miniRowTitle} numberOfLines={1}>{m.title}</Text>
-                    <Text style={styles.miniRowMeta}>Winner gets {m.seats_awarded ?? 1} seat{(m.seats_awarded ?? 1) === 1 ? "" : "s"} · {m.status}</Text>
-                  </View>
-                  <Text style={styles.manageChevron}>›</Text>
-                </TouchableOpacity>
-              ))
+              minis.map((m) => {
+                const cover = m.cover_url ?? raffle.cover_url; // minis default to the parent's image
+                const label = /^Mini \d+/.exec(m.title)?.[0] ?? m.title;
+                return (
+                  <TouchableOpacity key={m.id} style={styles.miniRow} onPress={() => router.push(`/raffle/${m.id}`)}>
+                    {cover ? <Image source={{ uri: cover }} style={styles.miniThumb} /> : <View style={[styles.miniThumb, { backgroundColor: colors.navy }]} />}
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.miniRowTitle} numberOfLines={1}>{label}</Text>
+                      <Text style={styles.miniRowMeta}>Winner gets {m.seats_awarded ?? 1} seat{(m.seats_awarded ?? 1) === 1 ? "" : "s"} · {m.status}</Text>
+                    </View>
+                    <Text style={styles.manageChevron}>›</Text>
+                  </TouchableOpacity>
+                );
+              })
             )}
           </View>
         )}
@@ -444,13 +464,11 @@ export default function RaffleDetail() {
           <View style={{ marginTop: 20, gap: 10 }}>
             {raffle.status === "open" && (
               <TouchableOpacity
-                style={[styles.btn, styles.btnRed, confirmedTickets.length < 1 && styles.btnDim]}
-                disabled={confirmedTickets.length < 1}
+                style={[styles.btn, styles.btnRed, drawBlocked && styles.btnDim]}
+                disabled={drawBlocked}
                 onPress={openDraw}
               >
-                <Text style={[styles.btnText, { color: colors.onAccent }]}>
-                  {confirmedTickets.length < 1 ? "Run the draw (need 1+ entry)" : "Run the draw"}
-                </Text>
+                <Text style={[styles.btnText, { color: colors.onAccent }]}>{drawLabel}</Text>
               </TouchableOpacity>
             )}
             {raffle.status === "open" && (
@@ -611,8 +629,8 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   miniAddBtn: { backgroundColor: colors.red, borderRadius: radius.pill, paddingVertical: 8, paddingHorizontal: 14 },
   miniAddBtnText: { color: colors.onAccent, fontSize: 13, fontWeight: "800" },
   miniRow: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, padding: 10, marginTop: 10 },
-  miniThumb: { width: 48, height: 48, borderRadius: 10 },
-  miniRowTitle: { color: colors.text, fontSize: 14, fontWeight: "800" },
+  miniThumb: { width: 60, height: 60, borderRadius: 10 },
+  miniRowTitle: { color: colors.text, fontSize: 17, fontWeight: "900", letterSpacing: -0.2 },
   miniRowMeta: { color: colors.muted, fontSize: 12, marginTop: 2, textTransform: "capitalize" },
   legend: { color: colors.faint, fontSize: 12, marginTop: 10 },
   // selectable seats

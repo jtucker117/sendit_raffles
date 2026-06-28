@@ -31,7 +31,7 @@ export default function CreateMini() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
 
-  const [parent, setParent] = useState<{ id: string; title: string; category: string | null; host_id: string; amount_cents: number | null; capacity: number | null } | null>(null);
+  const [parent, setParent] = useState<{ id: string; title: string; category: string | null; host_id: string; amount_cents: number | null; capacity: number | null; cover_url: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [title, setTitle] = useState("");
@@ -46,7 +46,7 @@ export default function CreateMini() {
 
   const load = useCallback(async () => {
     if (!id) return;
-    const { data } = await supabase.from("raffles").select("id, title, category, host_id, amount_cents, capacity").eq("id", id).single();
+    const { data } = await supabase.from("raffles").select("id, title, category, host_id, amount_cents, capacity, cover_url").eq("id", id).single();
     if (data) {
       setParent(data as any);
       // Auto-number: next number is one past the highest existing "Mini N" for this parent.
@@ -92,12 +92,12 @@ export default function CreateMini() {
     }
     setSaving(true);
     try {
-      const { error } = await supabase.from("raffles").insert({
+      const { data: created, error } = await supabase.from("raffles").insert({
         host_id: user!.id,
         title: title.trim(),
         prize: `${seats} seat${seats === 1 ? "" : "s"} in ${parent!.title}`,
         category: parent!.category,
-        cover_url: coverUrl,
+        cover_url: coverUrl ?? parent!.cover_url, // default to the parent game's image
         capacity: cap,
         free_seat_limit: free,
         entry_word: term.toLowerCase(),
@@ -107,8 +107,12 @@ export default function CreateMini() {
         parent_raffle_id: parent!.id,
         seats_awarded: seats,
         status: "open",
-      });
+      }).select("id").single();
       if (error) throw error;
+      // Lock the awarded seats in the parent so nobody else can claim them.
+      if (created?.id && seats > 0) {
+        await supabase.rpc("reserve_mini_seats", { p_parent: parent!.id, p_mini: created.id, p_count: seats });
+      }
       router.replace(`/raffle/${parent!.id}`);
     } catch (e: any) {
       Alert.alert("Couldn't create mini", e?.message ?? "Try again.");
