@@ -341,8 +341,8 @@ export default function RaffleDetail() {
             <View style={styles.miniHead}>
               <Text style={styles.boardTitle}>Mini games</Text>
               {isHost && raffle.status === "open" && (
-                <TouchableOpacity onPress={() => router.push(`/host/mini/${raffle.id}`)}>
-                  <Text style={styles.miniAdd}>+ Create mini</Text>
+                <TouchableOpacity style={styles.miniAddBtn} activeOpacity={0.85} onPress={() => router.push(`/host/mini/${raffle.id}`)}>
+                  <Text style={styles.miniAddBtnText}>+ Create mini</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -603,6 +603,8 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   miniSection: { marginTop: 18 },
   miniHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   miniAdd: { color: colors.red, fontSize: 14, fontWeight: "800" },
+  miniAddBtn: { backgroundColor: colors.red, borderRadius: radius.pill, paddingVertical: 8, paddingHorizontal: 14 },
+  miniAddBtnText: { color: colors.onAccent, fontSize: 13, fontWeight: "800" },
   miniRow: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, padding: 10, marginTop: 10 },
   miniThumb: { width: 48, height: 48, borderRadius: 10 },
   miniRowTitle: { color: colors.text, fontSize: 14, fontWeight: "800" },
