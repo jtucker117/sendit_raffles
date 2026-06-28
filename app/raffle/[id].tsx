@@ -22,7 +22,7 @@ interface Raffle {
   amount_cents: number; status: string; draw_style?: "wheel" | "scratch" | "lotto";
   draw_mode?: "single" | "elimination";
   parent_raffle_id?: string | null; seats_awarded?: number;
-  scheduled_at?: string | null;
+  scheduled_at?: string | null; show_odds?: boolean;
 }
 interface Ticket { id: string; seat_number: number; owner_id: string; type: "free" | "paid"; status: string; }
 
@@ -179,6 +179,7 @@ export default function RaffleDetail() {
 
   // Eligible entrants for the draw — confirmed only, ordered by seat to match the Edge Function.
   const confirmedTickets = tickets.filter((t) => t.status === "confirmed").sort((a, b) => a.seat_number - b.seat_number);
+  const myConfirmed = confirmedTickets.filter((t) => t.owner_id === user?.id).length;
   const wheelEntrants: WheelEntrant[] = confirmedTickets.map((t) => ({ seat: t.seat_number, name: nameFor(t.owner_id) }));
   const pendingPaid = tickets.filter((t) => t.type === "paid" && t.status === "held");
   // Can't draw the main game while payments are pending or any mini is unfinished.
@@ -422,6 +423,14 @@ export default function RaffleDetail() {
           </View>
           <View style={styles.bar}><View style={[styles.barFill, { width: `${soldPct}%` }]} /></View>
           <Text style={styles.selloutMeta}>{paidLeft} paid left{(raffle.free_seat_limit ?? 0) > 0 ? ` · ${freeLeft} of ${raffle.free_seat_limit} free left` : ""} · {money(raffle.amount_cents)}/seat</Text>
+          {raffle.show_odds !== false && raffle.status !== "complete" && totalSeats > 0 && (
+            <View style={styles.oddsRow}>
+              <Text style={styles.oddsLine}>🎲 Odds: <Text style={styles.oddsStrong}>1 in {totalSeats}</Text> per seat ({(100 / totalSeats).toFixed(1)}%)</Text>
+              {myConfirmed > 0 && confirmedTickets.length > 0 && (
+                <Text style={styles.oddsSub}>Your odds right now: {((myConfirmed / confirmedTickets.length) * 100).toFixed(1)}% ({myConfirmed} of {confirmedTickets.length} entered)</Text>
+              )}
+            </View>
+          )}
         </View>
 
         {/* Minis hanging off this game */}
@@ -699,6 +708,10 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   bar: { height: 8, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, overflow: "hidden" },
   barFill: { height: "100%", backgroundColor: colors.red },
   selloutMeta: { color: colors.muted, fontSize: 12, marginTop: 8 },
+  oddsRow: { marginTop: 10, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10 },
+  oddsLine: { color: colors.text, fontSize: 13, fontWeight: "600" },
+  oddsStrong: { color: colors.red, fontWeight: "900" },
+  oddsSub: { color: colors.muted, fontSize: 12, marginTop: 3 },
   miniBanner: { backgroundColor: colors.redSoft, borderColor: colors.red, borderWidth: 1, borderRadius: radius.md, padding: 12, marginTop: 14 },
   miniBannerText: { color: colors.text, fontSize: 13, lineHeight: 18, fontWeight: "600" },
   miniSection: { marginTop: 18 },

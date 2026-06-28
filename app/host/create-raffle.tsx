@@ -51,6 +51,7 @@ export default function CreateRaffleScreen() {
   const [drawStyle, setDrawStyle] = useState<"wheel" | "scratch" | "lotto">("wheel");
   const [drawMode, setDrawMode] = useState<"single" | "elimination">("single");
   const [scheduledAt, setScheduledAt] = useState(""); // datetime-local string; blank = launch now
+  const [showOdds, setShowOdds] = useState(true); // show winning odds to players
   const [dupName, setDupName] = useState(""); // set when relaunching from an old game
   const [step, setStep] = useState(0); // 0 Prize · 1 Tickets · 2 Rules · 3 Publish
 
@@ -74,6 +75,7 @@ export default function CreateRaffleScreen() {
       setTerm((ew.charAt(0).toUpperCase() + ew.slice(1)) as any);
       setDrawStyle((data.draw_style ?? "wheel") as any);
       setDrawMode((data.draw_mode ?? "single") as any);
+      setShowOdds(data.show_odds ?? true);
       setDupName(data.title ?? "");
     })();
   }, [params.from]);
@@ -132,6 +134,7 @@ export default function CreateRaffleScreen() {
         amount_cents: Math.round((parseFloat(amount) || 0) * 100),
         draw_style: drawStyle,
         draw_mode: drawMode,
+        show_odds: showOdds,
         status: mode,
         scheduled_at: scheduledISO,
       });
@@ -278,6 +281,14 @@ export default function CreateRaffleScreen() {
               <Text style={styles.helper}>How the winner is revealed. The winner is always drawn fairly via Random.org — the graphic just lands on it.</Text>
             </Field>
           )}
+
+          <Field label="Winning odds">
+            <TouchableOpacity style={styles.toggleRow} onPress={() => setShowOdds((v) => !v)}>
+              <View style={[styles.toggleBox, showOdds && styles.toggleBoxOn]}>{showOdds ? <Text style={styles.toggleCheck}>✓</Text> : null}</View>
+              <Text style={styles.toggleLabel}>Show players their odds of winning</Text>
+            </TouchableOpacity>
+            <Text style={styles.helper}>When on, players see each seat's chance (e.g. "1 in 50") and their own odds. Turn off to hide it.</Text>
+          </Field>
         </>
       )}
 
@@ -366,6 +377,11 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   input: { backgroundColor: colors.surfaceAlt, borderColor: colors.inputBorder, borderWidth: 1, borderRadius: radius.md, padding: 12, color: colors.text, fontSize: 15 },
   multiline: { minHeight: 80, textAlignVertical: "top" },
   helper: { color: colors.faint, fontSize: 12, marginTop: 6 },
+  toggleRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  toggleBox: { width: 24, height: 24, borderRadius: 7, borderWidth: 1.5, borderColor: colors.inputBorder, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceAlt },
+  toggleBoxOn: { backgroundColor: colors.red, borderColor: colors.red },
+  toggleCheck: { color: colors.onAccent, fontSize: 14, fontWeight: "900" },
+  toggleLabel: { color: colors.text, fontSize: 14, fontWeight: "600" },
   row2: { flexDirection: "row", gap: 12 },
   seatsNote: { color: colors.muted, fontSize: 12.5, lineHeight: 18, marginTop: -6, marginBottom: 14 },
   catWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },

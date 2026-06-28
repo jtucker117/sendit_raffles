@@ -46,6 +46,7 @@ export default function EditGame() {
   const [amount, setAmount] = useState("");
   const [drawMode, setDrawMode] = useState<"single" | "elimination">("single");
   const [drawStyle, setDrawStyle] = useState<"wheel" | "scratch" | "lotto">("wheel");
+  const [showOdds, setShowOdds] = useState(true);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -59,6 +60,7 @@ export default function EditGame() {
       setAmount(String((r.amount_cents ?? 0) / 100));
       setDrawMode(r.draw_mode === "elimination" ? "elimination" : "single");
       setDrawStyle(r.draw_style ?? "wheel");
+      setShowOdds(r.show_odds ?? true);
       const { count } = await supabase.from("tickets").select("*", { count: "exact", head: true }).eq("raffle_id", id);
       setClaimed(count ?? 0);
     }
@@ -76,10 +78,11 @@ export default function EditGame() {
     setSaving(true);
     const patch: any = {
       title: title.trim(), prize: prize.trim() || null, category, description: description.trim() || null, cover_url: coverUrl,
+      show_odds: showOdds, // cosmetic — editable any time
     };
     if (!locked) {
       patch.capacity = Math.max(2, Math.min(1000, parseInt(capacity, 10) || 0));
-      patch.free_seat_limit = Math.max(0, Math.min(patch.capacity, parseInt(freeLimit, 10) || 0));
+      patch.free_seat_limit = Math.max(0, parseInt(freeLimit, 10) || 0); // free seats are extra, not capped by capacity
       patch.amount_cents = Math.round((parseFloat(amount) || 0) * 100);
       patch.draw_mode = drawMode;
       patch.draw_style = drawStyle;
@@ -157,6 +160,13 @@ export default function EditGame() {
         </Field>
       )}
 
+      <Field label="Winning odds">
+        <TouchableOpacity style={styles.oddsToggle} onPress={() => setShowOdds((v) => !v)}>
+          <View style={[styles.oddsBox, showOdds && styles.oddsBoxOn]}>{showOdds ? <Text style={styles.oddsCheck}>✓</Text> : null}</View>
+          <Text style={styles.oddsToggleText}>Show players their odds of winning</Text>
+        </TouchableOpacity>
+      </Field>
+
       <TouchableOpacity style={[styles.saveBtn, saving && { opacity: 0.5 }]} disabled={saving} onPress={save}>
         {saving ? <ActivityIndicator color={colors.onAccent} /> : <Text style={styles.saveText}>Save changes</Text>}
       </TouchableOpacity>
@@ -189,6 +199,11 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   segOn: { backgroundColor: colors.red, borderColor: colors.red },
   segText: { color: colors.text, fontWeight: "700", fontSize: 13 },
   segTextOn: { color: colors.onAccent },
+  oddsToggle: { flexDirection: "row", alignItems: "center", gap: 10 },
+  oddsBox: { width: 24, height: 24, borderRadius: 7, borderWidth: 1.5, borderColor: colors.inputBorder, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceAlt },
+  oddsBoxOn: { backgroundColor: colors.red, borderColor: colors.red },
+  oddsCheck: { color: colors.onAccent, fontSize: 14, fontWeight: "900" },
+  oddsToggleText: { color: colors.text, fontSize: 14, fontWeight: "600" },
   saveBtn: { backgroundColor: colors.red, borderRadius: radius.md, paddingVertical: 15, alignItems: "center", marginTop: 8 },
   saveText: { color: colors.onAccent, fontSize: 16, fontWeight: "800" },
   backBtn: { alignSelf: "center", marginTop: 18, padding: 10 },
