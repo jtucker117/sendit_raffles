@@ -71,7 +71,7 @@ export default function Home() {
   const filtered = cat === "All" ? raffles : raffles.filter((r) => r.category === cat);
   const sorted = [...filtered].sort((a, b) => soldPct(b) - soldPct(a));
   const featured = sorted[0];
-  const cols = width >= 900 ? 3 : width >= 600 ? 2 : 1;
+  const cols = width >= 1100 ? 4 : width >= 760 ? 3 : 2;
   const contentW = Math.min(width, 1100) - 32;
   const gap = 14;
   const cardW = cols === 1 ? contentW : (contentW - gap * (cols - 1)) / cols;
@@ -159,12 +159,12 @@ export default function Home() {
                   {r.cover_url
                     ? <Image source={{ uri: r.cover_url }} style={styles.cardImg} />
                     : <LinearGradient colors={[colors.surfaceAlt, colors.border]} style={styles.cardImg} />}
-                  <View style={styles.cardBody}>
+                  <LinearGradient colors={["transparent", "rgba(0,0,0,0.82)"]} style={styles.cardShade} />
+                  <View style={styles.cardFooter}>
                     <Text style={styles.cardTitle} numberOfLines={1}>{r.title}</Text>
-                    {r.prize ? <Text style={styles.cardSub} numberOfLines={1}>🏆 {r.prize}</Text> : <Text style={styles.cardSub}>{r.capacity} seats</Text>}
                     <View style={styles.bar}><View style={[styles.barFill, { width: `${soldPct(r)}%` }]} /></View>
                     <View style={styles.cardRow}>
-                      <Text style={styles.cardPrice}>{money(r.amount_cents)} / seat</Text>
+                      <Text style={styles.cardPrice}>{money(r.amount_cents)}</Text>
                       <Text style={styles.cardLeft}>{Math.max(r.capacity - claimedOf(r), 0)} left</Text>
                     </View>
                   </View>
@@ -217,16 +217,16 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
 
   sectionTitle: { color: colors.text, fontSize: 16, fontWeight: "800", marginBottom: 12 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 14 },
-  card: { backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: "hidden" },
-  cardImg: { width: "100%", aspectRatio: 4 / 5 },
-  cardBody: { padding: 12 },
-  cardTitle: { color: colors.text, fontSize: 15, fontWeight: "800" },
-  cardSub: { color: colors.muted, fontSize: 12, marginTop: 2 },
-  bar: { height: 6, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, marginTop: 10, overflow: "hidden" },
+  card: { backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: "hidden", aspectRatio: 4 / 5 },
+  cardImg: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%" },
+  cardShade: { position: "absolute", left: 0, right: 0, bottom: 0, height: "55%" },
+  cardFooter: { position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 9, paddingBottom: 9, paddingTop: 4 },
+  cardTitle: { color: "#fff", fontSize: 13, fontWeight: "800" },
+  bar: { height: 4, borderRadius: radius.pill, backgroundColor: "rgba(255,255,255,0.28)", marginTop: 6, overflow: "hidden" },
   barFill: { height: "100%", backgroundColor: colors.red },
-  cardRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 9 },
-  cardPrice: { color: colors.text, fontSize: 12, fontWeight: "800" },
-  cardLeft: { color: colors.muted, fontSize: 12, fontWeight: "600" },
+  cardRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 6 },
+  cardPrice: { color: "#fff", fontSize: 12, fontWeight: "800" },
+  cardLeft: { color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: "600" },
 
   empty: { alignItems: "center", marginTop: 40, gap: 8 },
   emptyCard: { alignItems: "center", gap: 10, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingVertical: 40, paddingHorizontal: 24, marginTop: 8 },
