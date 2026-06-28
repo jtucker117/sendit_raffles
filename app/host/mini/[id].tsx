@@ -63,15 +63,10 @@ export default function CreateMini() {
     );
   }
 
-  // Auto-price: the mini's paid seats recover the value of the parent seats
-  // being pulled. Host can't mark it up. Always rounds up so seats aren't undersold.
+  // Auto-price: a mini seat costs the same as a seat in the parent game.
+  // Host can't change it, so minis can't be marked up.
   const parentPriceCents = parent.amount_cents ?? 0;
-  const seatsNum = Math.max(1, parseInt(seatsAwarded, 10) || 1);
-  const capNum = Math.max(0, parseInt(capacity, 10) || 0);
-  const freeNum = Math.max(0, Math.min(capNum, parseInt(freeLimit, 10) || 0));
-  const paidSeats = Math.max(0, capNum - freeNum);
-  const totalValueCents = seatsNum * parentPriceCents;
-  const perSeatCents = paidSeats > 0 ? Math.ceil(totalValueCents / paidSeats) : 0;
+  const perSeatCents = parentPriceCents;
   const money = (c: number) => `$${(c / 100).toFixed(2)}`;
 
   async function addCover() {
@@ -83,8 +78,7 @@ export default function CreateMini() {
     const cap = Math.max(2, Math.min(1000, parseInt(capacity, 10) || 0));
     const free = Math.max(0, Math.min(cap, parseInt(freeLimit, 10) || 0));
     const seats = Math.max(1, parseInt(seatsAwarded, 10) || 1);
-    const paid = Math.max(0, cap - free);
-    const perCents = paid > 0 ? Math.ceil((seats * parentPriceCents) / paid) : 0;
+    const perCents = parentPriceCents;
     if (!title.trim()) { Alert.alert("Title required"); return; }
     if (!(parseInt(capacity, 10) >= 2)) { Alert.alert("Seats required", "Enter total seats (at least 2)."); return; }
     if (parent!.capacity != null && seats > parent!.capacity) {
@@ -148,9 +142,7 @@ export default function CreateMini() {
           <Text style={styles.priceSub}>
             {parentPriceCents === 0
               ? "The main game's seats are free, so this mini is free too."
-              : paidSeats === 0
-                ? "All mini seats are free — nothing to charge."
-                : `${seatsNum} seat${seatsNum === 1 ? "" : "s"} × ${money(parentPriceCents)} = ${money(totalValueCents)} of value, split across ${paidSeats} paid seat${paidSeats === 1 ? "" : "s"} (rounded up). The price matches what the seats actually cost — minis can't be marked up.`}
+              : `Same as a seat in the main game (${money(parentPriceCents)} each). Locked — minis can't be marked up.`}
           </Text>
         </View>
       </Field>
