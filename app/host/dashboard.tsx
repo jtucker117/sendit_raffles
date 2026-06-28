@@ -85,7 +85,7 @@ export default function HostDashboard() {
   const revenueCents = rows.reduce((sum, r) => sum + r.paidConfirmed * r.amount_cents, 0);
   const entrants = rows.reduce((sum, r) => sum + r.confirmed, 0);
   const pct = (r: Row) => Math.min(100, Math.round((r.claimed / Math.max(r.capacity, 1)) * 100));
-  const statusChip = (s: string) => (s === "open" ? "● LIVE" : s === "complete" ? "DRAWN" : "CANCELED");
+  const statusChip = (s: string) => (s === "open" ? "● LIVE" : s === "complete" ? "DRAWN" : s === "draft" ? "DRAFT" : s === "scheduled" ? "🗓 SOON" : "CANCELED");
 
   if (!isHostApproved) {
     return (
@@ -142,7 +142,7 @@ export default function HostDashboard() {
                   <View style={styles.coverWrap}>
                     {r.cover_url ? <Image source={{ uri: r.cover_url }} style={styles.cover} /> : <LinearGradient colors={[colors.navy, colors.bg]} style={styles.cover} />}
                     <LinearGradient colors={["transparent", "rgba(0,0,0,0.88)"]} style={StyleSheet.absoluteFill} />
-                    <View style={[styles.chip, r.status === "open" ? styles.chipLive : r.status === "complete" ? styles.chipDrawn : styles.chipCanceled]}>
+                    <View style={[styles.chip, r.status === "open" ? styles.chipLive : r.status === "scheduled" ? styles.chipLive : r.status === "complete" ? styles.chipDrawn : styles.chipCanceled]}>
                       <Text style={styles.chipText}>{statusChip(r.status)}</Text>
                     </View>
                     <View style={styles.overlay}>

@@ -34,7 +34,7 @@ export default function Home() {
   const loadRaffles = useCallback(async () => {
     if (!user) return;
     setLoadingRaffles(true);
-    const { data } = await supabase.from("raffles").select("*").eq("status", "open").order("created_at", { ascending: false });
+    const { data } = await supabase.from("raffles").select("*").in("status", ["open", "scheduled"]).order("created_at", { ascending: false });
     const rows = (data ?? []) as RaffleRow[];
     setRaffles(rows);
     // Tally claimed seats per raffle for the sold bars.
@@ -157,15 +157,16 @@ export default function Home() {
               {filtered.map((r) => (
                 <TouchableOpacity key={r.id} activeOpacity={0.9} style={[styles.card, { width: cardW }]} onPress={() => router.push(`/raffle/${r.id}`)}>
                   {r.cover_url
-                    ? <Image source={{ uri: r.cover_url }} style={styles.cardImg} />
+                    ? <Image source={{ uri: r.cover_url }} style={styles.cardImg} blurRadius={r.status === "scheduled" ? 12 : 0} />
                     : <LinearGradient colors={[colors.surfaceAlt, colors.border]} style={styles.cardImg} />}
                   <LinearGradient colors={["transparent", "rgba(0,0,0,0.82)"]} style={styles.cardShade} />
+                  {r.status === "scheduled" && <View style={styles.soonBadge}><Text style={styles.soonBadgeText}>🗓 SOON</Text></View>}
                   <View style={styles.cardFooter}>
                     <Text style={styles.cardTitle} numberOfLines={1}>{r.title}</Text>
                     <View style={styles.bar}><View style={[styles.barFill, { width: `${soldPct(r)}%` }]} /></View>
                     <View style={styles.cardRow}>
                       <Text style={styles.cardPrice}>{money(r.amount_cents)}</Text>
-                      <Text style={styles.cardLeft}>{Math.max(r.capacity - claimedOf(r), 0)} left</Text>
+                      <Text style={styles.cardLeft}>{r.status === "scheduled" ? "Coming soon" : `${Math.max(r.capacity - claimedOf(r), 0)} left`}</Text>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -220,6 +221,8 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   card: { backgroundColor: colors.surface, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: "hidden", aspectRatio: 4 / 5 },
   cardImg: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%" },
   cardShade: { position: "absolute", left: 0, right: 0, bottom: 0, height: "55%" },
+  soonBadge: { position: "absolute", top: 8, left: 8, backgroundColor: "rgba(0,0,0,0.7)", borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 4 },
+  soonBadgeText: { color: "#fff", fontSize: 10, fontWeight: "900", letterSpacing: 0.5 },
   cardFooter: { position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 9, paddingBottom: 9, paddingTop: 4 },
   cardTitle: { color: "#fff", fontSize: 13, fontWeight: "800" },
   bar: { height: 4, borderRadius: radius.pill, backgroundColor: "rgba(255,255,255,0.28)", marginTop: 6, overflow: "hidden" },

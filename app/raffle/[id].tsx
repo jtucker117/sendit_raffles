@@ -7,6 +7,7 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/lib/supabase";
+import { showError } from "@/lib/notify";
 import { radius, AppColors } from "@/lib/theme";
 import { DrawWheel, WheelEntrant } from "@/components/DrawWheel";
 import { DrawScratch } from "@/components/DrawScratch";
@@ -21,6 +22,7 @@ interface Raffle {
   amount_cents: number; status: string; draw_style?: "wheel" | "scratch" | "lotto";
   draw_mode?: "single" | "elimination";
   parent_raffle_id?: string | null; seats_awarded?: number;
+  scheduled_at?: string | null;
 }
 interface Ticket { id: string; seat_number: number; owner_id: string; type: "free" | "paid"; status: string; }
 
@@ -60,6 +62,8 @@ export default function RaffleDetail() {
   const [elimRounds, setElimRounds] = useState<ElimRound[]>([]);
   const [liveWinner, setLiveWinner] = useState<{ name: string; seat: number } | null>(null);
   const [drawErr, setDrawErr] = useState("");
+  const [myNotify, setMyNotify] = useState(false);
+  const [nowMs, setNowMs] = useState(Date.now());
 
   const load = useCallback(async (silent = false) => {
     if (!id) return;
@@ -69,7 +73,18 @@ export default function RaffleDetail() {
       supabase.from("tickets").select("*").eq("raffle_id", id).order("seat_number"),
       supabase.from("draws").select("*").eq("raffle_id", id).maybeSingle(),
     ]);
-    if (r) setRaffle(r as Raffle);
+    let rr = r as Raffle | null;
+    // A scheduled game whose time has arrived auto-opens.
+    if (rr && rr.status === "scheduled" && rr.scheduled_at && new Date(rr.scheduled_at).getTime() <= Date.now()) {
+      await supabase.from("raffles").update({ status: "open" }).eq("id", rr.id);
+      rr = { ...rr, status: "open" };
+    }
+    if (rr) setRaffle(rr);
+    // Am I on the notify list for this game?
+    if (user?.id) {
+      const { data: gn } = await supabase.from("game_notify").select("user_id").eq("raffle_id", id).eq("user_id", user.id).maybeSingle();
+      setMyNotify(!!gn);
+    }
     const ts = (t ?? []) as Ticket[];
     setTickets(ts);
     // Resolve owner display names (host/superadmin can read followers; players read what RLS allows)
@@ -98,6 +113,9 @@ export default function RaffleDetail() {
   // Reload whenever the screen regains focus (e.g. returning from Manage entries)
   // so confirmed/pending counts and the draw button stay in sync.
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  // Tick once a second so scheduled countdowns update live.
+  useEffect(() => { const t = setInterval(() => setNowMs(Date.now()), 1000); return () => clearInterval(t); }, []);
 
   // Auto-verify the signature with Random.org as soon as a completed draw loads.
   useEffect(() => {
@@ -130,6 +148,34 @@ export default function RaffleDetail() {
   const paidLeft = Math.max(0, raffle.capacity - paidUsed);
   const money = (c: number) => `$${(c / 100).toFixed(0)}`;
   const nameFor = (oid: string) => names[oid] ?? (oid === user?.id ? "You" : "Player");
+
+  // Draft / scheduled state
+  const isDraft = raffle.status === "draft";
+  const goLiveMs = raffle.scheduled_at ? new Date(raffle.scheduled_at).getTime() : 0;
+  const isUpcoming = raffle.status === "scheduled" && goLiveMs > nowMs;
+  const goLiveStr = raffle.scheduled_at ? new Date(raffle.scheduled_at).toLocaleString() : "";
+  const countdownText = (() => {
+    const s = Math.max(0, Math.floor((goLiveMs - nowMs) / 1000));
+    const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
+    return d > 0 ? `${d}d ${h}h ${m}m` : h > 0 ? `${h}h ${m}m ${ss}s` : `${m}m ${ss}s`;
+  })();
+
+  async function toggleNotify() {
+    if (!user?.id) return;
+    if (myNotify) {
+      await supabase.from("game_notify").delete().eq("raffle_id", raffle!.id).eq("user_id", user.id);
+      setMyNotify(false);
+    } else {
+      const { error } = await supabase.from("game_notify").insert({ raffle_id: raffle!.id, user_id: user.id });
+      if (error) { showError(error, "Couldn't set reminder"); return; }
+      setMyNotify(true);
+    }
+  }
+  async function publishDraft() {
+    const { error } = await supabase.from("raffles").update({ status: "open", scheduled_at: null }).eq("id", raffle!.id);
+    if (error) { showError(error, "Couldn't publish"); return; }
+    load();
+  }
 
   // Eligible entrants for the draw — confirmed only, ordered by seat to match the Edge Function.
   const confirmedTickets = tickets.filter((t) => t.status === "confirmed").sort((a, b) => a.seat_number - b.seat_number);
@@ -275,8 +321,32 @@ export default function RaffleDetail() {
   return (
     <View style={styles.screen}>
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: BOTTOM_NAV_HEIGHT + (canPick && selected.length > 0 ? 110 : 40) }}>
-      {raffle.cover_url ? <Image source={{ uri: raffle.cover_url }} style={styles.cover} /> : <View style={[styles.cover, styles.coverPh]} />}
+      <View>
+        {raffle.cover_url ? <Image source={{ uri: raffle.cover_url }} style={styles.cover} blurRadius={isUpcoming ? 16 : 0} /> : <View style={[styles.cover, styles.coverPh]} />}
+        {isUpcoming && (
+          <View style={styles.soonOverlay}>
+            <Text style={styles.soonEyebrow}>🔒 COMING SOON</Text>
+            <Text style={styles.soonCountdown}>{countdownText}</Text>
+            <Text style={styles.soonWhen}>Goes live {goLiveStr}</Text>
+          </View>
+        )}
+      </View>
       <View style={styles.pad}>
+        {isDraft && (
+          <View style={styles.draftBanner}>
+            <Text style={styles.draftBannerText}>📝 Draft — only you can see this. Publish it when you're ready.</Text>
+            {isHost && (
+              <TouchableOpacity style={styles.draftPublish} onPress={publishDraft}>
+                <Text style={styles.draftPublishText}>Publish now</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+        {isUpcoming && !isHost && (
+          <TouchableOpacity style={[styles.notifyBtn, myNotify && styles.notifyOn]} onPress={toggleNotify}>
+            <Text style={[styles.notifyText, myNotify && styles.notifyTextOn]}>{myNotify ? "🔔 You'll be notified when it opens" : "🔔 Notify me when it opens"}</Text>
+          </TouchableOpacity>
+        )}
         <Text style={styles.title}>{raffle.title}</Text>
         {raffle.prize ? <Text style={styles.prize}>🏆 {raffle.prize}</Text> : null}
         {raffle.description ? <Text style={styles.desc}>{raffle.description}</Text> : null}
@@ -651,6 +721,18 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   buyBtnText: { color: colors.onAccent, fontSize: 15, fontWeight: "800" },
   cover: { width: "100%", height: 180, borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl },
   coverPh: { backgroundColor: colors.navy },
+  soonOverlay: { position: "absolute", left: 0, right: 0, top: 0, bottom: 0, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.35)" },
+  soonEyebrow: { color: "#fff", fontSize: 12, fontWeight: "900", letterSpacing: 1.5 },
+  soonCountdown: { color: "#fff", fontSize: 40, fontWeight: "900", marginTop: 4, letterSpacing: -0.5 },
+  soonWhen: { color: "rgba(255,255,255,0.9)", fontSize: 13, fontWeight: "600", marginTop: 4 },
+  draftBanner: { backgroundColor: colors.surfaceAlt, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, padding: 12, marginBottom: 14, flexDirection: "row", alignItems: "center", gap: 10 },
+  draftBannerText: { color: colors.text, fontSize: 13, flex: 1, lineHeight: 18 },
+  draftPublish: { backgroundColor: colors.red, borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 8 },
+  draftPublishText: { color: colors.onAccent, fontWeight: "800", fontSize: 13 },
+  notifyBtn: { backgroundColor: colors.surface, borderColor: colors.red, borderWidth: 1, borderRadius: radius.md, paddingVertical: 13, alignItems: "center", marginBottom: 14 },
+  notifyOn: { backgroundColor: colors.redSoft },
+  notifyText: { color: colors.red, fontWeight: "800", fontSize: 14 },
+  notifyTextOn: { color: colors.text },
   pad: { padding: 20 },
   title: { color: colors.text, fontSize: 24, fontWeight: "800", letterSpacing: -0.3 },
   prize: { color: colors.muted, fontSize: 16, marginTop: 6 },
