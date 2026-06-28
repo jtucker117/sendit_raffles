@@ -55,6 +55,7 @@ export default function CreateRaffleScreen() {
   const [freeForAll, setFreeForAll] = useState(false); // everyone gets 1 free seat
   const [bogo, setBogo] = useState(false); // buy one get one free
   const [freeCountOn, setFreeCountOn] = useState(false); // "set a number of free seats" checkbox
+  const [noSeats, setNoSeats] = useState(false); // no seat board — players just pick a quantity
   const [dupName, setDupName] = useState(""); // set when relaunching from an old game
   const [step, setStep] = useState(0); // 0 Prize · 1 Tickets · 2 Rules · 3 Publish
 
@@ -82,6 +83,7 @@ export default function CreateRaffleScreen() {
       setFreeForAll(data.free_for_all ?? false);
       setBogo(data.bogo ?? false);
       setFreeCountOn((data.free_seat_limit ?? 0) > 0);
+      setNoSeats(data.no_seats ?? false);
       setDupName(data.title ?? "");
     })();
   }, [params.from]);
@@ -143,6 +145,7 @@ export default function CreateRaffleScreen() {
         show_odds: showOdds,
         free_for_all: freeForAll,
         bogo: bogo,
+        no_seats: noSeats,
         status: mode,
         scheduled_at: scheduledISO,
       });
@@ -219,7 +222,11 @@ export default function CreateRaffleScreen() {
       {/* STEP 1 · Tickets */}
       {step === 1 && (
         <>
-          <Field label="Paid seats (max 1000)" required>
+          <TouchableOpacity style={[styles.modeRow, { marginBottom: 6 }]} onPress={() => setNoSeats((v) => !v)}>
+            <View style={[styles.toggleBox, noSeats && styles.toggleBoxOn]}>{noSeats ? <Text style={styles.toggleCheck}>✓</Text> : null}</View>
+            <Text style={styles.toggleLabel}>🔢 No seat numbers — players just pick how many entries</Text>
+          </TouchableOpacity>
+          <Field label={noSeats ? "Total entries (max 1000)" : "Paid seats (max 1000)"} required>
             <TextInput style={styles.input} value={capacity} onChangeText={setCapacity} keyboardType="number-pad" placeholder="e.g. 100" placeholderTextColor={colors.faint} />
           </Field>
 

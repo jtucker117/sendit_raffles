@@ -23,7 +23,7 @@ interface Raffle {
   draw_mode?: "single" | "elimination";
   parent_raffle_id?: string | null; seats_awarded?: number;
   scheduled_at?: string | null; show_odds?: boolean; featured?: boolean;
-  free_for_all?: boolean; bogo?: boolean;
+  free_for_all?: boolean; bogo?: boolean; no_seats?: boolean;
 }
 interface Ticket { id: string; seat_number: number; owner_id: string; type: "free" | "paid"; status: string; }
 
@@ -65,6 +65,7 @@ export default function RaffleDetail() {
   const [drawErr, setDrawErr] = useState("");
   const [myNotify, setMyNotify] = useState(false);
   const [nowMs, setNowMs] = useState(Date.now());
+  const [buyQty, setBuyQty] = useState(1);
 
   const load = useCallback(async (silent = false) => {
     if (!id) return;
@@ -503,9 +504,25 @@ export default function RaffleDetail() {
           </TouchableOpacity>
         )}
 
-        {/* Seat board / pick-your-seats */}
-        <Text style={styles.boardTitle}>{canPick ? "Pick your seats" : "Seat board"}</Text>
-        {gridMode ? (
+        {/* Seat board / pick-your-seats — or a quantity picker for no-seat games */}
+        <Text style={styles.boardTitle}>{raffle.no_seats ? "Entries" : canPick ? "Pick your seats" : "Seat board"}</Text>
+        {raffle.no_seats ? (
+          canPick ? (
+            <View style={styles.qtyBox}>
+              <Text style={styles.qtyLabel}>How many entries?</Text>
+              <View style={styles.qtyRow}>
+                <TouchableOpacity style={styles.qtyBtn} onPress={() => setBuyQty((q) => Math.max(1, q - 1))}><Text style={styles.qtyBtnText}>−</Text></TouchableOpacity>
+                <Text style={styles.qtyVal}>{Math.min(buyQty, Math.max(paidLeft, 1))}</Text>
+                <TouchableOpacity style={styles.qtyBtn} onPress={() => setBuyQty((q) => Math.min(paidLeft, q + 1))}><Text style={styles.qtyBtnText}>+</Text></TouchableOpacity>
+              </View>
+              <TouchableOpacity style={[styles.btn, styles.btnRed, { alignSelf: "stretch" }, paidLeft <= 0 && styles.btnDim]} disabled={paidLeft <= 0} onPress={() => router.push(`/checkout/${raffle.id}?random=${Math.min(buyQty, paidLeft)}`)}>
+                <Text style={[styles.btnText, { color: colors.onAccent }]}>{paidLeft <= 0 ? "Sold out" : `Reserve ${Math.min(buyQty, paidLeft)} entr${Math.min(buyQty, paidLeft) === 1 ? "y" : "ies"} — ${money(raffle.amount_cents * Math.min(buyQty, paidLeft))}`}</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <Text style={styles.bigNote}>{paidSold} of {sellablePaid} entries in · {paidLeft} left.</Text>
+          )
+        ) : gridMode ? (
           <ScrollView
             style={styles.boardScroll}
             contentContainerStyle={styles.board}
@@ -545,16 +562,18 @@ export default function RaffleDetail() {
             )}
           </View>
         )}
-        {canPick && gridMode && (
+        {canPick && gridMode && !raffle.no_seats && (
           <Text style={styles.legend}>Tap open seats to select · amber = your pick · grey = taken · 🔒 = held for a mini</Text>
         )}
 
         {/* Player extras: lucky dip + free seat */}
         {canPick && (
           <View style={{ gap: 10, marginTop: 14 }}>
-            <TouchableOpacity style={[styles.btn, styles.btnOutline, paidLeft <= 0 && styles.btnDim]} disabled={paidLeft <= 0} onPress={() => router.push(`/checkout/${raffle.id}?random=1`)}>
-              <Text style={[styles.btnText, { color: colors.text }]}>🎲 {paidLeft <= 0 ? "No paid seats left" : `Lucky dip — random paid seat · ${money(raffle.amount_cents)}`}</Text>
-            </TouchableOpacity>
+            {!raffle.no_seats && (
+              <TouchableOpacity style={[styles.btn, styles.btnOutline, paidLeft <= 0 && styles.btnDim]} disabled={paidLeft <= 0} onPress={() => router.push(`/checkout/${raffle.id}?random=1`)}>
+                <Text style={[styles.btnText, { color: colors.text }]}>🎲 {paidLeft <= 0 ? "No paid seats left" : `Lucky dip — random paid seat · ${money(raffle.amount_cents)}`}</Text>
+              </TouchableOpacity>
+            )}
             {isBogo ? (
               <Text style={styles.bogoNote}>🎁 Buy one, get one free — your free seat is added automatically when the host confirms your payment.</Text>
             ) : (freeForAll || (raffle.free_seat_limit ?? 0) > 0) ? (
@@ -835,6 +854,12 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   payNote: { color: colors.faint, fontSize: 11, lineHeight: 16 },
   boardTitle: { color: colors.text, fontSize: 13, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.6, marginTop: 24, marginBottom: 12 },
   boardScroll: { maxHeight: 260, marginTop: 6, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface },
+  qtyBox: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, padding: 16, marginTop: 6, alignItems: "center" },
+  qtyLabel: { color: colors.muted, fontSize: 13, fontWeight: "700", marginBottom: 10 },
+  qtyRow: { flexDirection: "row", alignItems: "center", gap: 20, marginBottom: 14 },
+  qtyBtn: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceAlt },
+  qtyBtnText: { color: colors.text, fontSize: 24, fontWeight: "800" },
+  qtyVal: { color: colors.text, fontSize: 28, fontWeight: "900", minWidth: 48, textAlign: "center" },
   board: { flexDirection: "row", flexWrap: "wrap", gap: 6, padding: 10 },
   seat: { width: 38, height: 38, borderRadius: 9, alignItems: "center", justifyContent: "center" },
   seatOpen: { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border },
