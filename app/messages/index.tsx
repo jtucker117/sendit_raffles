@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
 import { useMessaging } from "@/lib/use-messaging";
 import { supabase } from "@/lib/supabase";
+import { showError } from "@/lib/notify";
 import { radius, AppColors } from "@/lib/theme";
 import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 
@@ -74,6 +75,15 @@ export default function Messages() {
     else await supabase.from("direct_messages").update({ read_at: null }).eq("recipient_id", user.id).eq("sender_id", c.otherUser.id);
     load();
   }
+  // Open a DM and mark it read in the same tap (this is the "auto-read on open").
+  async function openDM(c: any) {
+    if (c.unread && user?.id) {
+      const { error } = await supabase.from("direct_messages").update({ read_at: new Date().toISOString() })
+        .eq("recipient_id", user.id).eq("sender_id", c.otherUser.id).is("read_at", null);
+      if (error) { showError(error, "Couldn't mark read"); return; }
+    }
+    router.push(`/messages/chat/${c.otherUser.id}`);
+  }
   async function toggleGroupRead(c: any, makeRead: boolean) {
     if (!user?.id) return;
     const key = c.kind === "room" ? `room:${c.id}` : `host:${c.id}`;
@@ -109,7 +119,7 @@ export default function Messages() {
                 {convos.length === 0 ? (
                   <Text style={styles.empty}>No conversations yet.</Text>
                 ) : convos.map((c) => (
-                  <TouchableOpacity key={c.otherUser.id} style={[styles.row, c.unread && styles.rowUnread]} onPress={() => router.push(`/messages/chat/${c.otherUser.id}`)}>
+                  <TouchableOpacity key={c.otherUser.id} style={[styles.row, c.unread && styles.rowUnread]} onPress={() => openDM(c)}>
                     <View style={styles.avatar}><Text style={styles.avatarInitial}>{c.otherUser.display_name?.[0]?.toUpperCase() ?? "?"}</Text></View>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.rowName, c.unread && styles.rowNameUnread]}>{c.otherUser.display_name}</Text>
