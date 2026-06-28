@@ -87,8 +87,10 @@ export default function Messages() {
   async function toggleGroupRead(c: any, makeRead: boolean) {
     if (!user?.id) return;
     const key = c.kind === "room" ? `room:${c.id}` : `host:${c.id}`;
-    if (makeRead) await supabase.from("chat_reads").upsert({ user_id: user.id, room_key: key, last_read_at: new Date().toISOString() });
-    else await supabase.from("chat_reads").delete().eq("user_id", user.id).eq("room_key", key);
+    const { error } = makeRead
+      ? await supabase.from("chat_reads").upsert({ user_id: user.id, room_key: key, last_read_at: new Date().toISOString() })
+      : await supabase.from("chat_reads").delete().eq("user_id", user.id).eq("room_key", key);
+    if (error) { showError(error, "Couldn't update read state"); return; }
     load();
   }
 

@@ -75,10 +75,12 @@ export default function Home() {
   const claimedOf = (r: RaffleRow) => counts[r.id] ?? 0;
   const soldPct = (r: RaffleRow) => Math.min(100, Math.round((claimedOf(r) / Math.max(r.capacity, 1)) * 100));
 
-  // Featured = most-sold open raffle; rest go in the grid.
+  // Featured banner = paid featured games only (never a scheduled/draft game,
+  // since nobody can play those yet). Rotates if there are several.
   const filtered = cat === "All" ? raffles : raffles.filter((r) => r.category === cat);
-  const sorted = [...filtered].sort((a, b) => soldPct(b) - soldPct(a));
-  const featured = sorted[0];
+  const featuredPool = filtered.filter((r) => (r as any).featured && r.status === "open");
+  const featured = featuredPool.length ? featuredPool[Math.floor(nowMs / 8000) % featuredPool.length] : undefined;
+  const gridItems = filtered.filter((r) => r.id !== featured?.id);
   const cols = width >= 1100 ? 4 : width >= 760 ? 3 : 2;
   const contentW = Math.min(width, 1100) - 32;
   const gap = 14;
@@ -147,6 +149,7 @@ export default function Home() {
                   <LinearGradient colors={[colors.navy, colors.bg]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroImg} />
                 )}
                 <LinearGradient colors={["transparent", "rgba(0,0,0,0.75)"]} style={styles.heroShade} />
+                <View style={styles.featuredTag}><Text style={styles.featuredTagText}>⭐ FEATURED</Text></View>
                 <View style={styles.heroInfo}>
                   <View style={styles.pillLive}><Text style={styles.pillLiveText}>● OPEN</Text></View>
                   <Text style={styles.heroTitle} numberOfLines={2}>{featured.title}</Text>
@@ -162,7 +165,7 @@ export default function Home() {
             {/* Grid */}
             <Text style={styles.sectionTitle}>{isHost ? "Open games" : "Games from hosts you follow"}</Text>
             <View style={styles.grid}>
-              {filtered.map((r) => (
+              {gridItems.map((r) => (
                 <TouchableOpacity key={r.id} activeOpacity={0.9} style={[styles.card, { width: cardW }]} onPress={() => router.push(`/raffle/${r.id}`)}>
                   {r.cover_url
                     ? <Image source={{ uri: r.cover_url }} style={styles.cardImg} blurRadius={r.status === "scheduled" ? 12 : 0} />
@@ -214,6 +217,8 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   heroBlur: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%" },
   heroImg: { position: "absolute", top: 10, left: 10, right: 10, bottom: 56 },
   heroShade: { ...StyleSheet.absoluteFillObject },
+  featuredTag: { position: "absolute", top: 12, left: 12, backgroundColor: colors.red, borderRadius: radius.pill, paddingHorizontal: 11, paddingVertical: 5 },
+  featuredTagText: { color: colors.onAccent, fontSize: 11, fontWeight: "900", letterSpacing: 1 },
   heroInfo: { position: "absolute", left: 0, right: 0, bottom: 0, padding: 18 },
   pillLive: { alignSelf: "flex-start", backgroundColor: colors.red, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 5 },
   pillLiveText: { color: colors.onAccent, fontSize: 12, fontWeight: "800" },

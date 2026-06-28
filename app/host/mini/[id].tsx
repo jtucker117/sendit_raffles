@@ -116,11 +116,21 @@ export default function CreateMini() {
         status: "open",
       }).select("id").single();
       if (error) throw error;
-      // Lock the awarded seats in the parent so nobody else can claim them.
+      // Lock the awarded seats in the parent. If we CAN'T lock them all, roll the
+      // mini back — never leave a mini that owes seats it didn't reserve.
       if (created?.id && seats > 0) {
         const { data: reserved, error: rErr } = await supabase.rpc("reserve_mini_seats", { p_parent: parent!.id, p_mini: created.id, p_count: seats });
-        if (rErr) { Alert.alert("Heads up", `Mini created, but seats couldn't be reserved: ${rErr.message}. Run SUPABASE_MINI_RESERVE.md.`); }
-        else if ((reserved ?? 0) < seats) { Alert.alert("Heads up", `Only ${reserved ?? 0} of ${seats} seats could be reserved (the rest were already taken).`); }
+        if (rErr || (reserved ?? 0) < seats) {
+          await supabase.from("raffles").delete().eq("id", created.id);
+          setSaving(false);
+          Alert.alert(
+            "Couldn't reserve the seats — mini not created",
+            rErr
+              ? `${rErr.message}\n\nRun SUPABASE_MINI_RESERVE.md in Supabase, then try again.`
+              : `Only ${reserved ?? 0} of ${seats} seat(s) are still available in ${parent!.title} (the rest are already sold). Free up seats or award fewer.`,
+          );
+          return;
+        }
       }
       router.replace(`/raffle/${parent!.id}`);
     } catch (e: any) {

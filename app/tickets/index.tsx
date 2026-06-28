@@ -23,7 +23,7 @@ interface Entry {
   won: boolean;
 }
 
-type Tab = "active" | "won" | "past";
+type Tab = "all" | "active" | "won" | "past";
 
 export default function MyTickets() {
   const { user } = useAuth();
@@ -38,7 +38,7 @@ export default function MyTickets() {
 
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<Tab>("active");
+  const [tab, setTab] = useState<Tab>("all");
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -84,12 +84,13 @@ export default function MyTickets() {
 
   const money = (c: number) => `$${(c / 100).toFixed(0)}`;
   const counts = {
+    all: entries.length,
     active: entries.filter((e) => e.status === "open").length,
     won: entries.filter((e) => e.won).length,
     past: entries.filter((e) => e.status !== "open" && !e.won).length,
   };
   const visible = entries.filter((e) =>
-    tab === "active" ? e.status === "open" : tab === "won" ? e.won : e.status !== "open" && !e.won,
+    tab === "all" ? true : tab === "active" ? e.status === "open" : tab === "won" ? e.won : e.status !== "open" && !e.won,
   );
 
   return (
@@ -101,7 +102,7 @@ export default function MyTickets() {
         <Text style={styles.h1}>My tickets</Text>
 
         <View style={styles.tabs}>
-          {([["active", "Active"], ["won", "Won"], ["past", "Past"]] as [Tab, string][]).map(([k, label]) => (
+          {([["all", "All"], ["active", "Active"], ["won", "Won"], ["past", "Past"]] as [Tab, string][]).map(([k, label]) => (
             <TouchableOpacity key={k} style={[styles.tab, tab === k && styles.tabActive]} onPress={() => setTab(k)}>
               <Text style={[styles.tabText, tab === k && styles.tabTextActive]}>{label} {counts[k]}</Text>
             </TouchableOpacity>

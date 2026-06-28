@@ -22,7 +22,7 @@ interface Raffle {
   amount_cents: number; status: string; draw_style?: "wheel" | "scratch" | "lotto";
   draw_mode?: "single" | "elimination";
   parent_raffle_id?: string | null; seats_awarded?: number;
-  scheduled_at?: string | null; show_odds?: boolean;
+  scheduled_at?: string | null; show_odds?: boolean; featured?: boolean;
 }
 interface Ticket { id: string; seat_number: number; owner_id: string; type: "free" | "paid"; status: string; }
 
@@ -174,6 +174,11 @@ export default function RaffleDetail() {
   async function publishDraft() {
     const { error } = await supabase.from("raffles").update({ status: "open", scheduled_at: null }).eq("id", raffle!.id);
     if (error) { showError(error, "Couldn't publish"); return; }
+    load();
+  }
+  async function toggleFeatured() {
+    const { error } = await supabase.from("raffles").update({ featured: !raffle!.featured }).eq("id", raffle!.id);
+    if (error) { showError(error, "Couldn't update featured"); return; }
     load();
   }
 
@@ -563,6 +568,14 @@ export default function RaffleDetail() {
             <TouchableOpacity style={[styles.btn, styles.btnOutline]} onPress={() => router.push(`/host/create-raffle?from=${raffle.id}`)}>
               <Text style={[styles.btnText, { color: colors.text }]}>🔁 Duplicate / relaunch</Text>
             </TouchableOpacity>
+            {raffle.status === "open" && (
+              <>
+                <TouchableOpacity style={[styles.btn, raffle.featured ? styles.btnRed : styles.btnOutline]} onPress={toggleFeatured}>
+                  <Text style={[styles.btnText, { color: raffle.featured ? colors.onAccent : colors.text }]}>{raffle.featured ? "⭐ Featured on home — tap to remove" : "⭐ Feature on home"}</Text>
+                </TouchableOpacity>
+                {!raffle.featured && <Text style={styles.featNote}>Free during beta · $10/game after launch (or Zelle/Venmo the creator).</Text>}
+              </>
+            )}
             {raffle.status !== "canceled" && raffle.status !== "complete" && (
               <TouchableOpacity style={[styles.btn, styles.btnOutline, { borderColor: colors.danger }]} onPress={onCancel}>
                 <Text style={[styles.btnText, { color: colors.danger }]}>{confirmCancel ? "Tap again to cancel" : "Cancel game"}</Text>
@@ -749,6 +762,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   notifyOn: { backgroundColor: colors.redSoft },
   notifyText: { color: colors.red, fontWeight: "800", fontSize: 14 },
   notifyTextOn: { color: colors.text },
+  featNote: { color: colors.faint, fontSize: 12, textAlign: "center", marginTop: -4 },
   pad: { padding: 20 },
   title: { color: colors.text, fontSize: 24, fontWeight: "800", letterSpacing: -0.3 },
   prize: { color: colors.muted, fontSize: 16, marginTop: 6 },
