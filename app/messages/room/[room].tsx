@@ -44,8 +44,10 @@ export default function PlatformRoomChat() {
       setNames(map);
     }
     setLoading(false);
+    // Mark this room read so its unread highlight clears.
+    if (user?.id) supabase.from("chat_reads").upsert({ user_id: user.id, room_key: `room:${room}`, last_read_at: new Date().toISOString() });
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 50);
-  }, [room]);
+  }, [room, user?.id]);
 
   useEffect(() => { load(); }, [load]);
 

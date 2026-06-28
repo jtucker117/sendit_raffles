@@ -21,14 +21,17 @@ export default function Messages() {
 
   const [tab, setTab] = useState<Tab>("direct");
   const [convos, setConvos] = useState<any[]>([]);
-  const [communities, setCommunities] = useState<{ id: string; name: string; own?: boolean; kind: "room" | "host"; sub: string }[]>([]);
+  const [communities, setCommunities] = useState<{ id: string; name: string; own?: boolean; kind: "room" | "host"; sub: string; unread?: boolean }[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
-    // Direct conversations
-    setConvos(await fetchDirectMessageConversations(user.id));
+    // Direct conversations + which have unread (sent to me, not yet read)
+    const convosList = await fetchDirectMessageConversations(user.id);
+    const { data: unreadDM } = await supabase.from("direct_messages").select("sender_id").eq("recipient_id", user.id).is("read_at", null);
+    const unreadSenders = new Set((unreadDM ?? []).map((m: any) => m.sender_id));
+    setConvos(convosList.map((c: any) => ({ ...c, unread: unreadSenders.has(c.otherUser.id) })));
     // Groups: each host has one group chat (host + their players). Mine if I'm a
     // host, plus the groups of every host I follow. Named "<Host> Group".
     const { data: follows } = await supabase.from("host_followers").select("host_id").eq("follower_id", user.id);
@@ -46,7 +49,19 @@ export default function Messages() {
       const { data: hosts } = await supabase.from("profiles").select("id, display_name").in("id", hostIds);
       (hosts ?? []).forEach((h: any) => comm.push({ id: h.id, name: `${h.display_name} Group`, kind: "host", sub: "Host & players" }));
     }
-    setCommunities(comm);
+    // Unread state for each group/room: newest message later than my last read of it.
+    const { data: reads } = await supabase.from("chat_reads").select("room_key, last_read_at").eq("user_id", user.id);
+    const readMap: Record<string, string> = {};
+    (reads ?? []).forEach((r: any) => { readMap[r.room_key] = r.last_read_at; });
+    await Promise.all(comm.map(async (c) => {
+      const key = c.kind === "room" ? `room:${c.id}` : `host:${c.id}`;
+      const { data: latest } = c.kind === "room"
+        ? await supabase.from("platform_chat").select("created_at, author_id").eq("room", c.id).order("created_at", { ascending: false }).limit(1).maybeSingle()
+        : await supabase.from("host_chat").select("created_at, author_id").eq("host_id", c.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+      const lastRead = readMap[key];
+      c.unread = !!latest && (latest as any).author_id !== user.id && (!lastRead || (latest as any).created_at > lastRead);
+    }));
+    setCommunities([...comm]);
     setLoading(false);
   }, [user?.id, user?.role, isSuperadmin]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -79,12 +94,13 @@ export default function Messages() {
                 {convos.length === 0 ? (
                   <Text style={styles.empty}>No conversations yet.</Text>
                 ) : convos.map((c) => (
-                  <TouchableOpacity key={c.otherUser.id} style={styles.row} onPress={() => router.push(`/messages/chat/${c.otherUser.id}`)}>
+                  <TouchableOpacity key={c.otherUser.id} style={[styles.row, c.unread && styles.rowUnread]} onPress={() => router.push(`/messages/chat/${c.otherUser.id}`)}>
                     <View style={styles.avatar}><Text style={styles.avatarInitial}>{c.otherUser.display_name?.[0]?.toUpperCase() ?? "?"}</Text></View>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.rowName}>{c.otherUser.display_name}</Text>
-                      <Text style={styles.rowSub} numberOfLines={1}>{c.sender_id === user?.id ? "You: " : ""}{c.content}</Text>
+                      <Text style={[styles.rowName, c.unread && styles.rowNameUnread]}>{c.otherUser.display_name}</Text>
+                      <Text style={[styles.rowSub, c.unread && styles.rowSubUnread]} numberOfLines={1}>{c.sender_id === user?.id ? "You: " : ""}{c.content}</Text>
                     </View>
+                    {c.unread && <View style={styles.unreadDot} />}
                   </TouchableOpacity>
                 ))}
               </>
@@ -95,12 +111,13 @@ export default function Messages() {
               communities.length === 0 ? (
                 <Text style={styles.empty}>Follow a host to join their group chat.</Text>
               ) : communities.map((c) => (
-                <TouchableOpacity key={c.kind + c.id} style={styles.row} onPress={() => router.push(c.kind === "room" ? `/messages/room/${c.id}` : `/messages/group/${c.id}`)}>
+                <TouchableOpacity key={c.kind + c.id} style={[styles.row, c.unread && styles.rowUnread]} onPress={() => router.push(c.kind === "room" ? `/messages/room/${c.id}` : `/messages/group/${c.id}`)}>
                   <View style={[styles.avatar, { backgroundColor: c.kind === "room" ? colors.red : colors.navy }]}><Text style={styles.avatarInitial}>{c.name[0]?.toUpperCase()}</Text></View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.rowName}>{c.name}</Text>
-                    <Text style={styles.rowSub}>{c.sub}</Text>
+                    <Text style={[styles.rowName, c.unread && styles.rowNameUnread]}>{c.name}</Text>
+                    <Text style={[styles.rowSub, c.unread && styles.rowSubUnread]}>{c.sub}</Text>
                   </View>
+                  {c.unread && <View style={styles.unreadDot} />}
                 </TouchableOpacity>
               ))
             )}
@@ -124,6 +141,10 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   newBtnText: { color: colors.onAccent, fontWeight: "800", fontSize: 14 },
   empty: { color: colors.muted, fontSize: 14, marginTop: 24, textAlign: "center" },
   row: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, padding: 12, marginBottom: 10 },
+  rowUnread: { backgroundColor: colors.redSoft, borderColor: colors.red },
+  rowNameUnread: { fontWeight: "900" },
+  rowSubUnread: { color: colors.text, fontWeight: "700" },
+  unreadDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.red },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.red, alignItems: "center", justifyContent: "center" },
   avatarInitial: { color: colors.onAccent, fontWeight: "900", fontSize: 18 },
   rowName: { color: colors.text, fontSize: 15, fontWeight: "800" },

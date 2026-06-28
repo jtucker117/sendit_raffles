@@ -45,8 +45,10 @@ export default function HostCommunityChat() {
       setNames(map);
     }
     setLoading(false);
+    // Mark this group read so its unread highlight clears.
+    if (user?.id) supabase.from("chat_reads").upsert({ user_id: user.id, room_key: `host:${hostId}`, last_read_at: new Date().toISOString() });
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 50);
-  }, [hostId]);
+  }, [hostId, user?.id]);
 
   useEffect(() => { load(); }, [load]);
 
