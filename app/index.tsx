@@ -97,7 +97,7 @@ export default function Home() {
         <LinearGradient colors={["transparent", "rgba(0,0,0,0.82)"]} style={styles.cardShade} />
         {isFeatured && <View style={styles.tileFeatured}><Text style={styles.tileFeaturedText}>⭐ FEATURED</Text></View>}
         {(() => {
-          const t = (r as any).bogo ? "🎁 BOGO" : (r as any).free_for_all ? "🎁 FREE SEAT" : (r as any).no_seats ? "🔢 NO SEATS" : null;
+          const t = (r as any).bogo ? "🎁 BOGO" : (r as any).free_for_all ? "🎁 FREE SEAT" : (r as any).no_seats ? "🎟 ENTRIES" : null;
           return t ? <View style={styles.tileType}><Text style={styles.tileTypeText}>{t}</Text></View> : null;
         })()}
         {upcoming && (
