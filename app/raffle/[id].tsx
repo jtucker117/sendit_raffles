@@ -551,6 +551,9 @@ export default function RaffleDetail() {
                 <Text style={[styles.btnText, { color: colors.text }]}>Edit game</Text>
               </TouchableOpacity>
             )}
+            <TouchableOpacity style={[styles.btn, styles.btnOutline]} onPress={() => router.push(`/host/create-raffle?from=${raffle.id}`)}>
+              <Text style={[styles.btnText, { color: colors.text }]}>🔁 Duplicate / relaunch</Text>
+            </TouchableOpacity>
             {raffle.status !== "canceled" && raffle.status !== "complete" && (
               <TouchableOpacity style={[styles.btn, styles.btnOutline, { borderColor: colors.danger }]} onPress={onCancel}>
                 <Text style={[styles.btnText, { color: colors.danger }]}>{confirmCancel ? "Tap again to cancel" : "Cancel game"}</Text>

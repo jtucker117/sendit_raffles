@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView,
   ActivityIndicator, Image, Alert, Platform,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/lib/supabase";
@@ -15,12 +15,16 @@ import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
 // Date/time picker: native HTML input on web, text fallback on native.
 function DateTimeField({ value, onChange, colors }: { value: string; onChange: (v: string) => void; colors: AppColors }) {
   if (Platform.OS === "web") {
-    return React.createElement("input", {
-      type: "datetime-local",
-      value,
-      onChange: (e: any) => onChange(e.target.value),
-      style: { backgroundColor: colors.surfaceAlt, color: colors.text, border: `1px solid ${colors.inputBorder}`, borderRadius: 14, padding: 12, fontSize: 15, width: "100%", boxSizing: "border-box" },
-    });
+    return (
+      <View style={{ borderRadius: radius.md, borderWidth: 1, borderColor: colors.inputBorder, backgroundColor: colors.surfaceAlt, overflow: "hidden" }}>
+        {React.createElement("input", {
+          type: "datetime-local",
+          value,
+          onChange: (e: any) => onChange(e.target.value),
+          style: { background: "transparent", color: (colors as any).text, border: "none", outline: "none", padding: 12, fontSize: 15, width: "100%", boxSizing: "border-box", fontFamily: "inherit" },
+        })}
+      </View>
+    );
   }
   return <TextInput value={value} onChangeText={onChange} placeholder="2026-07-01T18:00" placeholderTextColor={colors.faint} style={{ backgroundColor: colors.surfaceAlt, borderColor: colors.inputBorder, borderWidth: 1, borderRadius: radius.md, padding: 12, color: colors.text, fontSize: 15 }} />;
 }
@@ -47,7 +51,32 @@ export default function CreateRaffleScreen() {
   const [drawStyle, setDrawStyle] = useState<"wheel" | "scratch" | "lotto">("wheel");
   const [drawMode, setDrawMode] = useState<"single" | "elimination">("single");
   const [scheduledAt, setScheduledAt] = useState(""); // datetime-local string; blank = launch now
+  const [dupName, setDupName] = useState(""); // set when relaunching from an old game
   const [step, setStep] = useState(0); // 0 Prize · 1 Tickets · 2 Rules · 3 Publish
+
+  // Relaunch/duplicate: prefill the form from an existing game (?from=<id>).
+  const params = useLocalSearchParams<{ from?: string }>();
+  useEffect(() => {
+    const from = typeof params.from === "string" ? params.from : "";
+    if (!from) return;
+    (async () => {
+      const { data } = await supabase.from("raffles").select("*").eq("id", from).single();
+      if (!data) return;
+      setTitle(data.title ?? "");
+      setPrize(data.prize ?? "");
+      setCategory(data.category ?? "");
+      setDescription(data.description ?? "");
+      setCoverUrl(data.cover_url ?? null);
+      setCapacity(String(data.capacity ?? ""));
+      setFreeLimit(String(data.free_seat_limit ?? 0));
+      setAmount(String(((data.amount_cents ?? 0) / 100)));
+      const ew = (data.entry_word ?? "donation") as string;
+      setTerm((ew.charAt(0).toUpperCase() + ew.slice(1)) as any);
+      setDrawStyle((data.draw_style ?? "wheel") as any);
+      setDrawMode((data.draw_mode ?? "single") as any);
+      setDupName(data.title ?? "");
+    })();
+  }, [params.from]);
 
   // Revenue goal → per-seat price: goal ÷ PAID seats (free seats raise $0, so the
   // paid seats have to cover the whole goal), rounded UP to the next whole dollar
@@ -132,7 +161,8 @@ export default function CreateRaffleScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 20, paddingBottom: BOTTOM_NAV_HEIGHT + 40 }}>
-      <Text style={styles.h1}>Launch a game</Text>
+      <Text style={styles.h1}>{dupName ? "Relaunch a game" : "Launch a game"}</Text>
+      {dupName ? <Text style={styles.dupNote}>🔁 Copied from “{dupName}”. Review the details — change anything you want — then launch.</Text> : null}
 
       {/* Step indicator */}
       <View style={styles.steps}>
@@ -357,6 +387,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   stepDotText: { color: colors.muted, fontWeight: "800", fontSize: 13 },
   stepLabel: { color: colors.muted, fontSize: 11, fontWeight: "600" },
   // review
+  dupNote: { color: colors.red, fontSize: 13, fontWeight: "600", marginTop: 6, marginBottom: 4, lineHeight: 18 },
   previewLabel: { color: colors.muted, fontSize: 11, fontWeight: "800", letterSpacing: 1, marginBottom: 10 },
   previewWrap: { alignItems: "center", marginBottom: 18 },
   launchBtn: { backgroundColor: colors.red, borderRadius: radius.md, paddingVertical: 15, alignItems: "center", marginTop: 6 },

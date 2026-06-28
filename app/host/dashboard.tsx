@@ -156,9 +156,13 @@ export default function HostDashboard() {
                   <TouchableOpacity style={[styles.actionBtn, styles.actionGhost]} onPress={() => router.push(`/raffle/manage/${r.id}`)}>
                     <Text style={[styles.actionText, { color: colors.text }]} numberOfLines={1}>Manage</Text>
                   </TouchableOpacity>
-                  {r.status === "open" && (
+                  {r.status === "open" ? (
                     <TouchableOpacity style={[styles.actionBtn, styles.actionPrimary, r.confirmed < 1 && styles.dim]} disabled={r.confirmed < 1} onPress={() => router.push(`/raffle/${r.id}`)}>
-                      <Text style={[styles.actionText, { color: colors.onAccent }]} numberOfLines={1}>{r.confirmed < 1 ? "Draw" : "Draw"}</Text>
+                      <Text style={[styles.actionText, { color: colors.onAccent }]} numberOfLines={1}>Draw</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity style={[styles.actionBtn, styles.actionPrimary]} onPress={() => router.push(`/host/create-raffle?from=${r.id}`)}>
+                      <Text style={[styles.actionText, { color: colors.onAccent }]} numberOfLines={1}>Relaunch</Text>
                     </TouchableOpacity>
                   )}
                 </View>
