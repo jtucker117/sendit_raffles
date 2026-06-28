@@ -408,7 +408,9 @@ export default function RaffleDetail() {
           >
             {Array.from({ length: raffle.capacity }, (_, i) => {
               const seat = i + 1;
-              const taken = tickets.some((x) => x.seat_number === seat);
+              const t = tickets.find((x) => x.seat_number === seat);
+              const taken = !!t;
+              const reserved = t?.status === "reserved"; // held for a mini
               const sel = selected.includes(seat);
               const tappable = canPick && !taken;
               return (
@@ -419,7 +421,7 @@ export default function RaffleDetail() {
                   onPress={() => toggleSeat(seat)}
                   style={[styles.seat, taken ? styles.seatTaken : sel ? styles.seatSelected : styles.seatOpen]}
                 >
-                  <Text style={[styles.seatNum, sel ? styles.seatNumSelected : taken ? styles.seatNumTaken : null]}>{seat}</Text>
+                  <Text style={[styles.seatNum, sel ? styles.seatNumSelected : taken ? styles.seatNumTaken : null]}>{reserved ? "🔒" : seat}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -438,7 +440,7 @@ export default function RaffleDetail() {
           </View>
         )}
         {canPick && gridMode && (
-          <Text style={styles.legend}>Tap open seats to select · amber = your pick · grey = taken</Text>
+          <Text style={styles.legend}>Tap open seats to select · amber = your pick · grey = taken · 🔒 = held for a mini</Text>
         )}
 
         {/* Player extras: lucky dip + free seat */}

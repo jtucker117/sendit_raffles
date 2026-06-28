@@ -11,12 +11,15 @@ alter table tickets add column if not exists mini_id uuid references raffles(id)
 
 create or replace function public.reserve_mini_seats(p_parent uuid, p_mini uuid, p_count int)
 returns int language plpgsql security definer set search_path = public as $$
-declare v_cap int; v_host uuid; v_seat int; v_done int := 0; i int;
+declare v_cap int; v_free int; v_host uuid; v_paid_taken int; v_avail int; v_seat int; v_done int := 0; i int;
 begin
-  select capacity, host_id into v_cap, v_host from raffles where id = p_parent;
+  select capacity, coalesce(free_seat_limit, 0), host_id into v_cap, v_free, v_host from raffles where id = p_parent;
   if v_host is null then raise exception 'Parent game not found'; end if;
   if v_host <> auth.uid() and not public.is_superadmin() then raise exception 'Not your game'; end if;
-  for i in 1..greatest(coalesce(p_count, 0), 0) loop
+  -- Only the paid pool can be pulled into a mini; never the free allotment.
+  select count(*) into v_paid_taken from tickets where raffle_id = p_parent and type = 'paid';
+  v_avail := greatest(0, (v_cap - v_free) - v_paid_taken);
+  for i in 1..least(greatest(coalesce(p_count, 0), 0), v_avail) loop
     select s into v_seat from generate_series(1, v_cap) s
       where not exists (select 1 from tickets t where t.raffle_id = p_parent and t.seat_number = s)
       order by random() limit 1;

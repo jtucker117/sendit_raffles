@@ -31,7 +31,7 @@ export default function CreateMini() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
 
-  const [parent, setParent] = useState<{ id: string; title: string; category: string | null; host_id: string; amount_cents: number | null; capacity: number | null; cover_url: string | null } | null>(null);
+  const [parent, setParent] = useState<{ id: string; title: string; category: string | null; host_id: string; amount_cents: number | null; capacity: number | null; cover_url: string | null; free_seat_limit: number | null } | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [title, setTitle] = useState("");
@@ -43,12 +43,16 @@ export default function CreateMini() {
   const [drawMode, setDrawMode] = useState<"single" | "elimination">("single");
   const [drawStyle, setDrawStyle] = useState<"wheel" | "scratch" | "lotto">("wheel");
   const [saving, setSaving] = useState(false);
+  const [takenSeats, setTakenSeats] = useState(0);
 
   const load = useCallback(async () => {
     if (!id) return;
-    const { data } = await supabase.from("raffles").select("id, title, category, host_id, amount_cents, capacity, cover_url").eq("id", id).single();
+    const { data } = await supabase.from("raffles").select("id, title, category, host_id, amount_cents, capacity, cover_url, free_seat_limit").eq("id", id).single();
     if (data) {
       setParent(data as any);
+      // How many PAID parent seats are already taken (claimed paid + reserved) — minis can only pull from the paid pool.
+      const { count } = await supabase.from("tickets").select("seat_number", { count: "exact", head: true }).eq("raffle_id", id).eq("type", "paid");
+      setTakenSeats(count ?? 0);
       // Auto-number: next number is one past the highest existing "Mini N" for this parent.
       const { data: minis } = await supabase.from("raffles").select("title").eq("parent_raffle_id", id);
       let maxN = 0;
@@ -79,6 +83,9 @@ export default function CreateMini() {
   const totalValueCents = seatsNum * parentPriceCents;
   const perSeatCents = capNum > 0 ? Math.round(totalValueCents / capNum) : 0;
   const money = (c: number) => `$${(c / 100).toFixed(2)}`;
+  // Minis only pull from the paid pool: (capacity − free seats) − paid already taken.
+  const maxAward = Math.max(0, (parent.capacity ?? 0) - (parent.free_seat_limit ?? 0) - takenSeats);
+  const overAward = seatsNum > maxAward;
 
   async function create() {
     const cap = Math.max(2, Math.min(1000, parseInt(capacity, 10) || 0));
@@ -87,8 +94,8 @@ export default function CreateMini() {
     const perCents = cap > 0 ? Math.round((seats * parentPriceCents) / cap) : 0;
     if (!title.trim()) { Alert.alert("Title required"); return; }
     if (!(parseInt(capacity, 10) >= 2)) { Alert.alert("Seats required", "Enter total seats (at least 2)."); return; }
-    if (parent!.capacity != null && seats > parent!.capacity) {
-      Alert.alert("Too many seats", `The main game only has ${parent!.capacity} seats — you can't award more than that.`); return;
+    if (seats > maxAward) {
+      Alert.alert("Too many seats", `Only ${maxAward} seat${maxAward === 1 ? "" : "s"} ${maxAward === 1 ? "is" : "are"} still available in ${parent!.title}.`); return;
     }
     setSaving(true);
     try {
@@ -111,7 +118,9 @@ export default function CreateMini() {
       if (error) throw error;
       // Lock the awarded seats in the parent so nobody else can claim them.
       if (created?.id && seats > 0) {
-        await supabase.rpc("reserve_mini_seats", { p_parent: parent!.id, p_mini: created.id, p_count: seats });
+        const { data: reserved, error: rErr } = await supabase.rpc("reserve_mini_seats", { p_parent: parent!.id, p_mini: created.id, p_count: seats });
+        if (rErr) { Alert.alert("Heads up", `Mini created, but seats couldn't be reserved: ${rErr.message}. Run SUPABASE_MINI_RESERVE.md.`); }
+        else if ((reserved ?? 0) < seats) { Alert.alert("Heads up", `Only ${reserved ?? 0} of ${seats} seats could be reserved (the rest were already taken).`); }
       }
       router.replace(`/raffle/${parent!.id}`);
     } catch (e: any) {
@@ -139,7 +148,12 @@ export default function CreateMini() {
       </Field>
 
       <Field label="Seats the winner wins in the main game" required>
-        <TextInput style={styles.input} value={seatsAwarded} onChangeText={setSeatsAwarded} keyboardType="number-pad" placeholder="1" placeholderTextColor={colors.faint} />
+        <TextInput style={[styles.input, overAward && styles.inputError]} value={seatsAwarded} onChangeText={setSeatsAwarded} keyboardType="number-pad" placeholder="1" placeholderTextColor={colors.faint} />
+        <Text style={[styles.hint, overAward && styles.hintError]}>
+          {overAward
+            ? `Only ${maxAward} paid seat${maxAward === 1 ? "" : "s"} available in ${parent.title} (free seats can't be pulled).`
+            : `${maxAward} paid seat${maxAward === 1 ? "" : "s"} available to give away.`}
+        </Text>
       </Field>
 
       <View style={styles.row2}>
@@ -193,8 +207,8 @@ export default function CreateMini() {
         </Field>
       )}
 
-      <TouchableOpacity style={[styles.saveBtn, saving && { opacity: 0.5 }]} disabled={saving} onPress={create}>
-        {saving ? <ActivityIndicator color={colors.onAccent} /> : <Text style={styles.saveText}>Create mini</Text>}
+      <TouchableOpacity style={[styles.saveBtn, (saving || overAward || maxAward < 1) && { opacity: 0.5 }]} disabled={saving || overAward || maxAward < 1} onPress={create}>
+        {saving ? <ActivityIndicator color={colors.onAccent} /> : <Text style={styles.saveText}>{maxAward < 1 ? "No paid seats available" : "Create mini"}</Text>}
       </TouchableOpacity>
       <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}><Text style={styles.back}>← Back</Text></TouchableOpacity>
     </ScrollView>
@@ -212,6 +226,9 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   coverImg: { width: "100%", height: "100%" },
   coverText: { color: colors.muted, fontSize: 14 },
   input: { backgroundColor: colors.surfaceAlt, borderColor: colors.inputBorder, borderWidth: 1, borderRadius: radius.md, padding: 12, color: colors.text, fontSize: 15 },
+  inputError: { borderColor: colors.danger },
+  hint: { color: colors.muted, fontSize: 12, marginTop: 6 },
+  hintError: { color: colors.danger, fontWeight: "700" },
   readonlyField: { backgroundColor: colors.surfaceAlt, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, padding: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
   readonlyText: { color: colors.text, fontSize: 15, fontWeight: "700", flexShrink: 1 },
   priceCard: { backgroundColor: colors.surfaceAlt, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, padding: 14 },

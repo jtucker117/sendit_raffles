@@ -6,6 +6,7 @@ import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/lib/supabase";
 import { radius, AppColors } from "@/lib/theme";
 import { BOTTOM_NAV_HEIGHT } from "@/components/BottomNav";
+import { notify, showError } from "@/lib/notify";
 
 interface Raffle { id: string; title: string; amount_cents: number; host_id: string; capacity: number; }
 interface Host {
@@ -78,17 +79,19 @@ export default function Checkout() {
   const active = methods.find((m) => m.key === method) ?? methods[0];
 
   async function reserve() {
-    if (qty < 1) { Alert.alert("Nothing to reserve"); return; }
+    if (qty < 1) { notify("Nothing to reserve", "Go back and pick at least one seat."); return; }
     setBusy(true);
     try {
       const targets = explicitSeats.length ? explicitSeats : new Array(randomQty).fill(0);
+      let claimed = 0;
       for (const seat of targets) {
         const { error } = await supabase.rpc("claim_seat", { p_raffle: raffle!.id, p_seat: seat, p_type: "paid" });
-        if (error) throw error;
+        if (error) throw new Error(`${error.message}${claimed > 0 ? ` (${claimed} of ${targets.length} seat(s) were reserved before this).` : ""}`);
+        claimed++;
       }
       router.replace("/tickets");
     } catch (e: any) {
-      Alert.alert("Couldn't reserve", e?.message ?? "Try again.");
+      showError(e, "Couldn't reserve your seats");
       setBusy(false);
     }
   }
