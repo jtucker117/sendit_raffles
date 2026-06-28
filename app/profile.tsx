@@ -67,7 +67,7 @@ export default function Profile() {
   useFocusEffect(useCallback(() => {
     if (!user) return;
     (async () => {
-      const { data: tix } = await supabase.from("tickets").select("raffle_id, type, status, raffles(id, title, cover_url, capacity, amount_cents)").eq("owner_id", user.id);
+      const { data: tix } = await supabase.from("tickets").select("raffle_id, type, status, raffles!raffle_id(id, title, cover_url, capacity, amount_cents)").eq("owner_id", user.id);
       const rids = new Set<string>(); let spent = 0;
       (tix ?? []).forEach((t: any) => { rids.add(t.raffle_id); if (t.type === "paid" && t.status === "confirmed") spent += t.raffles?.amount_cents ?? 0; });
       const { data: wins } = await supabase.from("draws").select("raffle_id, raffles(id, title, prize, cover_url)").eq("winner_id", user.id);

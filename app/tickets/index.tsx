@@ -46,7 +46,7 @@ export default function MyTickets() {
     // My tickets, joined to their raffle.
     const { data: mine } = await supabase
       .from("tickets")
-      .select("seat_number, raffle_id, raffles(id, title, prize, cover_url, capacity, amount_cents, status)")
+      .select("seat_number, raffle_id, raffles!raffle_id(id, title, prize, cover_url, capacity, amount_cents, status)")
       .eq("owner_id", user.id)
       .order("seat_number");
 
