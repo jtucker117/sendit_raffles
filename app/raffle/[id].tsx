@@ -53,6 +53,7 @@ export default function RaffleDetail() {
   const [minis, setMinis] = useState<any[]>([]);
   const [parentName, setParentName] = useState("");
   const [parentBogo, setParentBogo] = useState(false);
+  const [hostName, setHostName] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [verifyMsg, setVerifyMsg] = useState<string | null>(null);
   const [showData, setShowData] = useState(false);
@@ -83,6 +84,11 @@ export default function RaffleDetail() {
       rr = { ...rr, status: "open" };
     }
     if (rr) setRaffle(rr);
+    // Host display name for the "Hosted by" link.
+    if (rr?.host_id) {
+      const { data: h } = await supabase.from("profiles").select("display_name").eq("id", rr.host_id).maybeSingle();
+      setHostName(h?.display_name ?? "");
+    }
     // Am I on the notify list for this game?
     if (user?.id) {
       const { data: gn } = await supabase.from("game_notify").select("user_id").eq("raffle_id", id).eq("user_id", user.id).maybeSingle();
@@ -405,6 +411,11 @@ export default function RaffleDetail() {
           </TouchableOpacity>
         )}
         <Text style={styles.title}>{raffle.title}</Text>
+        {hostName && !isMini ? (
+          <TouchableOpacity onPress={() => router.push(`/u/${raffle.host_id}`)}>
+            <Text style={styles.hostedBy}>Hosted by <Text style={styles.hostedByName}>{hostName}</Text> ›</Text>
+          </TouchableOpacity>
+        ) : null}
         {raffle.prize ? <Text style={styles.prizeBold}>🏆 {raffle.prize}</Text> : null}
         <Text style={styles.priceTop}>{money(raffle.amount_cents)} per {raffle.no_seats ? "entry" : "seat"}</Text>
         {raffle.description ? <Text style={styles.desc}>{raffle.description}</Text> : null}
@@ -933,6 +944,8 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   pad: { padding: 20 },
   title: { color: colors.text, fontSize: 24, fontWeight: "800", letterSpacing: -0.3 },
   prize: { color: colors.muted, fontSize: 16, marginTop: 6 },
+  hostedBy: { color: colors.muted, fontSize: 13, fontWeight: "600", marginTop: 6 },
+  hostedByName: { color: colors.red, fontWeight: "800" },
   prizeBold: { color: colors.text, fontSize: 18, fontWeight: "800", letterSpacing: -0.2, marginTop: 8 },
   priceTop: { color: colors.red, fontSize: 18, fontWeight: "900", marginTop: 4 },
   desc: { color: colors.muted, fontSize: 14, marginTop: 10, lineHeight: 20 },
