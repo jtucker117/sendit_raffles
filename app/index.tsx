@@ -29,6 +29,7 @@ export default function Home() {
 
   const [raffles, setRaffles] = useState<RaffleRow[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
+  const [followedHosts, setFollowedHosts] = useState<{ id: string; name: string; avatar: string | null }[]>([]);
   const [loadingRaffles, setLoadingRaffles] = useState(true);
   const [nowMs, setNowMs] = useState(Date.now());
   useEffect(() => { const t = setInterval(() => setNowMs(Date.now()), 1000); return () => clearInterval(t); }, []);
@@ -42,6 +43,13 @@ export default function Home() {
   const loadRaffles = useCallback(async () => {
     if (!user) return;
     setLoadingRaffles(true);
+    // Quick-link rail: hosts this player follows.
+    const { data: follows } = await supabase.from("host_followers").select("host_id").eq("follower_id", user.id);
+    const hostIds = [...new Set((follows ?? []).map((f: any) => f.host_id))];
+    if (hostIds.length) {
+      const { data: hp } = await supabase.from("profiles").select("id, display_name, avatar_url").in("id", hostIds);
+      setFollowedHosts((hp ?? []).map((p: any) => ({ id: p.id, name: p.display_name, avatar: p.avatar_url })));
+    } else setFollowedHosts([]);
     // Flip any scheduled games whose time has arrived to open before we load.
     await supabase.rpc("open_due_games");
     const { data } = await supabase.from("raffles").select("*").in("status", ["open", "scheduled"]).order("created_at", { ascending: false });
@@ -135,6 +143,20 @@ export default function Home() {
         contentContainerStyle={{ padding: 16, paddingBottom: BOTTOM_NAV_HEIGHT + 24 }}
         refreshControl={<RefreshControl refreshing={loadingRaffles} onRefresh={loadRaffles} tintColor={colors.red} />}
       >
+        {/* Quick links to hosts you follow */}
+        {followedHosts.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hostRail}>
+            {followedHosts.map((h) => (
+              <TouchableOpacity key={h.id} style={styles.hostChip} onPress={() => router.push(`/u/${h.id}`)}>
+                {h.avatar
+                  ? <Image source={{ uri: h.avatar }} style={styles.hostAvatar} />
+                  : <View style={[styles.hostAvatar, styles.hostAvatarPh]}><Text style={styles.hostAvatarInitial}>{h.name?.[0]?.toUpperCase() ?? "?"}</Text></View>}
+                <Text style={styles.hostChipName} numberOfLines={1}>{h.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+
         {/* Search + host action */}
         <View style={styles.searchRow}>
           <View style={styles.search}>
@@ -206,6 +228,12 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   bigLogo: { width: 200, height: 200 },
   tag: { color: colors.muted, fontSize: 15 },
 
+  hostRail: { gap: 16, paddingVertical: 4, paddingHorizontal: 2, marginBottom: 12 },
+  hostChip: { alignItems: "center", width: 64 },
+  hostAvatar: { width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: colors.red, backgroundColor: colors.surface },
+  hostAvatarPh: { alignItems: "center", justifyContent: "center", backgroundColor: colors.navy },
+  hostAvatarInitial: { color: "#fff", fontSize: 22, fontWeight: "800" },
+  hostChipName: { color: colors.text, fontSize: 11, fontWeight: "600", marginTop: 5, textAlign: "center" },
   searchRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 14 },
   search: { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, paddingHorizontal: 16, paddingVertical: 12 },
   searchPlaceholder: { color: colors.muted, fontSize: 14 },
