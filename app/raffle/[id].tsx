@@ -146,7 +146,9 @@ export default function RaffleDetail() {
   // seats live there and aren't counted in free_seat_limit, so they'd be hidden.
   const maxTicketSeat = tickets.reduce((m, t) => Math.max(m, t.seat_number), 0);
   const totalSeats = Math.max(raffle.capacity + (raffle.free_seat_limit ?? 0), maxTicketSeat);
-  const open = raffle.capacity - paidUsed;
+  // Open paid-block seats = capacity minus every seat occupying it (player paid,
+  // mini-reserved, AND mini-won — the last are type 'free' so paidUsed misses them).
+  const open = raffle.capacity - tickets.filter((t) => t.seat_number <= raffle.capacity).length;
   const myFree = tickets.some((t) => t.type === "free" && t.owner_id === user?.id);
   const gridMode = raffle.capacity <= 120;
   const canPick = !isHost && raffle.status === "open";
