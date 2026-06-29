@@ -63,10 +63,16 @@ export function AppHeader({ onMenu }: { onMenu: () => void }) {
         <Ionicons name="menu" size={26} color={colors.text} />
         {unread > 0 && <View style={styles.navDot} />}
       </TouchableOpacity>
-      <Image source={LOGO} style={styles.logo} resizeMode="contain" />
-      <TouchableOpacity onPress={() => setOpen(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-        <Ionicons name="person-circle-outline" size={28} color={colors.text} />
-      </TouchableOpacity>
+      <View style={styles.logoWrap} pointerEvents="none"><Image source={LOGO} style={styles.logo} resizeMode="contain" /></View>
+      <View style={styles.headerRight}>
+        <TouchableOpacity style={styles.followBtn} onPress={() => router.push("/join")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons name="person-add-outline" size={16} color={colors.onAccent} />
+          <Text style={styles.followBtnText}>Follow</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setOpen(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Ionicons name="person-circle-outline" size={28} color={colors.text} />
+        </TouchableOpacity>
+      </View>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.ddBackdrop} onPress={() => setOpen(false)}>
@@ -75,7 +81,6 @@ export function AppHeader({ onMenu }: { onMenu: () => void }) {
               <Text style={styles.ddName} numberOfLines={1}>{user?.display_name ?? "My profile"}</Text>
               <Text style={styles.ddRole}>{roleLabel(user, isSuperadmin)}</Text>
             </View>
-            <DDItem icon="add-circle-outline" label="Follow a host (enter code)" onPress={() => go("/join")} colors={colors} />
             <DDItem icon="person-outline" label="Edit my profile" onPress={() => go("/profile")} colors={colors} />
             <DDItem icon="lock-closed-outline" label="Change password" onPress={() => go("/settings/password")} colors={colors} />
             <DDItem icon="gift-outline" label="My referrals" onPress={() => go("/referrals")} colors={colors} />
@@ -203,7 +208,11 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
     backgroundColor: colors.surface,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
+  logoWrap: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center" },
   logo: { width: 38, height: 38 },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 12 },
+  followBtn: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: colors.red, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 7 },
+  followBtnText: { color: colors.onAccent, fontSize: 13, fontWeight: "800" },
   navDot: { position: "absolute", top: -3, right: -4, minWidth: 10, height: 10, borderRadius: 5, backgroundColor: colors.red, borderWidth: 1.5, borderColor: colors.surface },
 
   ddBackdrop: { flex: 1, alignItems: "flex-end", paddingTop: HEADER_HEIGHT + 6, paddingRight: 10, backgroundColor: "rgba(0,0,0,0.25)" },
