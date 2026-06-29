@@ -158,7 +158,9 @@ export default function RaffleDetail() {
   const isBogo = !!raffle.bogo;
   const totalLabel = freeForAll ? `${raffle.capacity} paid + free for all` : isBogo ? `${raffle.capacity} paid · BOGO` : `${totalSeats} seats`;
   const freeAvailable = freeForAll ? true : freeLeft > 0; // can a player still claim a free seat?
-  const oddsTotal = sellablePaid + (raffle.free_seat_limit ?? 0); // possible entries (excludes mini-reserved)
+  // Full field at sell-out: every capacity seat is a real entry (mini-reserved
+  // seats are held by the mini winner and still compete), plus any free seats.
+  const oddsTotal = raffle.capacity + (raffle.free_seat_limit ?? 0);
   const money = (c: number) => `$${c % 100 === 0 ? (c / 100).toFixed(0) : (c / 100).toFixed(2)}`;
   const nameFor = (oid: string) => names[oid] ?? (oid === user?.id ? "You" : "Player");
 
