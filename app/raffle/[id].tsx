@@ -142,7 +142,10 @@ export default function RaffleDetail() {
   const paidUsed = tickets.filter((t) => t.type === "paid").length;
   const claimed = tickets.length;
   // Free seats are ADDED ON TOP of the paid capacity (paid 1..capacity, free above).
-  const totalSeats = raffle.capacity + (raffle.free_seat_limit ?? 0);
+  // Stretch the board to cover any ticket numbered above capacity — BOGO/free-for-all
+  // seats live there and aren't counted in free_seat_limit, so they'd be hidden.
+  const maxTicketSeat = tickets.reduce((m, t) => Math.max(m, t.seat_number), 0);
+  const totalSeats = Math.max(raffle.capacity + (raffle.free_seat_limit ?? 0), maxTicketSeat);
   const open = raffle.capacity - paidUsed;
   const myFree = tickets.some((t) => t.type === "free" && t.owner_id === user?.id);
   const gridMode = raffle.capacity <= 120;
@@ -573,7 +576,7 @@ export default function RaffleDetail() {
             nestedScrollEnabled
             showsVerticalScrollIndicator
           >
-            {Array.from({ length: raffle.capacity + (raffle.free_seat_limit ?? 0) }, (_, i) => {
+            {Array.from({ length: totalSeats }, (_, i) => {
               const seat = i + 1;
               const isFree = seat > raffle.capacity; // free seats are numbered above the paid block
               const t = tickets.find((x) => x.seat_number === seat);
@@ -613,8 +616,8 @@ export default function RaffleDetail() {
 
         {/* Players — every seat (open + taken); for no-seat games, every entry */}
         {(() => {
-          const totalSeats = raffle.capacity + (raffle.free_seat_limit ?? 0);
-          // Seated games enumerate every seat; no-seat games just list the entries.
+          // Seated games enumerate every seat (incl. BOGO/free seats above capacity);
+          // no-seat games just list the entries.
           const rows = raffle.no_seats
             ? [...tickets].sort((a, b) => a.seat_number - b.seat_number).map((t) => ({ seat: t.seat_number, t, isFreeSlot: t.type === "free" }))
             : Array.from({ length: totalSeats }, (_, i) => {
