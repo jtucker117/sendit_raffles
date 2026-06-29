@@ -12,8 +12,10 @@ const LOGO = require("../assets/logo.png");
 
 export interface WheelEntrant { seat: number; name: string }
 
-// Slice fills cycle through the brand palette so neighbors never match.
-const SLICE_FILLS = ["#e6232f", "#1b2b4d", "#b3151f", "#2b3a5c", "#8f1019", "#243043"];
+// Slice fills cycle through the brand palette (amber/gold + deep navy) so
+// neighbors never match. Label color pairs with each fill for contrast.
+const SLICE_FILLS = ["#f59e0b", "#1b2b4d", "#d97706", "#243043", "#f4b740", "#14223f"];
+const SLICE_TEXT = ["#1a1407", "#ffffff", "#1a1407", "#ffffff", "#1a1407", "#ffffff"];
 
 function polar(cx: number, cy: number, r: number, deg: number) {
   const rad = (deg * Math.PI) / 180;
@@ -50,7 +52,7 @@ export function DrawWheel({
       const d = `M ${cx} ${cy} L ${p0.x} ${p0.y} A ${r} ${r} 0 ${large} 1 ${p1.x} ${p1.y} Z`;
       const mid = -90 + (i + 0.5) * slice;
       const label = polar(cx, cy, r * 0.66, mid);
-      return { d, fill: SLICE_FILLS[i % SLICE_FILLS.length], seat: e.seat, label, mid };
+      return { d, fill: SLICE_FILLS[i % SLICE_FILLS.length], text: SLICE_TEXT[i % SLICE_TEXT.length], seat: e.seat, label, mid };
     });
   }, [entrants, slice, cx, cy, r]);
 
@@ -92,7 +94,7 @@ export function DrawWheel({
                   <SvgText
                     x={s.label.x}
                     y={s.label.y}
-                    fill="#ffffff"
+                    fill={s.text}
                     fontSize={fontSize}
                     fontWeight="bold"
                     textAnchor="middle"
@@ -127,7 +129,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 24,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
-    borderTopColor: colors.white,
+    borderTopColor: colors.red, // brand amber pointer
   },
   hub: {
     position: "absolute",
@@ -135,6 +137,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: colors.bg,
     borderWidth: 3,
-    borderColor: colors.white,
+    borderColor: colors.red, // brand amber ring around the logo hub
   },
 });
