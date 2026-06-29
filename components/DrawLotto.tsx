@@ -26,6 +26,9 @@ export function DrawLotto({
       setTimeout(() => {
         lockedRef.current[i] = true;
         setLocked([...lockedRef.current]);
+        // Snap every locked digit to its target now — the last lock clears the
+        // interval, so we can't rely on the next tick to do it.
+        setDigits((prev) => prev.map((d, j) => (lockedRef.current[j] ? target[j] : d)));
         if (i === target.length - 1) {
           clearInterval(iv);
           setTimeout(() => onDone?.(), 600);
