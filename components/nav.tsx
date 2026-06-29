@@ -75,6 +75,7 @@ export function AppHeader({ onMenu }: { onMenu: () => void }) {
               <Text style={styles.ddName} numberOfLines={1}>{user?.display_name ?? "My profile"}</Text>
               <Text style={styles.ddRole}>{roleLabel(user, isSuperadmin)}</Text>
             </View>
+            <DDItem icon="add-circle-outline" label="Follow a host (enter code)" onPress={() => go("/join")} colors={colors} />
             <DDItem icon="person-outline" label="Edit my profile" onPress={() => go("/profile")} colors={colors} />
             <DDItem icon="lock-closed-outline" label="Change password" onPress={() => go("/settings/password")} colors={colors} />
             <DDItem icon="gift-outline" label="My referrals" onPress={() => go("/referrals")} colors={colors} />
@@ -136,6 +137,7 @@ export function SideMenu({ onClose }: { onClose: () => void }) {
 
   const items: Item[] = [
     { label: "Games", icon: "home-outline", href: "/" },
+    { label: "Follow a host", icon: "add-circle-outline", href: "/join" },
     { label: "Messages", icon: "chatbubble-ellipses-outline", href: "/messages" },
     { label: "Profile", icon: "person-outline", href: "/profile" },
   ];
