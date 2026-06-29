@@ -589,23 +589,25 @@ export default function RaffleDetail() {
               <Text style={styles.entriesSub}>
                 ✅ {paidCount} paid{pendCount > 0 ? ` · ⏳ ${pendCount} awaiting payment` : ""}
               </Text>
-              {rows.map((t) => {
-                const reserved = t.status === "reserved";
-                const isFreeSeat = t.type === "free";
-                const paid = t.status === "confirmed" && t.type === "paid";
-                const mine = user?.id === t.owner_id && !reserved;
-                const who = reserved ? "Reserved for a mini" : (names[t.owner_id] ?? "Player");
-                const label = reserved ? "🔒 Mini prize" : isFreeSeat ? "🎁 Free seat" : paid ? "Paid" : "Not paid yet";
-                const tone = reserved ? colors.muted : (paid || isFreeSeat) ? colors.green : colors.red;
-                const bg = reserved ? colors.surfaceAlt : (paid || isFreeSeat) ? colors.greenSoft : colors.redSoft;
-                return (
-                  <View key={t.id} style={styles.entRow}>
-                    <Text style={styles.entSeat}>#{t.seat_number}</Text>
-                    <Text style={[styles.entName, mine && styles.entNameMine]} numberOfLines={1}>{who}{mine ? " (you)" : ""}</Text>
-                    <View style={[styles.entPill, { backgroundColor: bg }]}><Text style={[styles.entPillText, { color: tone }]}>{label}</Text></View>
-                  </View>
-                );
-              })}
+              <ScrollView style={styles.entriesScroll} nestedScrollEnabled showsVerticalScrollIndicator>
+                {rows.map((t) => {
+                  const reserved = t.status === "reserved";
+                  const isFreeSeat = t.type === "free";
+                  const paid = t.status === "confirmed" && t.type === "paid";
+                  const mine = user?.id === t.owner_id && !reserved;
+                  const who = reserved ? "Reserved for a mini" : (names[t.owner_id] ?? "Player");
+                  const label = reserved ? "🔒 Mini" : isFreeSeat ? "🎁 Free" : paid ? "Paid" : "Unpaid";
+                  const tone = reserved ? colors.muted : (paid || isFreeSeat) ? colors.green : colors.red;
+                  const bg = reserved ? colors.surfaceAlt : (paid || isFreeSeat) ? colors.greenSoft : colors.redSoft;
+                  return (
+                    <View key={t.id} style={styles.entRow}>
+                      <Text style={styles.entSeat}>#{t.seat_number}</Text>
+                      <Text style={[styles.entName, mine && styles.entNameMine]} numberOfLines={1}>{who}{mine ? " (you)" : ""}</Text>
+                      <View style={[styles.entPill, { backgroundColor: bg }]}><Text style={[styles.entPillText, { color: tone }]}>{label}</Text></View>
+                    </View>
+                  );
+                })}
+              </ScrollView>
             </View>
           );
         })()}
@@ -817,13 +819,14 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   miniBogoNote: { backgroundColor: colors.surfaceAlt, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, padding: 12, marginTop: 8 },
   miniBogoText: { color: colors.muted, fontSize: 12.5, lineHeight: 18, fontWeight: "600" },
   entriesSection: { marginTop: 22 },
-  entriesSub: { color: colors.muted, fontSize: 12.5, fontWeight: "600", marginTop: -8, marginBottom: 10 },
-  entRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: colors.border },
-  entSeat: { color: colors.muted, fontSize: 13, fontWeight: "800", width: 42 },
-  entName: { color: colors.text, fontSize: 14, fontWeight: "600", flex: 1 },
+  entriesSub: { color: colors.muted, fontSize: 12.5, fontWeight: "600", marginTop: -8, marginBottom: 8 },
+  entriesScroll: { maxHeight: 240, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface, paddingHorizontal: 12 },
+  entRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: colors.border },
+  entSeat: { color: colors.muted, fontSize: 12, fontWeight: "800", width: 34 },
+  entName: { color: colors.text, fontSize: 13, fontWeight: "600", flex: 1 },
   entNameMine: { color: colors.red, fontWeight: "800" },
-  entPill: { borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
-  entPillText: { fontSize: 11, fontWeight: "800", letterSpacing: 0.3 },
+  entPill: { borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 2 },
+  entPillText: { fontSize: 10, fontWeight: "800", letterSpacing: 0.2 },
   miniSection: { marginTop: 18 },
   miniHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   miniAdd: { color: colors.red, fontSize: 14, fontWeight: "800" },
