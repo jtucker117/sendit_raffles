@@ -204,6 +204,11 @@ export default function RaffleDetail() {
   // Eligible entrants for the draw — confirmed only, ordered by seat to match the Edge Function.
   const confirmedTickets = tickets.filter((t) => t.status === "confirmed").sort((a, b) => a.seat_number - b.seat_number);
   const myConfirmed = confirmedTickets.filter((t) => t.owner_id === user?.id).length;
+  // Live odds preview as the player picks seats / a quantity.
+  const mySeatsNow = tickets.filter((t) => t.owner_id === user?.id).length; // seats I already hold (held or confirmed)
+  const picking = raffle.no_seats ? Math.min(buyQty, Math.max(paidLeft, 0)) : selected.length;
+  const myProjSeats = mySeatsNow + picking;
+  const projPct = oddsTotal > 0 ? (myProjSeats / oddsTotal) * 100 : 0;
   const wheelEntrants: WheelEntrant[] = confirmedTickets.map((t) => ({ seat: t.seat_number, name: nameFor(t.owner_id) }));
   const pendingPaid = tickets.filter((t) => t.type === "paid" && t.status === "held");
   // Can't draw the main game while payments are pending or any mini is unfinished.
@@ -475,6 +480,11 @@ export default function RaffleDetail() {
               {myConfirmed > 0 && confirmedTickets.length > 0 && (
                 <Text style={styles.oddsSub}>Your odds right now: {((myConfirmed / confirmedTickets.length) * 100).toFixed(1)}% ({myConfirmed} of {confirmedTickets.length} entered)</Text>
               )}
+              {canPick && myProjSeats > 0 && (
+                <Text style={styles.oddsProj}>
+                  🎯 {picking > 0 ? `With ${picking} more` : "With your"} {myProjSeats === 1 ? "seat" : "seats"} you'd have <Text style={styles.oddsStrong}>{projPct.toFixed(1)}%</Text> to win at sell-out ({myProjSeats} of {oddsTotal})
+                </Text>
+              )}
             </View>
           )}
         </View>
@@ -729,7 +739,9 @@ export default function RaffleDetail() {
         <View style={styles.buyBar}>
           <View style={{ flex: 1 }}>
             <Text style={styles.buyCount}>{selected.length} seat{selected.length === 1 ? "" : "s"} selected</Text>
-            <Text style={styles.buySeats} numberOfLines={1}>{[...selected].sort((a, b) => a - b).map((n) => `#${n}`).join(", ")}</Text>
+            {raffle.show_odds !== false && oddsTotal > 0
+              ? <Text style={styles.buySeats} numberOfLines={1}>🎯 {projPct.toFixed(1)}% to win at sell-out</Text>
+              : <Text style={styles.buySeats} numberOfLines={1}>{[...selected].sort((a, b) => a - b).map((n) => `#${n}`).join(", ")}</Text>}
           </View>
           <TouchableOpacity style={styles.buyBtn} onPress={() => router.push(`/checkout/${raffle.id}?seats=${[...selected].sort((a, b) => a - b).join(",")}`)}>
             <Text style={styles.buyBtnText}>Checkout — {money(raffle.amount_cents * selected.length)}</Text>
@@ -848,6 +860,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   oddsLine: { color: colors.text, fontSize: 13, fontWeight: "600" },
   oddsStrong: { color: colors.red, fontWeight: "900" },
   oddsSub: { color: colors.muted, fontSize: 12, marginTop: 3 },
+  oddsProj: { color: colors.red, fontSize: 12.5, fontWeight: "700", marginTop: 5 },
   miniBanner: { backgroundColor: colors.redSoft, borderColor: colors.red, borderWidth: 1, borderRadius: radius.md, padding: 12, marginTop: 14 },
   miniBannerText: { color: colors.text, fontSize: 13, lineHeight: 18, fontWeight: "600" },
   miniBogoNote: { backgroundColor: colors.surfaceAlt, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, padding: 12, marginTop: 8 },
