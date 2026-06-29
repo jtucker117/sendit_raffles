@@ -90,13 +90,16 @@ export default function CreateRaffleScreen() {
   }, [params.from]);
 
   // Revenue goal → per-seat price: goal ÷ PAID seats (free seats raise $0, so the
-  // paid seats have to cover the whole goal), rounded UP to the next whole dollar
-  // so the goal is always met. Auto-fills whenever the goal, seat count, or
-  // free-seat count changes (still manually editable after).
+  // paid seats have to cover the whole goal). Exact to the cent — no rounding up.
+  // Auto-fills whenever the goal or seat count changes (still manually editable).
   useEffect(() => {
     const cap = parseInt(capacity, 10) || 0; // paid seats
     const g = parseFloat(goal);
-    if (cap > 0 && g > 0) setAmount(String(Math.ceil(g / cap)));
+    if (cap > 0 && g > 0) {
+      const per = g / cap;
+      // Whole-dollar result stays clean ("8"); otherwise show cents ("7.70").
+      setAmount(per % 1 === 0 ? String(per) : per.toFixed(2));
+    }
   }, [goal, capacity]);
   const [saving, setSaving] = useState(false);
 
@@ -163,6 +166,7 @@ export default function CreateRaffleScreen() {
   const free = parseInt(freeLimit, 10) || 0;
   const paid = cap; // free seats are added on top — all capacity is paid
   const raised = (parseFloat(amount) || 0) * paid;
+  const fmt$ = (n: number) => (n % 1 === 0 ? n.toFixed(0) : n.toFixed(2)); // cents only when needed
 
   const STEPS = ["Prize", "Tickets", "Rules", "Publish"];
   function stepValid(s: number): boolean {
@@ -284,8 +288,8 @@ export default function CreateRaffleScreen() {
             <TextInput style={styles.input} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="e.g. 10" placeholderTextColor={colors.faint} />
             <Text style={styles.helper}>
               {goal.trim()
-                ? `Goal $${goal} ÷ ${paid} paid seat${paid === 1 ? "" : "s"} = $${amount || 0}/seat → sold out raises $${raised.toFixed(0)}${free > 0 ? ` (+ ${free} free seat${free === 1 ? "" : "s"}, no charge)` : ""}`
-                : `Sold out ≈ $${raised.toFixed(0)} from ${paid} paid seat${paid === 1 ? "" : "s"}${free > 0 ? ` (+ ${free} free, no charge)` : ""}`}
+                ? `Goal $${goal} ÷ ${paid} paid seat${paid === 1 ? "" : "s"} = $${amount || 0}/seat → sold out raises $${fmt$(raised)}${free > 0 ? ` (+ ${free} free seat${free === 1 ? "" : "s"}, no charge)` : ""}`
+                : `Sold out ≈ $${fmt$(raised)} from ${paid} paid seat${paid === 1 ? "" : "s"}${free > 0 ? ` (+ ${free} free, no charge)` : ""}`}
             </Text>
           </Field>
         </>
@@ -347,7 +351,7 @@ export default function CreateRaffleScreen() {
             <Text style={styles.reviewTitle}>{title || "Untitled game"}</Text>
             {prize ? <Text style={styles.reviewRow}>🏆 {prize}</Text> : null}
             <Text style={styles.reviewRow}>{cap} paid · {free} free · ${amount || 0}/seat</Text>
-            <Text style={styles.reviewRow}>Sold out raises ${raised.toFixed(0)}{goal.trim() ? ` (goal $${goal})` : ""}</Text>
+            <Text style={styles.reviewRow}>Sold out raises ${fmt$(raised)}{goal.trim() ? ` (goal $${goal})` : ""}</Text>
             <Text style={styles.reviewRow}>{drawMode === "elimination" ? "Last man standing draw" : `${drawStyle} reveal · single pick`}</Text>
           </View>
 
