@@ -72,7 +72,10 @@ export default function ManageEntries() {
   const confirmedPaid = tickets.filter((t) => t.type === "paid" && t.status === "confirmed").length;
   const heldPaid = tickets.filter((t) => t.type === "paid" && t.status === "held").length;
   const reservedPaid = tickets.filter((t) => t.type === "paid" && t.status === "reserved").length;
-  const sellablePaid = Math.max(0, raffle.capacity - reservedPaid); // seats that can actually generate revenue
+  // All mini seats (reserved OR already won) occupy the board and never earn
+  // revenue — keep them out of the sellable pool even after the mini draws.
+  const miniSeats = tickets.filter((t) => !!t.mini_id).length;
+  const sellablePaid = Math.max(0, raffle.capacity - miniSeats); // seats that can actually generate revenue
   const collectedCents = confirmedPaid * price;
   const pendingCents = heldPaid * price;
   const maxCents = sellablePaid * price;

@@ -149,8 +149,12 @@ export default function RaffleDetail() {
   const canPick = !isHost && raffle.status === "open";
   // Mini-reserved seats are the mini's prize — not buyable, not "sold to players".
   const reservedCount = tickets.filter((t) => t.status === "reserved").length;
-  const sellablePaid = Math.max(0, raffle.capacity - reservedCount);
-  const paidSold = Math.max(0, paidUsed - reservedCount);
+  // Every seat tied to a mini (still reserved OR already won) occupies the paid
+  // block and is never buyable — so it must stay out of the sellable pool even
+  // after the mini draws and the seat flips from 'reserved' to the winner.
+  const miniSeats = tickets.filter((t) => !!t.mini_id).length;
+  const sellablePaid = Math.max(0, raffle.capacity - miniSeats);
+  const paidSold = tickets.filter((t) => t.type === "paid" && !t.mini_id).length;
   const soldPct = Math.min(100, Math.round((paidSold / Math.max(sellablePaid, 1)) * 100));
   const freeLeft = Math.max(0, (raffle.free_seat_limit ?? 0) - freeUsed);
   const paidLeft = Math.max(0, sellablePaid - paidSold);
@@ -160,7 +164,12 @@ export default function RaffleDetail() {
   const freeAvailable = freeForAll ? true : freeLeft > 0; // can a player still claim a free seat?
   // Full field at sell-out: every capacity seat is a real entry (mini-reserved
   // seats are held by the mini winner and still compete), plus any free seats.
-  const oddsTotal = raffle.capacity + (raffle.free_seat_limit ?? 0);
+  // BOGO: each *buyable* paid seat also earns a free twin, so the field is the
+  // paid block + one free per sellable seat. A BOGO purchase = 2 entries.
+  const entriesPerBuy = isBogo ? 2 : 1;
+  const oddsTotal = isBogo
+    ? raffle.capacity + sellablePaid
+    : raffle.capacity + (raffle.free_seat_limit ?? 0);
   const money = (c: number) => `$${c % 100 === 0 ? (c / 100).toFixed(0) : (c / 100).toFixed(2)}`;
   const nameFor = (oid: string) => names[oid] ?? (oid === user?.id ? "You" : "Player");
 
@@ -209,7 +218,7 @@ export default function RaffleDetail() {
   // Live odds preview as the player picks seats / a quantity.
   const mySeatsNow = tickets.filter((t) => t.owner_id === user?.id).length; // seats I already hold (held or confirmed)
   const picking = raffle.no_seats ? Math.min(buyQty, Math.max(paidLeft, 0)) : selected.length;
-  const myProjSeats = mySeatsNow + picking;
+  const myProjSeats = mySeatsNow + picking * entriesPerBuy; // BOGO: each pick also brings a free seat
   const projPct = oddsTotal > 0 ? (myProjSeats / oddsTotal) * 100 : 0;
   const wheelEntrants: WheelEntrant[] = confirmedTickets.map((t) => ({ seat: t.seat_number, name: nameFor(t.owner_id) }));
   const pendingPaid = tickets.filter((t) => t.type === "paid" && t.status === "held");
@@ -478,7 +487,9 @@ export default function RaffleDetail() {
           </Text>
           {raffle.show_odds !== false && raffle.status !== "complete" && oddsTotal > 0 && (
             <View style={styles.oddsRow}>
-              <Text style={styles.oddsLine}>🎲 Odds: <Text style={styles.oddsStrong}>1 in {oddsTotal}</Text> per seat ({(100 / oddsTotal).toFixed(1)}%)</Text>
+              {isBogo
+                ? <Text style={styles.oddsLine}>🎲 Odds: each paid seat = <Text style={styles.oddsStrong}>2 entries</Text> · ~{(100 * 2 / oddsTotal).toFixed(1)}% per purchase at sell-out (pool of {oddsTotal})</Text>
+                : <Text style={styles.oddsLine}>🎲 Odds: <Text style={styles.oddsStrong}>1 in {oddsTotal}</Text> per seat ({(100 / oddsTotal).toFixed(1)}%)</Text>}
               {myConfirmed > 0 && confirmedTickets.length > 0 && (
                 <Text style={styles.oddsSub}>Your odds right now: {((myConfirmed / confirmedTickets.length) * 100).toFixed(1)}% ({myConfirmed} of {confirmedTickets.length} entered)</Text>
               )}
@@ -553,7 +564,7 @@ export default function RaffleDetail() {
               </TouchableOpacity>
             </View>
           ) : (
-            <Text style={styles.bigNote}>{paidSold} of {sellablePaid} entries in · {paidLeft} left.</Text>
+            <Text style={styles.bigNote}>{paidSold + miniSeats} of {raffle.capacity} entries in · {paidLeft} left.{miniSeats > 0 ? ` (${miniSeats} mini)` : ""}</Text>
           )
         ) : gridMode ? (
           <ScrollView
