@@ -31,7 +31,7 @@ export default function CreateMini() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const router = useRouter();
 
-  const [parent, setParent] = useState<{ id: string; title: string; category: string | null; host_id: string; amount_cents: number | null; capacity: number | null; cover_url: string | null; free_seat_limit: number | null } | null>(null);
+  const [parent, setParent] = useState<{ id: string; title: string; category: string | null; host_id: string; amount_cents: number | null; capacity: number | null; cover_url: string | null; free_seat_limit: number | null; bogo: boolean | null } | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [title, setTitle] = useState("");
@@ -47,7 +47,7 @@ export default function CreateMini() {
 
   const load = useCallback(async () => {
     if (!id) return;
-    const { data } = await supabase.from("raffles").select("id, title, category, host_id, amount_cents, capacity, cover_url, free_seat_limit").eq("id", id).single();
+    const { data } = await supabase.from("raffles").select("id, title, category, host_id, amount_cents, capacity, cover_url, free_seat_limit, bogo").eq("id", id).single();
     if (data) {
       setParent(data as any);
       // How many PAID parent seats are already taken (claimed paid + reserved) — minis can only pull from the paid pool.
@@ -164,6 +164,13 @@ export default function CreateMini() {
             ? `Only ${maxAward} paid seat${maxAward === 1 ? "" : "s"} available in ${parent.title} (free seats can't be pulled).`
             : `${maxAward} paid seat${maxAward === 1 ? "" : "s"} available to give away.`}
         </Text>
+        {parent.bogo && (
+          <Text style={styles.bogoNote}>
+            ⚠️ {parent.title} is a BOGO game. Each seat you reserve here also removes its
+            buy-one-get-one free seat from the pool — so awarding {seatsNum} seat{seatsNum === 1 ? "" : "s"} takes {seatsNum * 2} off
+            the total field (mini winners don't get BOGO frees).
+          </Text>
+        )}
       </Field>
 
       <View style={styles.row2}>
@@ -239,6 +246,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   inputError: { borderColor: colors.danger },
   hint: { color: colors.muted, fontSize: 12, marginTop: 6 },
   hintError: { color: colors.danger, fontWeight: "700" },
+  bogoNote: { color: colors.text, backgroundColor: colors.redSoft, borderRadius: radius.md, borderWidth: 1, borderColor: colors.red, padding: 10, fontSize: 12.5, lineHeight: 18, fontWeight: "600", marginTop: 8 },
   readonlyField: { backgroundColor: colors.surfaceAlt, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, padding: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
   readonlyText: { color: colors.text, fontSize: 15, fontWeight: "700", flexShrink: 1 },
   priceCard: { backgroundColor: colors.surfaceAlt, borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, padding: 14 },
