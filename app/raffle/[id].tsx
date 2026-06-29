@@ -578,31 +578,49 @@ export default function RaffleDetail() {
           <Text style={styles.legend}>Tap open seats · amber = your pick · grey = taken · 🔒 = mini · 🎁 = free seat</Text>
         )}
 
-        {/* Entries — everyone can see who's in and who's paid */}
-        {tickets.length > 0 && (() => {
-          const rows = [...tickets].sort((a, b) => a.seat_number - b.seat_number);
-          const paidCount = rows.filter((t) => t.status === "confirmed" && t.type === "paid").length;
-          const pendCount = rows.filter((t) => t.status === "held").length;
+        {/* Players — every seat (open + taken); for no-seat games, every entry */}
+        {(() => {
+          const totalSeats = raffle.capacity + (raffle.free_seat_limit ?? 0);
+          // Seated games enumerate every seat; no-seat games just list the entries.
+          const rows = raffle.no_seats
+            ? [...tickets].sort((a, b) => a.seat_number - b.seat_number).map((t) => ({ seat: t.seat_number, t, isFreeSlot: t.type === "free" }))
+            : Array.from({ length: totalSeats }, (_, i) => {
+                const seat = i + 1;
+                return { seat, t: tickets.find((x) => x.seat_number === seat) ?? null, isFreeSlot: seat > raffle.capacity };
+              });
+          if (rows.length === 0) return null;
+          const paidCount = tickets.filter((t) => t.status === "confirmed" && t.type === "paid").length;
+          const pendCount = tickets.filter((t) => t.status === "held").length;
           return (
             <View style={styles.entriesSection}>
-              <Text style={styles.boardTitle}>Entries ({rows.length})</Text>
+              <Text style={styles.boardTitle}>Players</Text>
               <Text style={styles.entriesSub}>
                 ✅ {paidCount} paid{pendCount > 0 ? ` · ⏳ ${pendCount} awaiting payment` : ""}
               </Text>
               <ScrollView style={styles.entriesScroll} nestedScrollEnabled showsVerticalScrollIndicator>
-                {rows.map((t) => {
-                  const reserved = t.status === "reserved";
-                  const isFreeSeat = t.type === "free";
-                  const paid = t.status === "confirmed" && t.type === "paid";
-                  const mine = user?.id === t.owner_id && !reserved;
-                  const who = reserved ? "Reserved for a mini" : (names[t.owner_id] ?? "Player");
-                  const label = reserved ? "🔒 Mini" : isFreeSeat ? "🎁 Free" : paid ? "Paid" : "Unpaid";
-                  const tone = reserved ? colors.muted : (paid || isFreeSeat) ? colors.green : colors.red;
-                  const bg = reserved ? colors.surfaceAlt : (paid || isFreeSeat) ? colors.greenSoft : colors.redSoft;
+                {rows.map(({ seat, t, isFreeSlot }) => {
+                  const reserved = t?.status === "reserved";
+                  const isFreeSeat = t?.type === "free";
+                  const paid = t?.status === "confirmed" && t?.type === "paid";
+                  const mine = !!t && user?.id === t.owner_id && !reserved;
+                  let who: string, label: string, tone: string, bg: string;
+                  if (!t) {
+                    who = isFreeSlot ? "Open free seat" : "Open seat";
+                    label = isFreeSlot ? "🎁 Free" : "Open";
+                    tone = isFreeSlot ? colors.green : colors.muted;
+                    bg = isFreeSlot ? colors.greenSoft : colors.surfaceAlt;
+                  } else if (reserved) {
+                    who = "Reserved for a mini"; label = "🔒 Mini"; tone = colors.muted; bg = colors.surfaceAlt;
+                  } else {
+                    who = names[t.owner_id] ?? "Player";
+                    label = isFreeSeat ? "🎁 Free" : paid ? "Paid" : "Unpaid";
+                    tone = (paid || isFreeSeat) ? colors.green : colors.red;
+                    bg = (paid || isFreeSeat) ? colors.greenSoft : colors.redSoft;
+                  }
                   return (
-                    <View key={t.id} style={styles.entRow}>
-                      <Text style={styles.entSeat}>#{t.seat_number}</Text>
-                      <Text style={[styles.entName, mine && styles.entNameMine]} numberOfLines={1}>{who}{mine ? " (you)" : ""}</Text>
+                    <View key={seat} style={styles.entRow}>
+                      <Text style={styles.entSeat}>#{seat}</Text>
+                      <Text style={[styles.entName, mine && styles.entNameMine, !t && styles.entNameOpen]} numberOfLines={1}>{who}{mine ? " (you)" : ""}</Text>
                       <View style={[styles.entPill, { backgroundColor: bg }]}><Text style={[styles.entPillText, { color: tone }]}>{label}</Text></View>
                     </View>
                   );
@@ -825,6 +843,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   entSeat: { color: colors.muted, fontSize: 12, fontWeight: "800", width: 34 },
   entName: { color: colors.text, fontSize: 13, fontWeight: "600", flex: 1 },
   entNameMine: { color: colors.red, fontWeight: "800" },
+  entNameOpen: { color: colors.muted, fontWeight: "500" },
   entPill: { borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 2 },
   entPillText: { fontSize: 10, fontWeight: "800", letterSpacing: 0.2 },
   miniSection: { marginTop: 18 },
