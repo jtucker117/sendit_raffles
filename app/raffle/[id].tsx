@@ -209,6 +209,15 @@ export default function RaffleDetail() {
   // Can't draw the main game while payments are pending or any mini is unfinished.
   const openMinis = minis.filter((m: any) => m.status !== "complete" && m.status !== "canceled");
   const drawBlocked = confirmedTickets.length < 1 || pendingPaid.length > 0 || openMinis.length > 0;
+  // Cancel guard: no open minis (parent only) and no player-claimed seats.
+  // Mini-reserved seats are host-owned, so they don't count as player claims.
+  const playerSeats = tickets.filter((t) => t.owner_id !== raffle!.host_id);
+  const cancelBlockReason =
+    !raffle!.parent_raffle_id && openMinis.length > 0
+      ? `Cancel the ${openMinis.length} open mini${openMinis.length === 1 ? "" : "s"} first (remove their players, then cancel each mini).`
+      : playerSeats.length > 0
+      ? `Remove all ${playerSeats.length} player seat${playerSeats.length === 1 ? "" : "s"} in Manage entries first.`
+      : "";
   const drawLabel =
     confirmedTickets.length < 1 ? "Run the draw (need 1+ entry)"
     : pendingPaid.length > 0 ? `Confirm ${pendingPaid.length} pending payment${pendingPaid.length === 1 ? "" : "s"} first`
@@ -283,6 +292,7 @@ export default function RaffleDetail() {
   function closeDraw() { setStage("idle"); setSpinTo(null); }
 
   async function onCancel() {
+    if (cancelBlockReason) { Alert.alert("Can't cancel yet", cancelBlockReason); return; }
     if (!confirmCancel) { setConfirmCancel(true); setTimeout(() => setConfirmCancel(false), 3000); return; }
     const { error } = await supabase.from("raffles").update({ status: "canceled" }).eq("id", raffle!.id);
     if (error) { Alert.alert("Cancel failed", error.message); return; }
@@ -684,9 +694,12 @@ export default function RaffleDetail() {
               </>
             )}
             {raffle.status !== "canceled" && raffle.status !== "complete" && (
-              <TouchableOpacity style={[styles.btn, styles.btnOutline, { borderColor: colors.danger }]} onPress={onCancel}>
-                <Text style={[styles.btnText, { color: colors.danger }]}>{confirmCancel ? "Tap again to cancel" : "Cancel game"}</Text>
-              </TouchableOpacity>
+              <>
+                <TouchableOpacity style={[styles.btn, styles.btnOutline, { borderColor: colors.danger }, cancelBlockReason && styles.btnDim]} onPress={onCancel}>
+                  <Text style={[styles.btnText, { color: colors.danger }]}>{confirmCancel ? "Tap again to cancel" : "Cancel game"}</Text>
+                </TouchableOpacity>
+                {cancelBlockReason ? <Text style={styles.cancelHint}>⚠️ {cancelBlockReason}</Text> : null}
+              </>
             )}
             {raffle.status === "canceled" && <Text style={styles.canceledNote}>This game is canceled</Text>}
           </View>
@@ -951,6 +964,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   seatNumClaimed: { color: colors.text },
   bigNote: { color: colors.muted, fontSize: 13, lineHeight: 20 },
   canceledNote: { color: colors.red, textAlign: "center", fontWeight: "700", marginTop: 4 },
+  cancelHint: { color: colors.muted, fontSize: 12.5, lineHeight: 18, fontWeight: "600", marginTop: -4 },
   btnDanger: { backgroundColor: colors.danger },
   dangerNote: { color: colors.faint, fontSize: 11, textAlign: "center" },
   backBtn: { alignSelf: "center", marginTop: 22, padding: 10 },
