@@ -110,7 +110,12 @@ export default function Home() {
           </View>
         )}
         {!upcoming && r.capacity > 0 && claimedOf(r) >= r.capacity && (
-          <View style={styles.fullStamp} pointerEvents="none"><Text style={styles.fullStampText}>FULL</Text></View>
+          <>
+            <View style={styles.fullDim} pointerEvents="none" />
+            <View style={styles.fullStamp} pointerEvents="none">
+              <Text style={[styles.fullStampText, { fontSize: Math.round(cardW * 0.32), borderWidth: Math.max(4, Math.round(cardW * 0.018)) }]}>FULL</Text>
+            </View>
+          </>
         )}
         <View style={styles.cardFooter}>
           <Text style={styles.cardTitle} numberOfLines={1}>{r.title}</Text>
@@ -245,9 +250,10 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   soonFullEyebrow: { color: "#fff", fontSize: 11, fontWeight: "900", letterSpacing: 1.5 },
   soonFullCount: { color: "#fff", fontSize: 26, fontWeight: "900", marginTop: 4, letterSpacing: -0.5, textShadowColor: "rgba(0,0,0,0.6)", textShadowRadius: 6 },
   soonFullWhen: { color: "rgba(255,255,255,0.92)", fontSize: 12, fontWeight: "600", marginTop: 2 },
-  fullStamp: { position: "absolute", top: "38%", left: -8, right: -8, alignItems: "center", justifyContent: "center", transform: [{ rotate: "-13deg" }], zIndex: 4 },
+  fullDim: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.6)", zIndex: 3 },
+  fullStamp: { position: "absolute", top: 0, bottom: 0, left: -8, right: -8, alignItems: "center", justifyContent: "center", transform: [{ rotate: "-13deg" }], zIndex: 4 },
   fullStampText: { color: "#FF2A2A", fontSize: 38, fontWeight: "900", letterSpacing: 5, borderWidth: 4, borderColor: "#FF2A2A", borderRadius: 8, paddingHorizontal: 16, paddingVertical: 2, backgroundColor: "rgba(255,42,42,0.12)", textShadowColor: "rgba(0,0,0,0.55)", textShadowRadius: 5, overflow: "hidden" },
-  cardFooter: { position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 9, paddingBottom: 9, paddingTop: 4 },
+  cardFooter: { position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 9, paddingBottom: 9, paddingTop: 4, zIndex: 5 },
   cardTitle: { color: "#fff", fontSize: 13, fontWeight: "800" },
   bar: { height: 4, borderRadius: radius.pill, backgroundColor: "rgba(255,255,255,0.28)", marginTop: 6, overflow: "hidden" },
   barFill: { height: "100%", backgroundColor: colors.red },

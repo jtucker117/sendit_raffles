@@ -178,10 +178,16 @@ export default function HostDashboard() {
                     <View style={[styles.chip, r.status === "open" ? styles.chipLive : r.status === "scheduled" ? styles.chipLive : r.status === "complete" ? styles.chipDrawn : styles.chipCanceled]}>
                       <Text style={styles.chipText}>{statusChip(r.status)}</Text>
                     </View>
-                    {r.status === "complete" || r.status === "canceled" ? (
-                      <View style={styles.stamp} pointerEvents="none"><Text style={styles.closedStampText}>CLOSED</Text></View>
-                    ) : r.status === "open" && r.capacity > 0 && r.paid >= r.capacity ? (
-                      <View style={styles.stamp} pointerEvents="none"><Text style={styles.fullStampText}>FULL</Text></View>
+                    {(r.status === "complete" || r.status === "canceled") ? (
+                      <>
+                        <View style={styles.stampDim} pointerEvents="none" />
+                        <View style={styles.stamp} pointerEvents="none"><Text style={[styles.closedStampText, { fontSize: Math.round(cardW * 0.2), borderWidth: Math.max(4, Math.round(cardW * 0.018)) }]}>CLOSED</Text></View>
+                      </>
+                    ) : (r.status === "open" && r.capacity > 0 && r.paid >= r.capacity) ? (
+                      <>
+                        <View style={styles.stampDim} pointerEvents="none" />
+                        <View style={styles.stamp} pointerEvents="none"><Text style={[styles.fullStampText, { fontSize: Math.round(cardW * 0.32), borderWidth: Math.max(4, Math.round(cardW * 0.018)) }]}>FULL</Text></View>
+                      </>
                     ) : null}
                     <View style={styles.overlay}>
                       <Text style={styles.cardTitle} numberOfLines={1}>{r.title}</Text>
@@ -245,13 +251,14 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   card: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: radius.lg, overflow: "hidden" },
   coverWrap: { width: "100%", aspectRatio: 4 / 5, position: "relative", backgroundColor: colors.surfaceAlt },
   cover: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%" },
-  chip: { position: "absolute", top: 8, right: 8, borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 4 },
+  chip: { position: "absolute", top: 8, right: 8, borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 4, zIndex: 5 },
   chipLive: { backgroundColor: colors.red },
   chipDrawn: { backgroundColor: "rgba(0,0,0,0.6)" },
   chipCanceled: { backgroundColor: "rgba(0,0,0,0.6)" },
   chipText: { color: "#fff", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
-  overlay: { position: "absolute", left: 0, right: 0, bottom: 0, padding: 10 },
-  stamp: { position: "absolute", top: "38%", left: -8, right: -8, alignItems: "center", justifyContent: "center", transform: [{ rotate: "-13deg" }], zIndex: 4 },
+  overlay: { position: "absolute", left: 0, right: 0, bottom: 0, padding: 10, zIndex: 5 },
+  stampDim: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.6)", zIndex: 3 },
+  stamp: { position: "absolute", top: 0, bottom: 0, left: -8, right: -8, alignItems: "center", justifyContent: "center", transform: [{ rotate: "-13deg" }], zIndex: 4 },
   fullStampText: { color: "#FF2A2A", fontSize: 30, fontWeight: "900", letterSpacing: 4, borderWidth: 4, borderColor: "#FF2A2A", borderRadius: 8, paddingHorizontal: 14, paddingVertical: 2, backgroundColor: "rgba(255,42,42,0.12)", textShadowColor: "rgba(0,0,0,0.55)", textShadowRadius: 5, overflow: "hidden" },
   closedStampText: { color: "#E6E8EB", fontSize: 26, fontWeight: "900", letterSpacing: 3, borderWidth: 4, borderColor: "#E6E8EB", borderRadius: 8, paddingHorizontal: 14, paddingVertical: 2, backgroundColor: "rgba(0,0,0,0.45)", textShadowColor: "rgba(0,0,0,0.7)", textShadowRadius: 5, overflow: "hidden" },
   cardTitle: { color: "#fff", fontSize: 15, fontWeight: "900" },
