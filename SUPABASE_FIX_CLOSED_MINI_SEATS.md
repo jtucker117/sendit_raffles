@@ -1,30 +1,66 @@
-# Supabase — retroactively hand a closed mini's reserved seats to its winner
+# Supabase — fix minis drawn on the OLD draw function
 
-Use this ONLY for minis that were drawn **before** the new `draw` edge function
-was deployed. Those draws never transferred the parent's reserved seats to the
-winner, so the parent's Seats list still shows "Held for a mini" instead of the
-winner's name.
+The old `draw` edge function awarded a mini winner the **lowest open seats**
+(e.g. #1/#3/#6) instead of transferring the seats that were **reserved** for that
+mini (e.g. #2/#4/#5). Use this for any mini drawn before the new `draw` function
+went live.
 
-This finds every completed mini whose reserved parent seats are still sitting in
-`reserved` status and reassigns them to that mini's recorded winner.
+It does two things, in order:
+1. **Removes** the wrong prize seats the old function granted — free tickets the
+   mini's winner got inside the paid block (`mini_id IS NULL`, `seat_number <=
+   capacity`). Real BOGO/free-for-all seats are numbered ABOVE capacity, so this
+   never deletes a legitimately claimed free seat.
+2. **Transfers** the seats that were reserved for that mini to the winner, so the
+   parent board/Players list shows the winner on those exact seats.
 
-Run once in **Supabase → SQL Editor**. Safe to re-run (only touches seats that
-are still `reserved`).
+Run once in **Supabase → SQL Editor**. Safe to re-run (only touches completed
+minis whose reserved seats are still unassigned).
 
 ```sql
+-- 1) Undo the old fallback grant (winner's free seats inside the paid block).
+delete from tickets t
+using raffles m, draws d, raffles p
+where m.parent_raffle_id is not null
+  and m.status = 'complete'
+  and d.raffle_id = m.id
+  and p.id = m.parent_raffle_id
+  and t.raffle_id = m.parent_raffle_id
+  and t.owner_id = d.winner_id
+  and t.type = 'free'
+  and t.mini_id is null
+  and t.seat_number <= p.capacity
+  and exists (
+    select 1 from tickets r
+    where r.raffle_id = m.parent_raffle_id and r.mini_id = m.id and r.status = 'reserved'
+  );
+
+-- 2) Hand the reserved seats to the mini's winner.
 update tickets t
 set owner_id = d.winner_id,
     type = 'free',
     status = 'confirmed'
-from raffles m
-join draws d on d.raffle_id = m.id
-where m.parent_raffle_id is not null      -- m is a mini
-  and m.status = 'complete'               -- the mini was drawn
-  and t.raffle_id = m.parent_raffle_id    -- seat lives on the parent
-  and t.mini_id = m.id                    -- reserved for THIS mini
-  and t.status = 'reserved';              -- not yet handed out
+from raffles m, draws d
+where m.parent_raffle_id is not null
+  and m.status = 'complete'
+  and d.raffle_id = m.id
+  and t.raffle_id = m.parent_raffle_id
+  and t.mini_id = m.id
+  and t.status = 'reserved';
 ```
 
-After running, the parent game's Manage → Seats list (and the entries list on the
-game page) will show the winner's name on those seats. Going forward, the
-redeployed `draw` function does this automatically — `supabase functions deploy draw`.
+After running, refresh the parent game — the Players list will show the winner on
+the seats that were reserved for the mini.
+
+## The real fix — redeploy the draw function
+
+The SQL above is cleanup. So future minis transfer automatically, the new `draw`
+edge function MUST be deployed. In the Codespace:
+
+```
+git pull origin main
+supabase functions deploy draw
+```
+
+Confirm it deployed (the CLI prints the function URL + a new version). If you draw
+a fresh mini afterward and the winner lands on the RESERVED seats (not #1/#3/#6),
+it's live.
