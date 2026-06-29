@@ -248,8 +248,10 @@ export default function ManageEntries() {
         <View style={styles.card}>
           {[...tickets].sort((a, b) => a.seat_number - b.seat_number).map((t) => {
             const isMini = !!t.mini_id;
-            const pay = t.type === "free" ? "🎁 Free seat"
+            const miniWon = isMini && t.status === "confirmed"; // reserved seat handed to the winner
+            const pay = miniWon ? "🏆 Won from mini"
               : isMini ? "🔒 Mini prize seat"
+              : t.type === "free" ? "🎁 Free seat"
               : t.status === "held" ? "Paid · pending payment"
               : `Paid · ${t.paid_method ?? "confirmed"}`;
             return (

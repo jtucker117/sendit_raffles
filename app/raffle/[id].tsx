@@ -25,7 +25,7 @@ interface Raffle {
   scheduled_at?: string | null; show_odds?: boolean; featured?: boolean;
   free_for_all?: boolean; bogo?: boolean; no_seats?: boolean;
 }
-interface Ticket { id: string; seat_number: number; owner_id: string; type: "free" | "paid"; status: string; }
+interface Ticket { id: string; seat_number: number; owner_id: string; type: "free" | "paid"; status: string; mini_id?: string | null; }
 
 type DrawStage = "idle" | "confirm" | "countdown" | "drawing" | "spinning" | "done" | "error";
 const COUNTDOWN_SECONDS = 60;
@@ -610,7 +610,8 @@ export default function RaffleDetail() {
               <ScrollView style={styles.entriesScroll} nestedScrollEnabled showsVerticalScrollIndicator>
                 {rows.map(({ seat, t, isFreeSlot }) => {
                   const reserved = t?.status === "reserved";
-                  const isFreeSeat = t?.type === "free";
+                  const miniWon = !!t && !!t.mini_id && t.status === "confirmed"; // reserved seat handed to the mini winner
+                  const isFreeSeat = t?.type === "free" && !miniWon;
                   const paid = t?.status === "confirmed" && t?.type === "paid";
                   const mine = !!t && user?.id === t.owner_id && !reserved;
                   let who: string, label: string, tone: string, bg: string;
@@ -621,6 +622,8 @@ export default function RaffleDetail() {
                     bg = isFreeSlot ? colors.greenSoft : colors.surfaceAlt;
                   } else if (reserved) {
                     who = "Reserved for a mini"; label = "🔒 Mini"; tone = colors.muted; bg = colors.surfaceAlt;
+                  } else if (miniWon) {
+                    who = names[t.owner_id] ?? "Player"; label = "🏆 Mini win"; tone = colors.red; bg = colors.redSoft;
                   } else {
                     who = names[t.owner_id] ?? "Player";
                     label = isFreeSeat ? "🎁 Free" : paid ? "Paid" : "Unpaid";
